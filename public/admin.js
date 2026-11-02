@@ -416,6 +416,90 @@ function renderBeats(beats) {
   document.querySelector('.admin-beat-list')
     .replaceChildren(...beats.map((beat, i) => beatEditor(beat, i, beats.length)));
   document.querySelector('#panel-beats .empty-note').hidden = beats.length > 0;
+  renderProducers();
+}
+
+// ---------- Producer pictures ----------
+
+const producerCard = document.getElementById('producer-pictures');
+
+function producerRow(key, name) {
+  const row = document.createElement('div');
+  row.className = 'producer-row';
+  const picture = content.producers?.[key];
+
+  const thumb = document.createElement('button');
+  thumb.type = 'button';
+  thumb.className = 'song-thumb producer-thumb' + (picture ? '' : ' empty');
+  thumb.setAttribute('aria-label', `Upload picture for ${name}`);
+  if (picture) {
+    const img = document.createElement('img');
+    img.src = picture;
+    img.alt = '';
+    thumb.append(img);
+  }
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/jpeg,image/png,image/gif,image/webp';
+  fileInput.hidden = true;
+
+  const label = document.createElement('span');
+  label.className = 'producer-name';
+  label.textContent = name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'button secondary';
+  remove.textContent = 'remove';
+  remove.hidden = !picture;
+
+  const status = document.createElement('span');
+  status.className = 'status';
+  status.setAttribute('role', 'status');
+
+  async function save(data, message) {
+    row.querySelectorAll('button').forEach(b => b.disabled = true);
+    status.textContent = message;
+    status.classList.remove('error');
+    try {
+      content = await send('PUT', `/api/admin/producers/${encodeURIComponent(key)}`, data,
+        p => status.textContent = `uploading… ${Math.round(p * 100)}%`);
+      renderProducers();
+    } catch (err) {
+      status.textContent = err.message;
+      status.classList.add('error');
+      row.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+  }
+
+  thumb.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (!fileInput.files[0]) return;
+    const data = new FormData();
+    data.append('image', fileInput.files[0]);
+    save(data, 'saving…');
+  });
+  remove.addEventListener('click', () => {
+    const data = new FormData();
+    data.append('remove', 'true');
+    save(data, 'removing…');
+  });
+
+  row.append(thumb, fileInput, label, remove, status);
+  return row;
+}
+
+// One row per producer on the beats, matched the same way as the public pills.
+function renderProducers() {
+  const names = new Map();
+  content.beats.forEach(beat => {
+    const name = (beat.producer || '').trim();
+    if (name && !names.has(name.toLowerCase())) names.set(name.toLowerCase(), name);
+  });
+  const sorted = [...names].sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' }));
+  producerCard.querySelector('.producer-editor').replaceChildren(...sorted.map(([key, name]) => producerRow(key, name)));
+  producerCard.hidden = names.size === 0;
 }
 
 // ---------- Load ----------

@@ -243,6 +243,7 @@ function createPlayer(beat) {
 // ---------- Sorting and producer filter ----------
 
 const view = { sort: 'newest', producers: new Set() };
+let producerPictures = {};
 const sortSelect = document.getElementById('beat-sort');
 const producerPills = document.querySelector('.producer-pills');
 
@@ -289,7 +290,15 @@ function pill(label, producer = '') {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'filter-pill';
-  button.textContent = label;
+  const picture = producer && producerPictures[producer];
+  if (picture) {
+    const img = document.createElement('img');
+    img.src = picture;
+    img.alt = '';
+    button.append(img);
+    button.classList.add('has-picture');
+  }
+  button.append(label);
   button.dataset.producer = producer;
   button.addEventListener('click', () => {
     if (!producer) view.producers.clear();
@@ -318,7 +327,8 @@ sortSelect.addEventListener('change', () => {
   applyView();
 });
 
-function renderBeats(beats) {
+function renderBeats(beats, pictures = {}) {
+  producerPictures = pictures;
   players.forEach(p => p.pause());
   players.length = 0;
   beats.forEach(beat => players.push(createPlayer(beat)));
@@ -334,5 +344,5 @@ fetch('/api/content')
   .then(content => {
     renderHome(content.home);
     renderContact(content.contact);
-    renderBeats(content.beats);
+    renderBeats(content.beats, content.producers);
   });

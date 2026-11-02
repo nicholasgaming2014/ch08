@@ -30,6 +30,8 @@ const DEFAULT_CONTENT = {
   home: { headline: '', bigText: '', image: '/assets/jeff-teague-5150.gif', paragraph: '', links: [] },
   contact: { email: '', paragraph: '', socials: [] },
   beats: [],
+  // Producer pictures for the beats page pills, keyed by lowercase producer name.
+  producers: {},
 };
 
 function loadContent() {
@@ -39,6 +41,7 @@ function loadContent() {
     Object.assign(content.home, saved.home);
     Object.assign(content.contact, saved.contact);
     if (Array.isArray(saved.beats)) content.beats = saved.beats;
+    if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
   } catch {}
   return content;
 }
@@ -420,6 +423,24 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   content.beats = content.beats.filter(b => b !== beat);
   await saveContent();
   await Promise.all(beatUploads(beat).map(removeUpload));
+  res.json(content);
+});
+
+const producerKey = name => text(name, 120).toLowerCase();
+
+// Sets or removes one producer's picture.
+app.put('/api/admin/producers/:name', requireAdminApi, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
+  const key = producerKey(req.params.name);
+  const image = req.files?.image?.[0];
+  if (!key || key === '__proto__') {
+    await removeRequestFiles(req);
+    return res.status(400).json({ error: 'That producer name can’t be used.' });
+  }
+  const oldImage = Object.hasOwn(content.producers, key) ? content.producers[key] : undefined;
+  if (image) content.producers[key] = fileUrl(image);
+  else if (req.body?.remove === 'true') delete content.producers[key];
+  await saveContent();
+  if (content.producers[key] !== oldImage) await removeUpload(oldImage);
   res.json(content);
 });
 

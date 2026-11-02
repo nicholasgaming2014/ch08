@@ -323,6 +323,21 @@ body {
   border-color: #fff;
 }
 
+.filter-pill.has-picture {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 14px 3px 3px;
+}
+
+.filter-pill img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 @media (max-width: 600px) {
   .beats-toolbar {
     flex-direction: column;
@@ -918,4 +933,37 @@ body {
 .song-row .song-auto {
   font-size: 12px;
   padding: 10px;
+}
+
+/* Producer pictures in the admin beats tab */
+.hint {
+  margin: -4px 0 0;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.producer-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.producer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.producer-thumb {
+  border-radius: 50%;
+}
+
+.producer-name {
+  font-size: 15px;
+}
+
+.producer-row .button {
+  font-size: 12px;
+  padding: 8px 12px;
 }
