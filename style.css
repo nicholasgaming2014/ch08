@@ -63,6 +63,19 @@ body {
   min-height: calc(100vh - 90px);
 }
 
+#home:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.hero-gif {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+}
+
 @media (max-width: 600px) {
   .banner {
     padding: 12px 16px;
