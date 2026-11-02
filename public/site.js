@@ -82,6 +82,18 @@ function serviceName(url) {
 function renderSongs(container, songs) {
   container.querySelector('ul').replaceChildren(...songs.map(song => {
     const li = document.createElement('li');
+    const cover = document.createElement('span');
+    cover.className = 'song-cover';
+    const art = song.cover || song.artwork;
+    if (art) {
+      const img = document.createElement('img');
+      img.src = art;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      cover.append(img);
+    }
+    li.append(cover);
     const name = document.createElement('span');
     name.className = 'song-name';
     name.textContent = song.title || song.artist;
@@ -198,7 +210,10 @@ function createPlayer(beat) {
     else audio.addEventListener('loadedmetadata', seek, { once: true });
   });
 
-  audio.addEventListener('loadedmetadata', () => { total.textContent = formatTime(audio.duration); });
+  audio.addEventListener('loadedmetadata', () => {
+    total.textContent = formatTime(audio.duration);
+    if (!beat.duration && view.sort.startsWith('length')) applyView();
+  });
   audio.addEventListener('play', () => {
     node.classList.add('playing');
     button.setAttribute('aria-label', 'Pause');
@@ -214,17 +229,102 @@ function createPlayer(beat) {
     tick();
   });
 
-  const player = { node, draw, pause: () => audio.pause() };
+  const player = {
+    beat,
+    node,
+    draw,
+    pause: () => audio.pause(),
+    // Stored at upload; older beats fall back to the audio file's own length.
+    duration: () => beat.duration || (Number.isFinite(audio.duration) ? audio.duration : null),
+  };
   return player;
 }
+
+// ---------- Sorting and producer filter ----------
+
+const view = { sort: 'newest', producers: new Set() };
+const sortSelect = document.getElementById('beat-sort');
+const producerPills = document.querySelector('.producer-pills');
+
+const producerKey = name => (name || '').trim().toLowerCase();
+
+// Missing values (no bpm, unknown length) always sort to the end.
+function compareMissingLast(a, b, desc) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return desc ? b - a : a - b;
+}
+
+const SORTS = {
+  newest: (a, b) => (b.beat.createdAt || '').localeCompare(a.beat.createdAt || ''),
+  oldest: (a, b) => (a.beat.createdAt || '').localeCompare(b.beat.createdAt || ''),
+  title: (a, b) => a.beat.title.localeCompare(b.beat.title, undefined, { sensitivity: 'base', numeric: true }),
+  'title-desc': (a, b) => b.beat.title.localeCompare(a.beat.title, undefined, { sensitivity: 'base', numeric: true }),
+  bpm: (a, b) => compareMissingLast(a.beat.bpm, b.beat.bpm, false),
+  'bpm-desc': (a, b) => compareMissingLast(a.beat.bpm, b.beat.bpm, true),
+  length: (a, b) => compareMissingLast(a.duration(), b.duration(), false),
+  'length-desc': (a, b) => compareMissingLast(a.duration(), b.duration(), true),
+};
+
+function applyView() {
+  const visible = players.filter(p => !view.producers.size || view.producers.has(producerKey(p.beat.producer)));
+  players.filter(p => !visible.includes(p)).forEach(p => p.pause());
+  visible.sort(SORTS[view.sort] || SORTS.newest);
+  document.querySelector('.beat-list').replaceChildren(...visible.map(p => p.node));
+  visible.forEach(p => p.draw());
+
+  const empty = document.querySelector('#beats .empty-note');
+  empty.textContent = players.length ? 'no beats by these producers' : 'no beats yet';
+  empty.hidden = visible.length > 0;
+
+  producerPills.querySelectorAll('.filter-pill').forEach(pill => {
+    const active = pill.dataset.producer ? view.producers.has(pill.dataset.producer) : view.producers.size === 0;
+    pill.classList.toggle('active', active);
+    pill.setAttribute('aria-pressed', active);
+  });
+}
+
+function pill(label, producer = '') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'filter-pill';
+  button.textContent = label;
+  button.dataset.producer = producer;
+  button.addEventListener('click', () => {
+    if (!producer) view.producers.clear();
+    else if (view.producers.has(producer)) view.producers.delete(producer);
+    else view.producers.add(producer);
+    applyView();
+  });
+  return button;
+}
+
+function renderProducerPills() {
+  // One pill per producer, using the first spelling seen.
+  const names = new Map();
+  players.forEach(p => {
+    const key = producerKey(p.beat.producer);
+    if (key && !names.has(key)) names.set(key, p.beat.producer.trim());
+  });
+  [...view.producers].forEach(key => names.has(key) || view.producers.delete(key));
+  const sorted = [...names].sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' }));
+  producerPills.replaceChildren(pill('all'), ...sorted.map(([key, name]) => pill(name, key)));
+  producerPills.hidden = names.size === 0;
+}
+
+sortSelect.addEventListener('change', () => {
+  view.sort = sortSelect.value;
+  applyView();
+});
 
 function renderBeats(beats) {
   players.forEach(p => p.pause());
   players.length = 0;
   beats.forEach(beat => players.push(createPlayer(beat)));
-  document.querySelector('.beat-list').replaceChildren(...players.map(p => p.node));
-  document.querySelector('#beats .empty-note').hidden = beats.length > 0;
-  players.forEach(p => p.draw());
+  document.querySelector('.beats-toolbar').hidden = beats.length < 2;
+  renderProducerPills();
+  applyView();
 }
 
 window.addEventListener('resize', () => players.forEach(p => p.draw()));

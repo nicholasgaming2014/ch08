@@ -64,6 +64,7 @@ const AUDIO_TYPES = {
   'audio/ogg': '.ogg', 'audio/flac': '.flac', 'audio/x-flac': '.flac',
 };
 const IMAGE_TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' };
+const SONG_COVER_FIELD = /^songCover_\d{1,2}$/;
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -73,9 +74,10 @@ const upload = multer({
       cb(null, crypto.randomBytes(12).toString('hex') + ext);
     },
   }),
-  limits: { fileSize: 200 * 1024 * 1024, files: 2 },
+  limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : IMAGE_TYPES;
+    const isImage = ['image', 'cover'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
   },
@@ -153,14 +155,58 @@ function linkList(value) {
     .filter(link => link.label && link.url);
 }
 
-// Songs linked to a beat: title, artist, and a Spotify/SoundCloud/etc. link.
-function songList(value) {
+// Cover art for a song link, looked up through the service's public oEmbed endpoint.
+const OEMBED = [
+  [host => host.endsWith('spotify.com'), 'https://open.spotify.com/oembed?url='],
+  [host => host.endsWith('soundcloud.com'), 'https://soundcloud.com/oembed?format=json&url='],
+  [host => host.endsWith('youtube.com') || host === 'youtu.be', 'https://www.youtube.com/oembed?format=json&url='],
+];
+
+async function fetchArtwork(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    const endpoint = OEMBED.find(([matches]) => matches(host))?.[1];
+    if (!endpoint) return '';
+    const res = await fetch(endpoint + encodeURIComponent(url), { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return '';
+    const thumbnail = String((await res.json()).thumbnail_url || '');
+    return thumbnail.startsWith('https://') ? thumbnail : '';
+  } catch {
+    return '';
+  }
+}
+
+// Songs linked to a beat: title, artist, link, an optional uploaded cover,
+// and artwork fetched from the link. Uploaded covers arrive as songCover_<n> files.
+async function songList(value, req, previous = []) {
   let list = value;
   try { list = JSON.parse(list || '[]'); } catch { list = []; }
   if (!Array.isArray(list)) return [];
-  return list.slice(0, 30)
-    .map(song => ({ title: text(song?.title, 120), artist: text(song?.artist, 120), url: safeUrl(song?.url) }))
+
+  const keptCovers = new Set(previous.map(s => s.cover).filter(Boolean));
+  const knownArtwork = new Map(previous.filter(s => s.url && s.artwork).map(s => [s.url, s.artwork]));
+
+  const songs = list.slice(0, 30)
+    .map(song => {
+      const upload = SONG_COVER_FIELD.test(song?.coverFile) ? requestFile(req, song.coverFile) : null;
+      return {
+        title: text(song?.title, 120),
+        artist: text(song?.artist, 120),
+        url: safeUrl(song?.url),
+        cover: upload ? fileUrl(upload) : keptCovers.has(song?.cover) ? song.cover : '',
+      };
+    })
     .filter(song => song.title || song.artist);
+
+  await Promise.all(songs.map(async song => {
+    song.artwork = song.url ? knownArtwork.get(song.url) || await fetchArtwork(song.url) : '';
+  }));
+  return songs;
+}
+
+function durationValue(value) {
+  const seconds = Number(value);
+  return seconds > 0 && seconds < 36000 ? Math.round(seconds * 10) / 10 : null;
 }
 
 function peakList(value) {
@@ -187,9 +233,23 @@ async function removeUpload(url) {
   await fsp.unlink(path.join(UPLOAD_DIR, path.basename(url))).catch(() => {});
 }
 
-async function removeRequestFiles(req) {
-  const files = Object.values(req.files || {}).flat();
-  await Promise.all(files.map(f => fsp.unlink(f.path).catch(() => {})));
+function requestFiles(req) {
+  return Array.isArray(req.files) ? req.files : Object.values(req.files || {}).flat();
+}
+
+function requestFile(req, fieldname) {
+  return requestFiles(req).find(f => f.fieldname === fieldname) || null;
+}
+
+async function removeRequestFiles(req, keep = []) {
+  const kept = new Set(keep.filter(Boolean));
+  const unused = requestFiles(req).filter(f => !kept.has(fileUrl(f)));
+  await Promise.all(unused.map(f => fsp.unlink(f.path).catch(() => {})));
+}
+
+// Uploads a beat refers to: its audio, cover, and any uploaded song covers.
+function beatUploads(beat) {
+  return [beat.audio, beat.cover, ...(beat.songs || []).map(s => s.cover)].filter(Boolean);
 }
 
 function findBeat(req, res) {
@@ -284,35 +344,36 @@ app.put('/api/admin/contact', requireAdminApi, async (req, res) => {
   res.json(content);
 });
 
-const beatFiles = upload.fields([{ name: 'audio', maxCount: 1 }, { name: 'cover', maxCount: 1 }]);
-
-app.post('/api/admin/beats', requireAdminApi, beatFiles, async (req, res) => {
+app.post('/api/admin/beats', requireAdminApi, upload.any(), async (req, res) => {
   const body = req.body || {};
-  const audio = req.files?.audio?.[0];
+  const audio = requestFile(req, 'audio');
   const title = text(body.title, 120);
   if (!audio || !title) {
     await removeRequestFiles(req);
     return res.status(400).json({ error: 'A beat needs an audio file and a title.' });
   }
 
-  content.beats.unshift({
+  const beat = {
     id: crypto.randomBytes(8).toString('hex'),
     title,
     producer: text(body.producer, 120),
     bpm: bpmValue(body.bpm),
     key: text(body.key, 30),
-    songs: songList(body.songs),
+    duration: durationValue(body.duration),
+    songs: await songList(body.songs, req),
     audio: fileUrl(audio),
-    cover: fileUrl(req.files?.cover?.[0]),
+    cover: fileUrl(requestFile(req, 'cover')),
     peaks: peakList(body.peaks),
     downloadable: body.downloadable === 'true',
     createdAt: new Date().toISOString(),
-  });
+  };
+  content.beats.unshift(beat);
   await saveContent();
+  await removeRequestFiles(req, beatUploads(beat));
   res.status(201).json(content);
 });
 
-app.put('/api/admin/beats/:id', requireAdminApi, upload.fields([{ name: 'cover', maxCount: 1 }]), async (req, res) => {
+app.put('/api/admin/beats/:id', requireAdminApi, upload.any(), async (req, res) => {
   const beat = findBeat(req, res);
   if (!beat) return removeRequestFiles(req);
 
@@ -323,19 +384,22 @@ app.put('/api/admin/beats/:id', requireAdminApi, upload.fields([{ name: 'cover',
     return res.status(400).json({ error: 'A beat needs a title.' });
   }
 
-  const oldCover = beat.cover;
-  const cover = req.files?.cover?.[0];
+  const oldUploads = beatUploads(beat);
+  const cover = requestFile(req, 'cover');
   Object.assign(beat, {
     title,
     producer: text(body.producer, 120),
     bpm: bpmValue(body.bpm),
     key: text(body.key, 30),
-    songs: songList(body.songs),
+    songs: await songList(body.songs, req, beat.songs),
     downloadable: body.downloadable === 'true',
-    cover: cover ? fileUrl(cover) : body.removeCover === 'true' ? null : oldCover,
+    cover: cover ? fileUrl(cover) : body.removeCover === 'true' ? null : beat.cover,
   });
   await saveContent();
-  if (beat.cover !== oldCover) await removeUpload(oldCover);
+
+  const newUploads = beatUploads(beat);
+  await removeRequestFiles(req, newUploads);
+  await Promise.all(oldUploads.filter(url => !newUploads.includes(url)).map(removeUpload));
   res.json(content);
 });
 
@@ -355,8 +419,7 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   if (!beat) return;
   content.beats = content.beats.filter(b => b !== beat);
   await saveContent();
-  await removeUpload(beat.audio);
-  await removeUpload(beat.cover);
+  await Promise.all(beatUploads(beat).map(removeUpload));
   res.json(content);
 });
 
@@ -375,6 +438,16 @@ app.use(async (err, req, res, next) => {
   res.status(tooBig ? 413 : 400).json({ error: tooBig ? 'That file is too big (200 MB max).' : err.message });
 });
 
+// Songs saved before artwork lookup existed get their covers fetched once.
+async function backfillArtwork() {
+  const missing = content.beats.flatMap(b => b.songs || []).filter(s => s.url && s.artwork === undefined);
+  if (!missing.length) return;
+  await Promise.all(missing.map(async song => { song.artwork = await fetchArtwork(song.url); }));
+  await saveContent();
+  console.log(`Fetched artwork for ${missing.length} song(s)`);
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`ch08 running on port ${PORT}, saving content in ${DATA_DIR}`);
+  backfillArtwork().catch(err => console.error('Artwork backfill failed:', err.message));
 });

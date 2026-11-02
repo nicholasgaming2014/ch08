@@ -43,6 +43,22 @@
     <section id="beats" class="page" hidden>
       <div class="content-column">
         <h1 class="page-title">beats</h1>
+        <div class="beats-toolbar" hidden>
+          <label class="sort-control">
+            <span>sort</span>
+            <select id="beat-sort">
+              <option value="newest">newest</option>
+              <option value="oldest">oldest</option>
+              <option value="title">title a–z</option>
+              <option value="title-desc">title z–a</option>
+              <option value="bpm">bpm low–high</option>
+              <option value="bpm-desc">bpm high–low</option>
+              <option value="length">length short–long</option>
+              <option value="length-desc">length long–short</option>
+            </select>
+          </label>
+          <div class="producer-pills" role="group" aria-label="Filter by producer"></div>
+        </div>
         <div class="beat-list"></div>
         <p class="empty-note" hidden>no beats yet</p>
       </div>

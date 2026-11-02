@@ -103,6 +103,53 @@ function addSongRow(editor, song = { title: '', artist: '', url: '' }) {
   const row = document.createElement('div');
   row.className = 'link-row song-row';
 
+  // Cover: an uploaded one (song.cover) wins over artwork fetched from the link.
+  let manualCover = song.cover || '';
+  let newFile = null;
+
+  const thumb = document.createElement('button');
+  thumb.type = 'button';
+  thumb.className = 'song-thumb';
+  thumb.title = 'Upload a cover (otherwise it’s pulled from the link)';
+  thumb.setAttribute('aria-label', 'Upload song cover');
+  const thumbImg = document.createElement('img');
+  thumbImg.alt = '';
+  thumb.append(thumbImg);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/jpeg,image/png,image/gif,image/webp';
+  fileInput.hidden = true;
+
+  const auto = document.createElement('button');
+  auto.type = 'button';
+  auto.className = 'button secondary song-auto';
+  auto.textContent = 'auto';
+  auto.title = 'Use the cover from the link instead';
+
+  function showCover() {
+    const src = newFile ? URL.createObjectURL(newFile) : manualCover || song.artwork || '';
+    thumbImg.hidden = !src;
+    if (src) thumbImg.src = src;
+    thumb.classList.toggle('empty', !src);
+    auto.hidden = !newFile && !manualCover;
+  }
+
+  thumb.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) newFile = fileInput.files[0];
+    showCover();
+  });
+  auto.addEventListener('click', () => {
+    newFile = null;
+    manualCover = '';
+    fileInput.value = '';
+    showCover();
+  });
+
+  row.songCover = () => ({ cover: manualCover, file: newFile });
+  showCover();
+
   const fields = [
     ['title', 'song title', 120],
     ['artist', 'original artist', 120],
@@ -124,14 +171,25 @@ function addSongRow(editor, song = { title: '', artist: '', url: '' }) {
   remove.setAttribute('aria-label', 'Remove song');
   remove.addEventListener('click', () => row.remove());
 
-  row.append(...fields, remove);
+  row.append(thumb, fileInput, ...fields, auto, remove);
   editor.append(row);
 }
 
-function readSongs(editor) {
-  return [...editor.querySelectorAll('.song-row')]
-    .map(row => Object.fromEntries([...row.querySelectorAll('input')].map(i => [i.dataset.key, i.value.trim()])))
-    .filter(song => song.title || song.artist || song.url);
+// Adds the songs (and any newly picked covers) to the form data being sent.
+function appendSongs(data, editor) {
+  const songs = [];
+  editor.querySelectorAll('.song-row').forEach(row => {
+    const song = Object.fromEntries([...row.querySelectorAll('input[data-key]')].map(i => [i.dataset.key, i.value.trim()]));
+    if (!song.title && !song.artist && !song.url) return;
+    const { cover, file } = row.songCover();
+    song.cover = cover;
+    if (file) {
+      song.coverFile = `songCover_${songs.length}`;
+      data.append(song.coverFile, file);
+    }
+    songs.push(song);
+  });
+  data.append('songs', JSON.stringify(songs));
 }
 
 function wireSongEditor(form, songs = []) {
@@ -233,10 +291,10 @@ contactForm.addEventListener('submit', async e => {
 const uploadForm = document.getElementById('beat-upload');
 wireSongEditor(uploadForm);
 
-// Reads the audio in the browser to get the bar heights for the waveform.
-async function computePeaks(file, bars = 240) {
+// Reads the audio in the browser to get the bar heights for the waveform and its length.
+async function analyzeAudio(file, bars = 240) {
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return [];
+  if (!AudioCtx) return { peaks: [], duration: null };
   const ctx = new AudioCtx();
   try {
     const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
@@ -252,9 +310,9 @@ async function computePeaks(file, bars = 240) {
       peaks.push(max);
     }
     const top = Math.max(...peaks, 0.0001);
-    return peaks.map(p => Math.round((p / top) * 1000) / 1000);
+    return { peaks: peaks.map(p => Math.round((p / top) * 1000) / 1000), duration: buffer.duration };
   } catch {
-    return [];
+    return { peaks: [], duration: null };
   } finally {
     ctx.close();
   }
@@ -273,15 +331,16 @@ uploadForm.addEventListener('submit', async e => {
   setBusy(uploadForm, true);
   setStatus(uploadForm, 'reading audio…');
   try {
-    const peaks = await computePeaks(audio);
+    const { peaks, duration } = await analyzeAudio(audio);
     const data = new FormData();
     data.append('title', uploadForm.title.value);
     data.append('producer', uploadForm.producer.value);
     data.append('bpm', uploadForm.bpm.value);
     data.append('key', uploadForm.key.value);
-    data.append('songs', JSON.stringify(readSongs(uploadForm.querySelector('.song-editor'))));
+    appendSongs(data, uploadForm.querySelector('.song-editor'));
     data.append('downloadable', uploadForm.downloadable.checked);
     data.append('peaks', JSON.stringify(peaks));
+    data.append('duration', duration);
     data.append('audio', audio);
     if (uploadForm.cover.files[0]) data.append('cover', uploadForm.cover.files[0]);
 
@@ -334,7 +393,7 @@ function beatEditor(beat, index, total) {
     data.append('producer', form.producer.value);
     data.append('bpm', form.bpm.value);
     data.append('key', form.key.value);
-    data.append('songs', JSON.stringify(readSongs(form.querySelector('.song-editor'))));
+    appendSongs(data, form.querySelector('.song-editor'));
     data.append('downloadable', form.downloadable.checked);
     data.append('removeCover', form.removeCover.checked);
     if (form.cover.files[0]) data.append('cover', form.cover.files[0]);

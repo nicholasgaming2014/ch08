@@ -252,6 +252,88 @@ body {
   gap: 20px;
 }
 
+/* Sort menu and producer filter */
+.beats-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: -8px;
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
+.sort-control {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.sort-control span {
+  opacity: 0.6;
+}
+
+.sort-control select {
+  appearance: none;
+  padding: 6px 30px 6px 12px;
+  background: #000 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center / 10px;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 999px;
+  font: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.sort-control select:hover,
+.sort-control select:focus {
+  outline: none;
+  border-color: #fff;
+}
+
+.producer-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.filter-pill {
+  padding: 6px 14px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.filter-pill:hover {
+  border-color: #fff;
+}
+
+.filter-pill.active {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+@media (max-width: 600px) {
+  .beats-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .producer-pills {
+    justify-content: flex-start;
+  }
+}
+
 .beat {
   display: flex;
   gap: 16px;
@@ -399,6 +481,21 @@ body {
   gap: 10px;
   padding: 6px 0;
   min-width: 0;
+}
+
+.song-cover {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  background: #111;
+  overflow: hidden;
+}
+
+.song-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .beat-songs li + li {
@@ -779,4 +876,43 @@ body {
   .link-row input:first-child {
     flex-basis: 100%;
   }
+}
+
+/* Song cover picker in the admin song list */
+.song-thumb {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: #111;
+  border: 1px solid #444;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+}
+
+.song-thumb:hover {
+  border-color: #fff;
+}
+
+.song-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.song-thumb.empty::after {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #888;
+  font-size: 20px;
+}
+
+.song-row .song-auto {
+  font-size: 12px;
+  padding: 10px;
 }
