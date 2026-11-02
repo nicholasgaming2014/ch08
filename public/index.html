@@ -4,39 +4,46 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ch08</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <header class="banner">
-    <a href="#home" class="logo" aria-label="ch08 home">
+    <button class="menu-button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="/#home" class="logo" aria-label="ch08 home">
       <span>ch</span>
       <span>08</span>
     </a>
-    <nav class="tabs">
-      <a href="#home" class="tab">Home</a>
-      <a href="#contact" class="tab">Contact</a>
-    </nav>
   </header>
+
+  <div class="menu-overlay" hidden></div>
+  <nav id="menu" class="menu" aria-label="Main menu">
+    <a href="/#home" class="menu-link">home</a>
+    <a href="/#contact" class="menu-link">contact</a>
+    <a href="/admin" class="menu-link">admin</a>
+  </nav>
 
   <main>
     <section id="home" class="page">
-      <img src="assets/jeff-teague-5150.gif" alt="" class="hero-gif" width="480" height="236">
+      <img src="/assets/jeff-teague-5150.gif" alt="" class="hero-gif" width="480" height="236">
     </section>
     <section id="contact" class="page"></section>
   </main>
 
+  <script src="/menu.js"></script>
   <script>
-    const tabs = document.querySelectorAll('.tab');
+    const links = document.querySelectorAll('.menu-link[href^="/#"]');
     const pages = document.querySelectorAll('.page');
 
     function show() {
       const id = (location.hash || '#home').slice(1);
       pages.forEach(p => p.hidden = p.id !== id);
-      tabs.forEach(t => t.classList.toggle('active', t.hash === '#' + id));
+      links.forEach(l => l.classList.toggle('active', l.hash === '#' + id));
     }
 
     window.addEventListener('hashchange', show);

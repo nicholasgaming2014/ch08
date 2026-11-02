@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>ch08 admin login</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="banner">
+    <button class="menu-button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="/#home" class="logo" aria-label="ch08 home">
+      <span>ch</span>
+      <span>08</span>
+    </a>
+  </header>
+
+  <div class="menu-overlay" hidden></div>
+  <nav id="menu" class="menu" aria-label="Main menu">
+    <a href="/#home" class="menu-link">home</a>
+    <a href="/#contact" class="menu-link">contact</a>
+    <a href="/admin" class="menu-link active">admin</a>
+  </nav>
+
+  <main class="page centered">
+    <h1>admin</h1>
+    <form class="login-form" method="post" action="/admin/login">
+      <!--ERROR-->
+      <label>
+        username
+        <input name="username" autocomplete="username" required>
+      </label>
+      <label>
+        password
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">log in</button>
+    </form>
+  </main>
+
+  <script src="/menu.js"></script>
+</body>
+</html>
