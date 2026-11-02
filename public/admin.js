@@ -202,6 +202,44 @@ function wireSongEditor(form, songs = []) {
   });
 }
 
+// ---------- Producer list (producers on a beat) ----------
+
+function addProducerRow(list, name = '') {
+  const row = document.createElement('div');
+  row.className = 'link-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'producer name';
+  input.maxLength = 120;
+  input.value = name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'button secondary';
+  remove.textContent = '✕';
+  remove.setAttribute('aria-label', 'Remove producer');
+  remove.addEventListener('click', () => row.remove());
+
+  row.append(input, remove);
+  list.append(row);
+}
+
+// Starts with one empty box so a single producer needs no extra click.
+function wireProducerList(form, producers = []) {
+  const list = form.querySelector('.producer-list');
+  list.replaceChildren();
+  (producers.length ? producers : ['']).forEach(name => addProducerRow(list, name));
+  form.querySelector('.add-producer').addEventListener('click', () => {
+    addProducerRow(list);
+    list.lastElementChild.querySelector('input').focus();
+  });
+}
+
+function readProducers(form) {
+  return [...form.querySelectorAll('.producer-list input')].map(i => i.value.trim()).filter(Boolean);
+}
+
 document.querySelectorAll('.add-link').forEach(button => {
   button.addEventListener('click', () => {
     const editor = button.parentElement.querySelector('.link-editor');
@@ -290,6 +328,7 @@ contactForm.addEventListener('submit', async e => {
 
 const uploadForm = document.getElementById('beat-upload');
 wireSongEditor(uploadForm);
+wireProducerList(uploadForm);
 
 // Reads the audio in the browser to get the bar heights for the waveform and its length.
 async function analyzeAudio(file, bars = 240) {
@@ -334,7 +373,7 @@ uploadForm.addEventListener('submit', async e => {
     const { peaks, duration } = await analyzeAudio(audio);
     const data = new FormData();
     data.append('title', uploadForm.title.value);
-    data.append('producer', uploadForm.producer.value);
+    data.append('producers', JSON.stringify(readProducers(uploadForm)));
     data.append('bpm', uploadForm.bpm.value);
     data.append('key', uploadForm.key.value);
     appendSongs(data, uploadForm.querySelector('.song-editor'));
@@ -348,6 +387,8 @@ uploadForm.addEventListener('submit', async e => {
     renderBeats(content.beats);
     uploadForm.reset();
     uploadForm.querySelector('.song-editor').replaceChildren();
+    uploadForm.querySelector('.producer-list').replaceChildren();
+    addProducerRow(uploadForm.querySelector('.producer-list'));
     uploadForm.downloadable.checked = true;
     setStatus(uploadForm, peaks.length ? 'uploaded ✓' : 'uploaded ✓ (couldn’t read this file for a waveform, so it shows flat bars)');
   } catch (err) {
@@ -365,7 +406,7 @@ function beatEditor(beat, index, total) {
   form.querySelector('.remove-cover').hidden = !beat.cover;
 
   form.title.value = beat.title;
-  form.producer.value = beat.producer || '';
+  wireProducerList(form, beat.producers || []);
   form.bpm.value = beat.bpm ?? '';
   form.key.value = beat.key;
   wireSongEditor(form, beat.songs || []);
@@ -390,7 +431,7 @@ function beatEditor(beat, index, total) {
     e.preventDefault();
     const data = new FormData();
     data.append('title', form.title.value);
-    data.append('producer', form.producer.value);
+    data.append('producers', JSON.stringify(readProducers(form)));
     data.append('bpm', form.bpm.value);
     data.append('key', form.key.value);
     appendSongs(data, form.querySelector('.song-editor'));
@@ -493,9 +534,8 @@ function producerRow(key, name) {
 // One row per producer on the beats, matched the same way as the public pills.
 function renderProducers() {
   const names = new Map();
-  content.beats.forEach(beat => {
-    const name = (beat.producer || '').trim();
-    if (name && !names.has(name.toLowerCase())) names.set(name.toLowerCase(), name);
+  content.beats.flatMap(beat => beat.producers || []).forEach(name => {
+    if (!names.has(name.toLowerCase())) names.set(name.toLowerCase(), name);
   });
   const sorted = [...names].sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' }));
   producerCard.querySelector('.producer-editor').replaceChildren(...sorted.map(([key, name]) => producerRow(key, name)));

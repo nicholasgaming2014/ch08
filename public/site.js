@@ -118,6 +118,11 @@ function renderSongs(container, songs) {
   container.hidden = songs.length === 0;
 }
 
+// "a", "a & b", "a, b & c"
+function joinNames(names) {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} & ${names.at(-1)}`;
+}
+
 function createPlayer(beat) {
   const node = document.getElementById('beat-template').content.firstElementChild.cloneNode(true);
   const audio = new Audio();
@@ -129,7 +134,8 @@ function createPlayer(beat) {
   else cover.classList.add('no-cover');
 
   node.querySelector('.beat-title').textContent = beat.title;
-  setText(node.querySelector('.beat-producer'), beat.producer && `prod. ${beat.producer}`);
+  const producers = beat.producers || [];
+  setText(node.querySelector('.beat-producer'), producers.length && `prod. ${joinNames(producers)}`);
   const meta = [beat.bpm && `${beat.bpm} bpm`, beat.key].filter(Boolean).join(' · ');
   setText(node.querySelector('.beat-meta'), meta);
   renderSongs(node.querySelector('.beat-songs'), beat.songs || []);
@@ -269,7 +275,7 @@ const SORTS = {
 };
 
 function applyView() {
-  const visible = players.filter(p => !view.producers.size || view.producers.has(producerKey(p.beat.producer)));
+  const visible = players.filter(p => !view.producers.size || (p.beat.producers || []).some(name => view.producers.has(producerKey(name))));
   players.filter(p => !visible.includes(p)).forEach(p => p.pause());
   visible.sort(SORTS[view.sort] || SORTS.newest);
   document.querySelector('.beat-list').replaceChildren(...visible.map(p => p.node));
@@ -312,9 +318,9 @@ function pill(label, producer = '') {
 function renderProducerPills() {
   // One pill per producer, using the first spelling seen.
   const names = new Map();
-  players.forEach(p => {
-    const key = producerKey(p.beat.producer);
-    if (key && !names.has(key)) names.set(key, p.beat.producer.trim());
+  players.flatMap(p => p.beat.producers || []).forEach(name => {
+    const key = producerKey(name);
+    if (key && !names.has(key)) names.set(key, name.trim());
   });
   [...view.producers].forEach(key => names.has(key) || view.producers.delete(key));
   const sorted = [...names].sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' }));

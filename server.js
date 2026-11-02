@@ -34,13 +34,20 @@ const DEFAULT_CONTENT = {
   producers: {},
 };
 
+// Beats saved before multiple producers had a single `producer` string.
+function withProducerList(beat) {
+  if (Array.isArray(beat.producers)) return beat;
+  const { producer, ...rest } = beat;
+  return { ...rest, producers: producer ? [producer] : [] };
+}
+
 function loadContent() {
   const content = structuredClone(DEFAULT_CONTENT);
   try {
     const saved = JSON.parse(fs.readFileSync(CONTENT_FILE, 'utf8'));
     Object.assign(content.home, saved.home);
     Object.assign(content.contact, saved.contact);
-    if (Array.isArray(saved.beats)) content.beats = saved.beats;
+    if (Array.isArray(saved.beats)) content.beats = saved.beats.map(withProducerList);
     if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
   } catch {}
   return content;
@@ -207,6 +214,22 @@ async function songList(value, req, previous = []) {
   return songs;
 }
 
+const producerKey = name => text(name, 120).toLowerCase();
+
+// Producers on a beat, in the order given, without blanks or repeats.
+function producerList(value) {
+  let list = value;
+  try { list = JSON.parse(list || '[]'); } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.map(name => text(name, 120)).filter(name => {
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 10);
+}
+
 function durationValue(value) {
   const seconds = Number(value);
   return seconds > 0 && seconds < 36000 ? Math.round(seconds * 10) / 10 : null;
@@ -359,7 +382,7 @@ app.post('/api/admin/beats', requireAdminApi, upload.any(), async (req, res) => 
   const beat = {
     id: crypto.randomBytes(8).toString('hex'),
     title,
-    producer: text(body.producer, 120),
+    producers: producerList(body.producers),
     bpm: bpmValue(body.bpm),
     key: text(body.key, 30),
     duration: durationValue(body.duration),
@@ -391,7 +414,7 @@ app.put('/api/admin/beats/:id', requireAdminApi, upload.any(), async (req, res) 
   const cover = requestFile(req, 'cover');
   Object.assign(beat, {
     title,
-    producer: text(body.producer, 120),
+    producers: producerList(body.producers),
     bpm: bpmValue(body.bpm),
     key: text(body.key, 30),
     songs: await songList(body.songs, req, beat.songs),
@@ -425,8 +448,6 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   await Promise.all(beatUploads(beat).map(removeUpload));
   res.json(content);
 });
-
-const producerKey = name => text(name, 120).toLowerCase();
 
 // Sets or removes one producer's picture.
 app.put('/api/admin/producers/:name', requireAdminApi, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
