@@ -97,6 +97,53 @@ function readLinks(editor) {
     .filter(link => link.label || link.url);
 }
 
+// ---------- Song editor (songs linked to a beat) ----------
+
+function addSongRow(editor, song = { title: '', artist: '', url: '' }) {
+  const row = document.createElement('div');
+  row.className = 'link-row song-row';
+
+  const fields = [
+    ['title', 'song title', 120],
+    ['artist', 'original artist', 120],
+    ['url', 'spotify / soundcloud link', 500],
+  ].map(([key, placeholder, max]) => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.dataset.key = key;
+    input.placeholder = placeholder;
+    input.maxLength = max;
+    input.value = song[key] || '';
+    return input;
+  });
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'button secondary';
+  remove.textContent = '✕';
+  remove.setAttribute('aria-label', 'Remove song');
+  remove.addEventListener('click', () => row.remove());
+
+  row.append(...fields, remove);
+  editor.append(row);
+}
+
+function readSongs(editor) {
+  return [...editor.querySelectorAll('.song-row')]
+    .map(row => Object.fromEntries([...row.querySelectorAll('input')].map(i => [i.dataset.key, i.value.trim()])))
+    .filter(song => song.title || song.artist || song.url);
+}
+
+function wireSongEditor(form, songs = []) {
+  const editor = form.querySelector('.song-editor');
+  editor.replaceChildren();
+  songs.forEach(song => addSongRow(editor, song));
+  form.querySelector('.add-song').addEventListener('click', () => {
+    addSongRow(editor);
+    editor.lastElementChild.querySelector('input').focus();
+  });
+}
+
 document.querySelectorAll('.add-link').forEach(button => {
   button.addEventListener('click', () => {
     const editor = button.parentElement.querySelector('.link-editor');
@@ -184,6 +231,7 @@ contactForm.addEventListener('submit', async e => {
 // ---------- Beats ----------
 
 const uploadForm = document.getElementById('beat-upload');
+wireSongEditor(uploadForm);
 
 // Reads the audio in the browser to get the bar heights for the waveform.
 async function computePeaks(file, bars = 240) {
@@ -228,8 +276,10 @@ uploadForm.addEventListener('submit', async e => {
     const peaks = await computePeaks(audio);
     const data = new FormData();
     data.append('title', uploadForm.title.value);
+    data.append('producer', uploadForm.producer.value);
     data.append('bpm', uploadForm.bpm.value);
     data.append('key', uploadForm.key.value);
+    data.append('songs', JSON.stringify(readSongs(uploadForm.querySelector('.song-editor'))));
     data.append('downloadable', uploadForm.downloadable.checked);
     data.append('peaks', JSON.stringify(peaks));
     data.append('audio', audio);
@@ -238,6 +288,7 @@ uploadForm.addEventListener('submit', async e => {
     content = await send('POST', '/api/admin/beats', data, p => setStatus(uploadForm, `uploading… ${Math.round(p * 100)}%`));
     renderBeats(content.beats);
     uploadForm.reset();
+    uploadForm.querySelector('.song-editor').replaceChildren();
     uploadForm.downloadable.checked = true;
     setStatus(uploadForm, peaks.length ? 'uploaded ✓' : 'uploaded ✓ (couldn’t read this file for a waveform, so it shows flat bars)');
   } catch (err) {
@@ -255,8 +306,10 @@ function beatEditor(beat, index, total) {
   form.querySelector('.remove-cover').hidden = !beat.cover;
 
   form.title.value = beat.title;
+  form.producer.value = beat.producer || '';
   form.bpm.value = beat.bpm ?? '';
   form.key.value = beat.key;
+  wireSongEditor(form, beat.songs || []);
   form.downloadable.checked = beat.downloadable;
   form.querySelector('audio').src = beat.audio;
   form.querySelector('.move-up').disabled = index === 0;
@@ -278,8 +331,10 @@ function beatEditor(beat, index, total) {
     e.preventDefault();
     const data = new FormData();
     data.append('title', form.title.value);
+    data.append('producer', form.producer.value);
     data.append('bpm', form.bpm.value);
     data.append('key', form.key.value);
+    data.append('songs', JSON.stringify(readSongs(form.querySelector('.song-editor'))));
     data.append('downloadable', form.downloadable.checked);
     data.append('removeCover', form.removeCover.checked);
     if (form.cover.files[0]) data.append('cover', form.cover.files[0]);

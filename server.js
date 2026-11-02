@@ -153,6 +153,16 @@ function linkList(value) {
     .filter(link => link.label && link.url);
 }
 
+// Songs linked to a beat: title, artist, and a Spotify/SoundCloud/etc. link.
+function songList(value) {
+  let list = value;
+  try { list = JSON.parse(list || '[]'); } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, 30)
+    .map(song => ({ title: text(song?.title, 120), artist: text(song?.artist, 120), url: safeUrl(song?.url) }))
+    .filter(song => song.title || song.artist);
+}
+
 function peakList(value) {
   try {
     const peaks = JSON.parse(value || '[]');
@@ -288,8 +298,10 @@ app.post('/api/admin/beats', requireAdminApi, beatFiles, async (req, res) => {
   content.beats.unshift({
     id: crypto.randomBytes(8).toString('hex'),
     title,
+    producer: text(body.producer, 120),
     bpm: bpmValue(body.bpm),
     key: text(body.key, 30),
+    songs: songList(body.songs),
     audio: fileUrl(audio),
     cover: fileUrl(req.files?.cover?.[0]),
     peaks: peakList(body.peaks),
@@ -315,8 +327,10 @@ app.put('/api/admin/beats/:id', requireAdminApi, upload.fields([{ name: 'cover',
   const cover = req.files?.cover?.[0];
   Object.assign(beat, {
     title,
+    producer: text(body.producer, 120),
     bpm: bpmValue(body.bpm),
     key: text(body.key, 30),
+    songs: songList(body.songs),
     downloadable: body.downloadable === 'true',
     cover: cover ? fileUrl(cover) : body.removeCover === 'true' ? null : oldCover,
   });

@@ -69,6 +69,43 @@ function fileExtension(url) {
   return match ? match[0] : '';
 }
 
+// Names the link button after the service the song is on.
+function serviceName(url) {
+  const host = new URL(url).hostname.replace(/^www\./, '');
+  if (host.endsWith('spotify.com')) return 'spotify';
+  if (host.endsWith('soundcloud.com') || host === 'on.soundcloud.com') return 'soundcloud';
+  if (host.endsWith('music.apple.com')) return 'apple music';
+  if (host.endsWith('youtube.com') || host === 'youtu.be') return 'youtube';
+  return 'listen';
+}
+
+function renderSongs(container, songs) {
+  container.querySelector('ul').replaceChildren(...songs.map(song => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.className = 'song-name';
+    name.textContent = song.title || song.artist;
+    li.append(name);
+    if (song.title && song.artist) {
+      const artist = document.createElement('span');
+      artist.className = 'song-artist';
+      artist.textContent = song.artist;
+      li.append(artist);
+    }
+    if (song.url) {
+      const link = document.createElement('a');
+      link.className = 'song-link';
+      link.href = song.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = serviceName(song.url);
+      li.append(link);
+    }
+    return li;
+  }));
+  container.hidden = songs.length === 0;
+}
+
 function createPlayer(beat) {
   const node = document.getElementById('beat-template').content.firstElementChild.cloneNode(true);
   const audio = new Audio();
@@ -80,8 +117,10 @@ function createPlayer(beat) {
   else cover.classList.add('no-cover');
 
   node.querySelector('.beat-title').textContent = beat.title;
-  const meta = [beat.bpm && `${beat.bpm} BPM`, beat.key].filter(Boolean).join(' · ');
+  setText(node.querySelector('.beat-producer'), beat.producer && `prod. ${beat.producer}`);
+  const meta = [beat.bpm && `${beat.bpm} bpm`, beat.key].filter(Boolean).join(' · ');
   setText(node.querySelector('.beat-meta'), meta);
+  renderSongs(node.querySelector('.beat-songs'), beat.songs || []);
 
   const download = node.querySelector('.beat-download');
   if (beat.downloadable) {

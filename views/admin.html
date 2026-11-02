@@ -81,6 +81,9 @@
         <label class="field"><span>title</span>
           <input type="text" name="title" maxlength="120" required>
         </label>
+        <label class="field"><span>producer</span>
+          <input type="text" name="producer" maxlength="120">
+        </label>
         <div class="field-row">
           <label class="field"><span>bpm</span>
             <input type="number" name="bpm" min="1" max="999" inputmode="numeric">
@@ -88,6 +91,10 @@
           <label class="field"><span>key</span>
             <input type="text" name="key" maxlength="30" placeholder="C minor">
           </label>
+        </div>
+        <div class="field"><span>linked songs (song, original artist, spotify/soundcloud link)</span>
+          <div class="song-editor"></div>
+          <button type="button" class="button secondary add-song" style="align-self:flex-start">+ add song</button>
         </div>
         <label class="field"><span>cover image (optional)</span>
           <input type="file" name="cover" accept="image/jpeg,image/png,image/gif,image/webp">
@@ -133,6 +140,9 @@
         <label class="field"><span>title</span>
           <input type="text" name="title" maxlength="120" required>
         </label>
+        <label class="field"><span>producer</span>
+          <input type="text" name="producer" maxlength="120">
+        </label>
         <div class="field-row">
           <label class="field"><span>bpm</span>
             <input type="number" name="bpm" min="1" max="999" inputmode="numeric">
@@ -140,6 +150,10 @@
           <label class="field"><span>key</span>
             <input type="text" name="key" maxlength="30">
           </label>
+        </div>
+        <div class="field"><span>linked songs</span>
+          <div class="song-editor"></div>
+          <button type="button" class="button secondary add-song" style="align-self:flex-start">+ add song</button>
         </div>
         <label class="field"><span>replace cover</span>
           <input type="file" name="cover" accept="image/jpeg,image/png,image/gif,image/webp">
