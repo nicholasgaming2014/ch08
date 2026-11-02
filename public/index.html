@@ -24,30 +24,62 @@
   <div class="menu-overlay" hidden></div>
   <nav id="menu" class="menu" aria-label="Main menu">
     <a href="/#home" class="menu-link">home</a>
+    <a href="/#beats" class="menu-link">beats</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link">admin</a>
   </nav>
 
   <main>
     <section id="home" class="page">
-      <img src="/assets/jeff-teague-5150.gif" alt="" class="hero-gif" width="480" height="236">
+      <div class="home">
+        <p class="home-headline" hidden></p>
+        <h1 class="home-big" hidden></h1>
+        <img class="hero-gif" alt="" hidden>
+        <p class="home-paragraph" hidden></p>
+        <div class="link-list" hidden></div>
+      </div>
     </section>
-    <section id="contact" class="page"></section>
+
+    <section id="beats" class="page" hidden>
+      <div class="content-column">
+        <h1 class="page-title">beats</h1>
+        <div class="beat-list"></div>
+        <p class="empty-note" hidden>no beats yet</p>
+      </div>
+    </section>
+
+    <section id="contact" class="page" hidden>
+      <div class="content-column contact">
+        <h1 class="page-title">contact</h1>
+        <p class="contact-paragraph" hidden></p>
+        <a class="contact-email" hidden></a>
+        <div class="link-list" hidden></div>
+      </div>
+    </section>
   </main>
 
+  <template id="beat-template">
+    <article class="beat">
+      <div class="beat-cover"><img alt=""></div>
+      <div class="beat-body">
+        <div class="beat-top">
+          <button class="play-button" aria-label="Play">
+            <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+          </button>
+          <div class="beat-info">
+            <h2 class="beat-title"></h2>
+            <p class="beat-meta"></p>
+          </div>
+          <a class="beat-download" download>download</a>
+        </div>
+        <canvas class="waveform" aria-label="Seek"></canvas>
+        <div class="beat-time"><span class="time-current">0:00</span><span class="time-total"></span></div>
+      </div>
+    </article>
+  </template>
+
   <script src="/menu.js"></script>
-  <script>
-    const links = document.querySelectorAll('.menu-link[href^="/#"]');
-    const pages = document.querySelectorAll('.page');
-
-    function show() {
-      const id = (location.hash || '#home').slice(1);
-      pages.forEach(p => p.hidden = p.id !== id);
-      links.forEach(l => l.classList.toggle('active', l.hash === '#' + id));
-    }
-
-    window.addEventListener('hashchange', show);
-    show();
-  </script>
+  <script src="/site.js"></script>
 </body>
 </html>

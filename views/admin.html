@@ -25,6 +25,7 @@
   <div class="menu-overlay" hidden></div>
   <nav id="menu" class="menu" aria-label="Main menu">
     <a href="/#home" class="menu-link">home</a>
+    <a href="/#beats" class="menu-link">beats</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link active">admin</a>
     <form method="post" action="/admin/logout">
@@ -32,10 +33,132 @@
     </form>
   </nav>
 
-  <main class="page centered">
-    <h1>admin</h1>
+  <main class="admin">
+    <h1 class="page-title">admin</h1>
+
+    <nav class="admin-tabs" aria-label="Admin sections">
+      <a href="#home" class="menu-link">home</a>
+      <a href="#beats" class="menu-link">beats</a>
+      <a href="#contact" class="menu-link">contact</a>
+    </nav>
+
+    <!-- Home -->
+    <section id="panel-home" class="admin-panel">
+      <form id="home-form" class="admin-card">
+        <label class="field"><span>headline (small text at the top)</span>
+          <input type="text" name="headline" maxlength="200">
+        </label>
+        <label class="field"><span>big centered text</span>
+          <input type="text" name="bigText" maxlength="300">
+        </label>
+        <div class="field"><span>image or gif</span>
+          <img class="image-preview" alt="" hidden>
+          <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+          <label class="check"><input type="checkbox" name="removeImage"> remove image</label>
+        </div>
+        <label class="field"><span>paragraph</span>
+          <textarea name="paragraph" maxlength="5000"></textarea>
+        </label>
+        <div class="field"><span>links (buttons under the paragraph)</span>
+          <div class="link-editor" data-name="links"></div>
+          <button type="button" class="button secondary add-link" style="align-self:flex-start">+ add link</button>
+        </div>
+        <div class="button-row">
+          <button type="submit" class="button">save home</button>
+          <a href="/#home" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
+          <span class="status" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- Beats -->
+    <section id="panel-beats" class="admin-panel" hidden>
+      <form id="beat-upload" class="admin-card">
+        <h2>upload a beat</h2>
+        <label class="field"><span>audio file (mp3, wav, m4a, ogg, flac)</span>
+          <input type="file" name="audio" accept="audio/*" required>
+        </label>
+        <label class="field"><span>title</span>
+          <input type="text" name="title" maxlength="120" required>
+        </label>
+        <div class="field-row">
+          <label class="field"><span>bpm</span>
+            <input type="number" name="bpm" min="1" max="999" inputmode="numeric">
+          </label>
+          <label class="field"><span>key</span>
+            <input type="text" name="key" maxlength="30" placeholder="C minor">
+          </label>
+        </div>
+        <label class="field"><span>cover image (optional)</span>
+          <input type="file" name="cover" accept="image/jpeg,image/png,image/gif,image/webp">
+        </label>
+        <label class="check"><input type="checkbox" name="downloadable" checked> show download button</label>
+        <div class="button-row">
+          <button type="submit" class="button">upload beat</button>
+          <span class="status" role="status"></span>
+        </div>
+      </form>
+
+      <h2>your beats</h2>
+      <p class="empty-note" hidden>no beats yet</p>
+      <div class="admin-beat-list beat-list"></div>
+    </section>
+
+    <!-- Contact -->
+    <section id="panel-contact" class="admin-panel" hidden>
+      <form id="contact-form" class="admin-card">
+        <label class="field"><span>paragraph</span>
+          <textarea name="paragraph" maxlength="5000"></textarea>
+        </label>
+        <label class="field"><span>email</span>
+          <input type="email" name="email" maxlength="200">
+        </label>
+        <div class="field"><span>social links</span>
+          <div class="link-editor" data-name="socials"></div>
+          <button type="button" class="button secondary add-link" style="align-self:flex-start">+ add link</button>
+        </div>
+        <div class="button-row">
+          <button type="submit" class="button">save contact</button>
+          <a href="/#contact" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
+          <span class="status" role="status"></span>
+        </div>
+      </form>
+    </section>
   </main>
 
+  <template id="admin-beat-template">
+    <form class="admin-card admin-beat">
+      <div class="beat-cover"><img alt=""></div>
+      <div class="admin-beat-fields">
+        <label class="field"><span>title</span>
+          <input type="text" name="title" maxlength="120" required>
+        </label>
+        <div class="field-row">
+          <label class="field"><span>bpm</span>
+            <input type="number" name="bpm" min="1" max="999" inputmode="numeric">
+          </label>
+          <label class="field"><span>key</span>
+            <input type="text" name="key" maxlength="30">
+          </label>
+        </div>
+        <label class="field"><span>replace cover</span>
+          <input type="file" name="cover" accept="image/jpeg,image/png,image/gif,image/webp">
+        </label>
+        <label class="check remove-cover"><input type="checkbox" name="removeCover"> remove cover</label>
+        <label class="check"><input type="checkbox" name="downloadable"> show download button</label>
+        <audio controls preload="none"></audio>
+        <div class="button-row">
+          <button type="submit" class="button">save</button>
+          <button type="button" class="button secondary move-up" aria-label="Move up">↑</button>
+          <button type="button" class="button secondary move-down" aria-label="Move down">↓</button>
+          <button type="button" class="button danger delete">delete</button>
+          <span class="status" role="status"></span>
+        </div>
+      </div>
+    </form>
+  </template>
+
   <script src="/menu.js"></script>
+  <script src="/admin.js"></script>
 </body>
 </html>
