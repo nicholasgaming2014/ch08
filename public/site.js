@@ -107,13 +107,26 @@ function renderPedia(pedia) {
 
   const box = section.querySelector('.pedia-infobox');
   setText(box.querySelector('.pedia-infobox-title'), pedia.infoboxTitle);
-  const figure = box.querySelector('figure');
-  if (pedia.image) figure.querySelector('img').src = pedia.image;
-  figure.hidden = !pedia.image;
-  setText(figure.querySelector('figcaption'), pedia.imageCaption);
+
+  const flag = box.querySelector('.pedia-flag');
+  if (pedia.image) flag.querySelector('img').src = pedia.image;
+  flag.hidden = !pedia.image;
+
+  const nav = box.querySelector('.pedia-nav-row');
+  nav.querySelector('.pedia-nav-prev').textContent = pedia.navPrev ? '← ' + pedia.navPrev : '';
+  nav.querySelector('.pedia-nav-date').textContent = pedia.navDate || '';
+  nav.querySelector('.pedia-nav-next').textContent = pedia.navNext ? pedia.navNext + ' →' : '';
+  nav.hidden = !pedia.navPrev && !pedia.navDate && !pedia.navNext;
+
   renderFacts(box.querySelector('.pedia-facts'), pedia.infobox);
-  renderFacts(box.querySelector('.pedia-closing'), pedia.closing);
   renderMatchup(box.querySelector('.pedia-matchup'), pedia);
+
+  const map = box.querySelector('.pedia-map');
+  if (pedia.mapImage) map.querySelector('img').src = pedia.mapImage;
+  map.hidden = !pedia.mapImage;
+  setText(map.querySelector('figcaption'), pedia.mapCaption);
+
+  renderFacts(box.querySelector('.pedia-closing'), pedia.closing);
   box.hidden = !pedia.infoboxTitle && !pedia.image && !pedia.infobox.length && !pedia.matchup.length && !pedia.closing.length;
 
   const headings = [];
@@ -132,16 +145,26 @@ function renderPedia(pedia) {
   }));
 
   const contents = section.querySelector('.pedia-contents');
-  contents.querySelector('ol').replaceChildren(...headings.map(([label, heading]) => {
+  const list = contents.querySelector('ol');
+  list.replaceChildren(...headings.map(([label, heading], i) => {
     const li = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = label;
-    button.addEventListener('click', () => heading.scrollIntoView());
+    button.addEventListener('click', () => heading.scrollIntoView({ behavior: 'smooth' }));
     li.append(button);
     return li;
   }));
   contents.hidden = headings.length === 0;
+
+  // Contents hide/show toggle
+  const toggle = contents.querySelector('.pedia-contents-toggle');
+  toggle.textContent = 'hide';
+  list.hidden = false;
+  toggle.onclick = () => {
+    list.hidden = !list.hidden;
+    toggle.textContent = list.hidden ? 'show' : 'hide';
+  };
 }
 
 // ---------- Beat player ----------

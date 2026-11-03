@@ -133,14 +133,22 @@
         <label class="field"><span>side box title</span>
           <input type="text" name="infoboxTitle" maxlength="200">
         </label>
-        <div class="field"><span>side box image</span>
+        <div class="field"><span>flag / top image</span>
           <img class="image-preview" alt="" hidden>
           <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
           <label class="check"><input type="checkbox" name="removeImage"> remove image</label>
         </div>
-        <label class="field"><span>image caption</span>
-          <input type="text" name="imageCaption" maxlength="300">
-        </label>
+        <div class="field-row">
+          <label class="field"><span>← prev</span>
+            <input type="text" name="navPrev" maxlength="80" placeholder="2020">
+          </label>
+          <label class="field"><span>date</span>
+            <input type="text" name="navDate" maxlength="80" placeholder="November 5, 2024">
+          </label>
+          <label class="field"><span>next →</span>
+            <input type="text" name="navNext" maxlength="80" placeholder="2028">
+          </label>
+        </div>
         <div class="field"><span>side box rows</span>
           <div class="infobox-editor"></div>
           <button type="button" class="button secondary add-row" style="align-self:flex-start">+ add row</button>
@@ -161,6 +169,14 @@
             <label class="check"><input type="checkbox" name="removeRightImage"> remove picture</label>
           </div>
         </div>
+        <div class="field"><span>results map / image below comparison</span>
+          <img class="image-preview" alt="" hidden>
+          <input type="file" name="mapImage" accept="image/jpeg,image/png,image/gif,image/webp">
+          <label class="check"><input type="checkbox" name="removeMapImage"> remove map</label>
+        </div>
+        <label class="field"><span>map caption</span>
+          <input type="text" name="mapCaption" maxlength="300">
+        </label>
         <div class="field"><span>side box rows below the comparison</span>
           <div class="closing-editor"></div>
           <button type="button" class="button secondary add-closing" style="align-self:flex-start">+ add row</button>

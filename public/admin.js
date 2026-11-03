@@ -302,7 +302,7 @@ const infoboxEditor = pediaForm.querySelector('.infobox-editor');
 const sectionEditor = pediaForm.querySelector('.section-editor');
 const matchupEditor = pediaForm.querySelector('.matchup-editor');
 const closingEditor = pediaForm.querySelector('.closing-editor');
-const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage']];
+const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage'], ['mapImage', 'removeMapImage']];
 const pediaPreview = name => pediaForm.elements[name].parentElement.querySelector('.image-preview');
 
 function removeButton(row, label) {
@@ -369,6 +369,9 @@ function fillPedia(pedia) {
     pediaPreview(name).src = pedia[name] || '';
     pediaPreview(name).hidden = !pedia[name];
   });
+  ['navPrev', 'navDate', 'navNext', 'mapCaption'].forEach(name => {
+    pediaForm.elements[name].value = pedia[name] || '';
+  });
   infoboxEditor.replaceChildren();
   pedia.infobox.forEach(row => addInfoboxRow(row));
   matchupEditor.replaceChildren();
@@ -401,7 +404,7 @@ PEDIA_IMAGES.forEach(([name, remove]) => {
 pediaForm.addEventListener('submit', async e => {
   e.preventDefault();
   const data = new FormData();
-  ['title', 'intro', 'infoboxTitle', 'imageCaption'].forEach(name => data.append(name, pediaForm.elements[name].value));
+  ['title', 'intro', 'infoboxTitle', 'navPrev', 'navDate', 'navNext', 'mapCaption'].forEach(name => data.append(name, pediaForm.elements[name].value));
   data.append('infobox', JSON.stringify(readRows(infoboxEditor, '.link-row')));
   data.append('matchup', JSON.stringify(readRows(matchupEditor, '.link-row')));
   data.append('closing', JSON.stringify(readRows(closingEditor, '.link-row')));

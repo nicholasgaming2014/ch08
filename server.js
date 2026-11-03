@@ -56,6 +56,11 @@ const DEFAULT_CONTENT = {
       { label: 'Popular vote', left: '77,302,580', right: '75,017,613' },
       { label: 'Percentage', left: '49.8%', right: '48.3%' },
     ],
+    navPrev: '2020',
+    navDate: 'November 5, 2024',
+    navNext: '2028',
+    mapImage: '',
+    mapCaption: '',
     closing: [
       { label: 'President before election', value: 'Joe Biden (Democratic)' },
       { label: 'Elected president', value: 'Donald Trump (Republican)' },
@@ -122,7 +127,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover', 'leftImage', 'rightImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'leftImage', 'rightImage', 'mapImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
@@ -513,7 +518,7 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   res.json(content);
 });
 
-const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage']];
+const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage'], ['mapImage', 'removeMapImage']];
 
 app.put('/api/admin/pedia', requireAdminApi, upload.fields(PEDIA_IMAGES.map(([name]) => ({ name, maxCount: 1 }))), async (req, res) => {
   const body = req.body || {};
@@ -529,7 +534,11 @@ app.put('/api/admin/pedia', requireAdminApi, upload.fields(PEDIA_IMAGES.map(([na
     infoboxTitle: text(body.infoboxTitle, 200),
     imageCaption: text(body.imageCaption, 300),
     infobox: infoboxRows(body.infobox),
+    navPrev: text(body.navPrev, 80),
+    navDate: text(body.navDate, 80),
+    navNext: text(body.navNext, 80),
     matchup: matchupRows(body.matchup),
+    mapCaption: text(body.mapCaption, 300),
     closing: infoboxRows(body.closing),
     sections: pediaSections(body.sections),
     ...images,

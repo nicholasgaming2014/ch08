@@ -71,10 +71,14 @@
         <h1 class="pedia-title"></h1>
         <aside class="pedia-infobox" hidden>
           <p class="pedia-infobox-title"></p>
-          <figure hidden>
+          <figure class="pedia-flag" hidden>
             <img alt="">
-            <figcaption></figcaption>
           </figure>
+          <div class="pedia-nav-row" hidden>
+            <span class="pedia-nav-prev"></span>
+            <span class="pedia-nav-date"></span>
+            <span class="pedia-nav-next"></span>
+          </div>
           <dl class="pedia-facts"></dl>
           <div class="pedia-matchup" hidden>
             <div class="pedia-portraits">
@@ -84,11 +88,18 @@
             </div>
             <table><tbody></tbody></table>
           </div>
+          <figure class="pedia-map" hidden>
+            <img alt="">
+            <figcaption></figcaption>
+          </figure>
           <dl class="pedia-closing"></dl>
         </aside>
         <div class="pedia-intro"></div>
         <nav class="pedia-contents" aria-label="Contents" hidden>
-          <p>Contents</p>
+          <div class="pedia-contents-header">
+            <span>Contents</span>
+            <button type="button" class="pedia-contents-toggle">hide</button>
+          </div>
           <ol></ol>
         </nav>
         <div class="pedia-sections"></div>
