@@ -145,6 +145,26 @@
           <div class="infobox-editor"></div>
           <button type="button" class="button secondary add-row" style="align-self:flex-start">+ add row</button>
         </div>
+        <div class="field"><span>candidate comparison (row name, left candidate, right candidate)</span>
+          <div class="matchup-editor"></div>
+          <button type="button" class="button secondary add-matchup" style="align-self:flex-start">+ add row</button>
+        </div>
+        <div class="field-row">
+          <div class="field"><span>left candidate picture</span>
+            <img class="image-preview" alt="" hidden>
+            <input type="file" name="leftImage" accept="image/jpeg,image/png,image/gif,image/webp">
+            <label class="check"><input type="checkbox" name="removeLeftImage"> remove picture</label>
+          </div>
+          <div class="field"><span>right candidate picture</span>
+            <img class="image-preview" alt="" hidden>
+            <input type="file" name="rightImage" accept="image/jpeg,image/png,image/gif,image/webp">
+            <label class="check"><input type="checkbox" name="removeRightImage"> remove picture</label>
+          </div>
+        </div>
+        <div class="field"><span>side box rows below the comparison</span>
+          <div class="closing-editor"></div>
+          <button type="button" class="button secondary add-closing" style="align-self:flex-start">+ add row</button>
+        </div>
         <div class="field"><span>sections</span>
           <div class="section-editor"></div>
           <button type="button" class="button secondary add-section" style="align-self:flex-start">+ add section</button>

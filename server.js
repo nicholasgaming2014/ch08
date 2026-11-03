@@ -40,11 +40,25 @@ const DEFAULT_CONTENT = {
     imageCaption: '',
     infobox: [
       { label: 'Election date', value: 'November 5, 2024' },
-      { label: 'Winner', value: 'Donald Trump (Republican)' },
-      { label: 'Running mate', value: 'JD Vance' },
-      { label: 'Runner-up', value: 'Kamala Harris (Democratic)' },
-      { label: 'Running mate', value: 'Tim Walz' },
-      { label: 'Electoral votes', value: '312 to 226' },
+      { label: 'Electoral College', value: '538 members, 270 votes needed to win' },
+      { label: 'Turnout', value: '64.3%' },
+    ],
+    // Two-candidate comparison in the side box, with an optional picture above each column.
+    leftImage: '',
+    rightImage: '',
+    matchup: [
+      { label: 'Nominee', left: 'Donald Trump', right: 'Kamala Harris' },
+      { label: 'Party', left: 'Republican', right: 'Democratic' },
+      { label: 'Home state', left: 'Florida', right: 'California' },
+      { label: 'Running mate', left: 'JD Vance', right: 'Tim Walz' },
+      { label: 'Electoral vote', left: '312', right: '226' },
+      { label: 'States carried', left: '31 + ME-02', right: '19 + DC + NE-02' },
+      { label: 'Popular vote', left: '77,302,580', right: '75,017,613' },
+      { label: 'Percentage', left: '49.8%', right: '48.3%' },
+    ],
+    closing: [
+      { label: 'President before election', value: 'Joe Biden (Democratic)' },
+      { label: 'Elected president', value: 'Donald Trump (Republican)' },
     ],
     sections: [
       { heading: 'Background', body: 'Biden began the cycle as the Democratic incumbent seeking a second term, while Trump ran to return to the office he left in 2021. The race was the first in decades to open with a president and a former president as the expected nominees.' },
@@ -108,7 +122,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'leftImage', 'rightImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
@@ -260,6 +274,15 @@ function infoboxRows(value) {
   return list.slice(0, 40)
     .map(row => ({ label: text(row?.label, 120), value: text(row?.value, 500) }))
     .filter(row => row.label || row.value);
+}
+
+function matchupRows(value) {
+  let list = value;
+  try { list = JSON.parse(list || '[]'); } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, 40)
+    .map(row => ({ label: text(row?.label, 120), left: text(row?.left, 200), right: text(row?.right, 200) }))
+    .filter(row => row.label || row.left || row.right);
 }
 
 function pediaSections(value) {
@@ -490,10 +513,15 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   res.json(content);
 });
 
-app.put('/api/admin/pedia', requireAdminApi, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
+const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage']];
+
+app.put('/api/admin/pedia', requireAdminApi, upload.fields(PEDIA_IMAGES.map(([name]) => ({ name, maxCount: 1 }))), async (req, res) => {
   const body = req.body || {};
-  const image = req.files?.image?.[0];
-  const oldImage = content.pedia.image;
+  const old = content.pedia;
+  const images = Object.fromEntries(PEDIA_IMAGES.map(([name, remove]) => {
+    const file = req.files?.[name]?.[0];
+    return [name, file ? fileUrl(file) : body[remove] === 'true' ? '' : old[name]];
+  }));
 
   content.pedia = {
     title: text(body.title, 200),
@@ -501,11 +529,13 @@ app.put('/api/admin/pedia', requireAdminApi, upload.fields([{ name: 'image', max
     infoboxTitle: text(body.infoboxTitle, 200),
     imageCaption: text(body.imageCaption, 300),
     infobox: infoboxRows(body.infobox),
+    matchup: matchupRows(body.matchup),
+    closing: infoboxRows(body.closing),
     sections: pediaSections(body.sections),
-    image: image ? fileUrl(image) : body.removeImage === 'true' ? '' : oldImage,
+    ...images,
   };
   await saveContent();
-  if (content.pedia.image !== oldImage) await removeUpload(oldImage);
+  await Promise.all(PEDIA_IMAGES.filter(([name]) => images[name] !== old[name]).map(([name]) => removeUpload(old[name])));
   res.json(content);
 });
 

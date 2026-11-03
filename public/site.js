@@ -6,6 +6,7 @@ const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 function showPage() {
   const id = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   pages.forEach(p => p.hidden = p.id !== id);
+  document.body.classList.toggle('on-pedia', id === 'ch08pedia');
   pageLinks.forEach(l => l.classList.toggle('active', l.hash === '#' + id));
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
 }
@@ -70,6 +71,35 @@ function renderProse(container, value) {
   }));
 }
 
+function renderFacts(list, rows) {
+  list.replaceChildren(...rows.flatMap(row => {
+    const label = document.createElement('dt');
+    label.textContent = row.label;
+    const value = document.createElement('dd');
+    value.textContent = row.value;
+    return [label, value];
+  }));
+}
+
+function renderMatchup(container, pedia) {
+  [['left', pedia.leftImage], ['right', pedia.rightImage]].forEach(([side, src]) => {
+    const img = container.querySelector(`.pedia-portrait.${side} img`);
+    if (src) img.src = src;
+    img.hidden = !src;
+  });
+  container.querySelector('tbody').replaceChildren(...pedia.matchup.map(row => {
+    const tr = document.createElement('tr');
+    [row.label, row.left, row.right].forEach((value, i) => {
+      const cell = document.createElement(i === 0 ? 'th' : 'td');
+      if (i === 0) cell.scope = 'row';
+      cell.textContent = value;
+      tr.append(cell);
+    });
+    return tr;
+  }));
+  container.hidden = pedia.matchup.length === 0;
+}
+
 function renderPedia(pedia) {
   const section = document.getElementById('ch08pedia');
   section.querySelector('.pedia-title').textContent = pedia.title;
@@ -81,14 +111,10 @@ function renderPedia(pedia) {
   if (pedia.image) figure.querySelector('img').src = pedia.image;
   figure.hidden = !pedia.image;
   setText(figure.querySelector('figcaption'), pedia.imageCaption);
-  box.querySelector('dl').replaceChildren(...pedia.infobox.flatMap(row => {
-    const label = document.createElement('dt');
-    label.textContent = row.label;
-    const value = document.createElement('dd');
-    value.textContent = row.value;
-    return [label, value];
-  }));
-  box.hidden = !pedia.infoboxTitle && !pedia.image && pedia.infobox.length === 0;
+  renderFacts(box.querySelector('.pedia-facts'), pedia.infobox);
+  renderFacts(box.querySelector('.pedia-closing'), pedia.closing);
+  renderMatchup(box.querySelector('.pedia-matchup'), pedia);
+  box.hidden = !pedia.infoboxTitle && !pedia.image && !pedia.infobox.length && !pedia.matchup.length && !pedia.closing.length;
 
   const headings = [];
   section.querySelector('.pedia-sections').replaceChildren(...pedia.sections.map(item => {

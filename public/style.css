@@ -983,10 +983,20 @@ body {
   padding: 24px 16px 56px;
 }
 
+.on-pedia .banner {
+  display: none;
+}
+
+.on-pedia .pedia {
+  min-height: 100vh;
+}
+
 .pedia-brand {
+  display: block;
+  color: #54595d;
+  text-decoration: none;
   font-family: "Playfair Display", Georgia, "Times New Roman", serif;
   font-size: 15px;
-  color: #54595d;
 }
 
 .pedia-title {
@@ -1036,7 +1046,7 @@ body {
   margin: 0 auto 4px;
 }
 
-.pedia-infobox dl {
+.pedia-infobox dl:not(:empty) {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
@@ -1048,6 +1058,59 @@ body {
 
 .pedia-infobox dd {
   margin: 0;
+}
+
+.pedia-matchup {
+  margin: 8px 0;
+  padding: 8px 0;
+  border-top: 1px solid #a2a9b1;
+  border-bottom: 1px solid #a2a9b1;
+}
+
+.pedia-portraits {
+  display: grid;
+  grid-template-columns: 84px 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.pedia-portrait {
+  min-height: 6px;
+  border-bottom: 5px solid #c33;
+}
+
+.pedia-portrait.right {
+  border-color: #36c;
+}
+
+.pedia-portrait img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  margin: 0;
+}
+
+.pedia-matchup table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.pedia-matchup th {
+  width: 84px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.pedia-matchup th,
+.pedia-matchup td {
+  padding: 2px 0;
+}
+
+.pedia-matchup td {
+  padding-left: 4px;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .pedia-contents {
