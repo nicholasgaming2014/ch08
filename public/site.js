@@ -1,12 +1,11 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'ch08pedia', 'contact'];
+const PAGES = ['home', 'beats', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
 function showPage() {
   const id = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   pages.forEach(p => p.hidden = p.id !== id);
-  document.body.classList.toggle('on-pedia', id === 'ch08pedia');
   pageLinks.forEach(l => l.classList.toggle('active', l.hash === '#' + id));
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
 }
@@ -52,119 +51,6 @@ function renderContact(contact) {
   setText(email, contact.email);
   email.href = contact.email ? 'mailto:' + contact.email : '';
   renderLinks(section.querySelector('.link-list'), contact.socials);
-}
-
-// ---------- ch08pedia ----------
-
-// Paragraphs split on blank lines; [[words]] show as links that don't go anywhere yet.
-function renderProse(container, value) {
-  container.replaceChildren(...(value || '').split(/\n\s*\n/).filter(p => p.trim()).map(paragraph => {
-    const p = document.createElement('p');
-    paragraph.split(/\[\[(.+?)\]\]/).forEach((part, i) => {
-      if (i % 2 === 0) return p.append(part);
-      const link = document.createElement('span');
-      link.className = 'pedia-link';
-      link.textContent = part;
-      p.append(link);
-    });
-    return p;
-  }));
-}
-
-function renderFacts(list, rows) {
-  list.replaceChildren(...rows.flatMap(row => {
-    const label = document.createElement('dt');
-    label.textContent = row.label;
-    const value = document.createElement('dd');
-    value.textContent = row.value;
-    return [label, value];
-  }));
-}
-
-function renderMatchup(container, pedia) {
-  [['left', pedia.leftImage], ['right', pedia.rightImage]].forEach(([side, src]) => {
-    const img = container.querySelector(`.pedia-portrait.${side} img`);
-    if (src) img.src = src;
-    img.hidden = !src;
-  });
-  container.querySelector('tbody').replaceChildren(...pedia.matchup.map(row => {
-    const tr = document.createElement('tr');
-    [row.label, row.left, row.right].forEach((value, i) => {
-      const cell = document.createElement(i === 0 ? 'th' : 'td');
-      if (i === 0) cell.scope = 'row';
-      cell.textContent = value;
-      tr.append(cell);
-    });
-    return tr;
-  }));
-  container.hidden = pedia.matchup.length === 0;
-}
-
-function renderPedia(pedia) {
-  const section = document.getElementById('ch08pedia');
-  section.querySelector('.pedia-title').textContent = pedia.title;
-  renderProse(section.querySelector('.pedia-intro'), pedia.intro);
-
-  const box = section.querySelector('.pedia-infobox');
-  setText(box.querySelector('.pedia-infobox-title'), pedia.infoboxTitle);
-
-  const flag = box.querySelector('.pedia-flag');
-  if (pedia.image) flag.querySelector('img').src = pedia.image;
-  flag.hidden = !pedia.image;
-
-  const nav = box.querySelector('.pedia-nav-row');
-  nav.querySelector('.pedia-nav-prev').textContent = pedia.navPrev ? '← ' + pedia.navPrev : '';
-  nav.querySelector('.pedia-nav-date').textContent = pedia.navDate || '';
-  nav.querySelector('.pedia-nav-next').textContent = pedia.navNext ? pedia.navNext + ' →' : '';
-  nav.hidden = !pedia.navPrev && !pedia.navDate && !pedia.navNext;
-
-  renderFacts(box.querySelector('.pedia-facts'), pedia.infobox);
-  renderMatchup(box.querySelector('.pedia-matchup'), pedia);
-
-  const map = box.querySelector('.pedia-map');
-  if (pedia.mapImage) map.querySelector('img').src = pedia.mapImage;
-  map.hidden = !pedia.mapImage;
-  setText(map.querySelector('figcaption'), pedia.mapCaption);
-
-  renderFacts(box.querySelector('.pedia-closing'), pedia.closing);
-  box.hidden = !pedia.infoboxTitle && !pedia.image && !pedia.infobox.length && !pedia.matchup.length && !pedia.closing.length;
-
-  const headings = [];
-  section.querySelector('.pedia-sections').replaceChildren(...pedia.sections.map(item => {
-    const block = document.createElement('section');
-    if (item.heading) {
-      const heading = document.createElement('h2');
-      heading.textContent = item.heading;
-      block.append(heading);
-      headings.push([item.heading, heading]);
-    }
-    const body = document.createElement('div');
-    renderProse(body, item.body);
-    block.append(body);
-    return block;
-  }));
-
-  const contents = section.querySelector('.pedia-contents');
-  const list = contents.querySelector('ol');
-  list.replaceChildren(...headings.map(([label, heading], i) => {
-    const li = document.createElement('li');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.addEventListener('click', () => heading.scrollIntoView({ behavior: 'smooth' }));
-    li.append(button);
-    return li;
-  }));
-  contents.hidden = headings.length === 0;
-
-  // Contents hide/show toggle
-  const toggle = contents.querySelector('.pedia-contents-toggle');
-  toggle.textContent = 'hide';
-  list.hidden = false;
-  toggle.onclick = () => {
-    list.hidden = !list.hidden;
-    toggle.textContent = list.hidden ? 'show' : 'hide';
-  };
 }
 
 // ---------- Beat player ----------
@@ -464,6 +350,5 @@ fetch('/api/content')
   .then(content => {
     renderHome(content.home);
     renderContact(content.contact);
-    renderPedia(content.pedia);
     renderBeats(content.beats, content.producers);
   });

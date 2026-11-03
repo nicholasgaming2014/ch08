@@ -26,7 +26,6 @@
   <nav id="menu" class="menu" aria-label="Main menu">
     <a href="/#home" class="menu-link">home</a>
     <a href="/#beats" class="menu-link">beats</a>
-    <a href="/#ch08pedia" class="menu-link">ch08pedia</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link active">admin</a>
     <form method="post" action="/admin/logout">
@@ -40,7 +39,6 @@
     <nav class="admin-tabs" aria-label="Admin sections">
       <a href="#home" class="menu-link">home</a>
       <a href="#beats" class="menu-link">beats</a>
-      <a href="#ch08pedia" class="menu-link">ch08pedia</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
 
@@ -118,79 +116,6 @@
       <h2>your beats</h2>
       <p class="empty-note" hidden>no beats yet</p>
       <div class="admin-beat-list beat-list"></div>
-    </section>
-
-    <!-- ch08pedia -->
-    <section id="panel-ch08pedia" class="admin-panel" hidden>
-      <form id="pedia-form" class="admin-card">
-        <p class="hint">leave a blank line between paragraphs. put [[double brackets]] around words to show them as links (they don’t go anywhere yet)</p>
-        <label class="field"><span>page title</span>
-          <input type="text" name="title" maxlength="200">
-        </label>
-        <label class="field"><span>intro</span>
-          <textarea name="intro" maxlength="20000"></textarea>
-        </label>
-        <label class="field"><span>side box title</span>
-          <input type="text" name="infoboxTitle" maxlength="200">
-        </label>
-        <div class="field"><span>flag / top image</span>
-          <img class="image-preview" alt="" hidden>
-          <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
-          <label class="check"><input type="checkbox" name="removeImage"> remove image</label>
-        </div>
-        <div class="field-row">
-          <label class="field"><span>← prev</span>
-            <input type="text" name="navPrev" maxlength="80" placeholder="2020">
-          </label>
-          <label class="field"><span>date</span>
-            <input type="text" name="navDate" maxlength="80" placeholder="November 5, 2024">
-          </label>
-          <label class="field"><span>next →</span>
-            <input type="text" name="navNext" maxlength="80" placeholder="2028">
-          </label>
-        </div>
-        <div class="field"><span>side box rows</span>
-          <div class="infobox-editor"></div>
-          <button type="button" class="button secondary add-row" style="align-self:flex-start">+ add row</button>
-        </div>
-        <div class="field"><span>candidate comparison (row name, left candidate, right candidate)</span>
-          <div class="matchup-editor"></div>
-          <button type="button" class="button secondary add-matchup" style="align-self:flex-start">+ add row</button>
-        </div>
-        <div class="field-row">
-          <div class="field"><span>left candidate picture</span>
-            <img class="image-preview" alt="" hidden>
-            <input type="file" name="leftImage" accept="image/jpeg,image/png,image/gif,image/webp">
-            <label class="check"><input type="checkbox" name="removeLeftImage"> remove picture</label>
-          </div>
-          <div class="field"><span>right candidate picture</span>
-            <img class="image-preview" alt="" hidden>
-            <input type="file" name="rightImage" accept="image/jpeg,image/png,image/gif,image/webp">
-            <label class="check"><input type="checkbox" name="removeRightImage"> remove picture</label>
-          </div>
-        </div>
-        <div class="field"><span>results map / image below comparison</span>
-          <img class="image-preview" alt="" hidden>
-          <input type="file" name="mapImage" accept="image/jpeg,image/png,image/gif,image/webp">
-          <label class="check"><input type="checkbox" name="removeMapImage"> remove map</label>
-        </div>
-        <label class="field"><span>map caption</span>
-          <input type="text" name="mapCaption" maxlength="300">
-        </label>
-        <div class="field"><span>side box rows below the comparison</span>
-          <div class="closing-editor"></div>
-          <button type="button" class="button secondary add-closing" style="align-self:flex-start">+ add row</button>
-        </div>
-        <div class="field"><span>sections</span>
-          <div class="section-editor"></div>
-          <button type="button" class="button secondary add-section" style="align-self:flex-start">+ add section</button>
-        </div>
-        <div class="button-row">
-          <button type="submit" class="button">save ch08pedia</button>
-          <a href="/#ch08pedia" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
-          <span class="status" role="status"></span>
-        </div>
-      </form>
     </section>
 
     <!-- Contact -->

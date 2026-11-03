@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'ch08pedia', 'contact'];
+const TABS = ['home', 'beats', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -295,138 +295,6 @@ homeForm.addEventListener('submit', async e => {
   }
 });
 
-// ---------- ch08pedia ----------
-
-const pediaForm = document.getElementById('pedia-form');
-const infoboxEditor = pediaForm.querySelector('.infobox-editor');
-const sectionEditor = pediaForm.querySelector('.section-editor');
-const matchupEditor = pediaForm.querySelector('.matchup-editor');
-const closingEditor = pediaForm.querySelector('.closing-editor');
-const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage'], ['mapImage', 'removeMapImage']];
-const pediaPreview = name => pediaForm.elements[name].parentElement.querySelector('.image-preview');
-
-function removeButton(row, label) {
-  const remove = document.createElement('button');
-  remove.type = 'button';
-  remove.className = 'button secondary';
-  remove.textContent = '✕';
-  remove.setAttribute('aria-label', label);
-  remove.addEventListener('click', () => row.remove());
-  return remove;
-}
-
-function addTextRow(editor, row, fields) {
-  const node = document.createElement('div');
-  node.className = 'link-row';
-  const inputs = fields.map(([key, max]) => {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.dataset.key = key;
-    input.placeholder = key;
-    input.maxLength = max;
-    input.value = row[key];
-    return input;
-  });
-  node.append(...inputs, removeButton(node, 'Remove row'));
-  editor.append(node);
-}
-
-const FACT_FIELDS = [['label', 120], ['value', 500]];
-const MATCHUP_FIELDS = [['label', 120], ['left', 200], ['right', 200]];
-const addInfoboxRow = (row = { label: '', value: '' }) => addTextRow(infoboxEditor, row, FACT_FIELDS);
-const addClosingRow = (row = { label: '', value: '' }) => addTextRow(closingEditor, row, FACT_FIELDS);
-const addMatchupRow = (row = { label: '', left: '', right: '' }) => addTextRow(matchupEditor, row, MATCHUP_FIELDS);
-
-function addSection(section = { heading: '', body: '' }) {
-  const node = document.createElement('div');
-  node.className = 'pedia-section-row';
-  const top = document.createElement('div');
-  top.className = 'link-row';
-  const heading = document.createElement('input');
-  heading.type = 'text';
-  heading.dataset.key = 'heading';
-  heading.placeholder = 'section heading';
-  heading.maxLength = 200;
-  heading.value = section.heading;
-  top.append(heading, removeButton(node, 'Remove section'));
-  const body = document.createElement('textarea');
-  body.dataset.key = 'body';
-  body.placeholder = 'section text';
-  body.maxLength = 50000;
-  body.value = section.body;
-  node.append(top, body);
-  sectionEditor.append(node);
-}
-
-function fillPedia(pedia) {
-  pediaForm.elements.title.value = pedia.title;
-  pediaForm.intro.value = pedia.intro;
-  pediaForm.infoboxTitle.value = pedia.infoboxTitle;
-  pediaForm.imageCaption.value = pedia.imageCaption;
-  PEDIA_IMAGES.forEach(([name, remove]) => {
-    pediaForm.elements[name].value = '';
-    pediaForm.elements[remove].checked = false;
-    pediaPreview(name).src = pedia[name] || '';
-    pediaPreview(name).hidden = !pedia[name];
-  });
-  ['navPrev', 'navDate', 'navNext', 'mapCaption'].forEach(name => {
-    pediaForm.elements[name].value = pedia[name] || '';
-  });
-  infoboxEditor.replaceChildren();
-  pedia.infobox.forEach(row => addInfoboxRow(row));
-  matchupEditor.replaceChildren();
-  pedia.matchup.forEach(row => addMatchupRow(row));
-  closingEditor.replaceChildren();
-  pedia.closing.forEach(row => addClosingRow(row));
-  sectionEditor.replaceChildren();
-  pedia.sections.forEach(section => addSection(section));
-}
-
-const readRows = (editor, selector) => [...editor.querySelectorAll(selector)].map(row =>
-  Object.fromEntries([...row.querySelectorAll('[data-key]')].map(field => [field.dataset.key, field.value.trim()])));
-
-pediaForm.querySelector('.add-row').addEventListener('click', () => addInfoboxRow());
-pediaForm.querySelector('.add-section').addEventListener('click', () => addSection());
-
-pediaForm.querySelector('.add-matchup').addEventListener('click', () => addMatchupRow());
-pediaForm.querySelector('.add-closing').addEventListener('click', () => addClosingRow());
-
-PEDIA_IMAGES.forEach(([name, remove]) => {
-  pediaForm.elements[name].addEventListener('change', () => {
-    const file = pediaForm.elements[name].files[0];
-    if (!file) return;
-    pediaPreview(name).src = URL.createObjectURL(file);
-    pediaPreview(name).hidden = false;
-    pediaForm.elements[remove].checked = false;
-  });
-});
-
-pediaForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const data = new FormData();
-  ['title', 'intro', 'infoboxTitle', 'navPrev', 'navDate', 'navNext', 'mapCaption'].forEach(name => data.append(name, pediaForm.elements[name].value));
-  data.append('infobox', JSON.stringify(readRows(infoboxEditor, '.link-row')));
-  data.append('matchup', JSON.stringify(readRows(matchupEditor, '.link-row')));
-  data.append('closing', JSON.stringify(readRows(closingEditor, '.link-row')));
-  data.append('sections', JSON.stringify(readRows(sectionEditor, '.pedia-section-row')));
-  PEDIA_IMAGES.forEach(([name, remove]) => {
-    data.append(remove, pediaForm.elements[remove].checked);
-    if (pediaForm.elements[name].files[0]) data.append(name, pediaForm.elements[name].files[0]);
-  });
-
-  setBusy(pediaForm, true);
-  setStatus(pediaForm, 'saving…');
-  try {
-    content = await send('PUT', '/api/admin/pedia', data, p => setStatus(pediaForm, `uploading… ${Math.round(p * 100)}%`));
-    fillPedia(content.pedia);
-    setStatus(pediaForm, 'saved ✓');
-  } catch (err) {
-    setStatus(pediaForm, err.message, true);
-  } finally {
-    setBusy(pediaForm, false);
-  }
-});
-
 // ---------- Contact ----------
 
 const contactForm = document.getElementById('contact-form');
@@ -682,6 +550,5 @@ fetch('/api/content', { cache: 'no-store' })
     content = data;
     fillHome(content.home);
     fillContact(content.contact);
-    fillPedia(content.pedia);
     renderBeats(content.beats);
   });

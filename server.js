@@ -32,46 +32,6 @@ const DEFAULT_CONTENT = {
   beats: [],
   // Producer pictures for the beats page pills, keyed by lowercase producer name.
   producers: {},
-  pedia: {
-    title: '2024 United States presidential election',
-    intro: 'The 2024 United States presidential election took place on November 5, 2024. [[Donald Trump]] and his running mate [[JD Vance]] defeated [[Kamala Harris]] and her running mate [[Tim Walz]], returning Trump to the White House four years after he lost to [[Joe Biden]].',
-    infoboxTitle: '2024 United States presidential election',
-    image: '',
-    imageCaption: '',
-    infobox: [
-      { label: 'Election date', value: 'November 5, 2024' },
-      { label: 'Electoral College', value: '538 members, 270 votes needed to win' },
-      { label: 'Turnout', value: '64.3%' },
-    ],
-    // Two-candidate comparison in the side box, with an optional picture above each column.
-    leftImage: '',
-    rightImage: '',
-    matchup: [
-      { label: 'Nominee', left: 'Donald Trump', right: 'Kamala Harris' },
-      { label: 'Party', left: 'Republican', right: 'Democratic' },
-      { label: 'Home state', left: 'Florida', right: 'California' },
-      { label: 'Running mate', left: 'JD Vance', right: 'Tim Walz' },
-      { label: 'Electoral vote', left: '312', right: '226' },
-      { label: 'States carried', left: '31 + ME-02', right: '19 + DC + NE-02' },
-      { label: 'Popular vote', left: '77,302,580', right: '75,017,613' },
-      { label: 'Percentage', left: '49.8%', right: '48.3%' },
-    ],
-    navPrev: '2020',
-    navDate: 'November 5, 2024',
-    navNext: '2028',
-    mapImage: '',
-    mapCaption: '',
-    closing: [
-      { label: 'President before election', value: 'Joe Biden (Democratic)' },
-      { label: 'Elected president', value: 'Donald Trump (Republican)' },
-    ],
-    sections: [
-      { heading: 'Background', body: 'Biden began the cycle as the Democratic incumbent seeking a second term, while Trump ran to return to the office he left in 2021. The race was the first in decades to open with a president and a former president as the expected nominees.' },
-      { heading: 'Nominations', body: 'After a widely criticized debate performance in June, Biden ended his campaign on July 21, 2024 and endorsed Harris, his vice president. Democrats nominated her at their August convention, and she chose Walz, the governor of Minnesota. Trump won the Republican nomination after a primary season he dominated, and he picked Vance, a senator from Ohio.' },
-      { heading: 'Campaign', body: 'Voters ranked the economy, inflation, immigration and abortion among their leading concerns. Trump survived an assassination attempt at a rally in Butler, Pennsylvania on July 13, and a second attempt was stopped in Florida in September.' },
-      { heading: 'Results', body: 'Trump won all seven of the closely watched swing states and carried the Electoral College 312 to 226. He also won the national popular vote, becoming the first Republican to do so since 2004. He took office for his second term on January 20, 2025.' },
-    ],
-  },
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -89,7 +49,6 @@ function loadContent() {
     Object.assign(content.contact, saved.contact);
     if (Array.isArray(saved.beats)) content.beats = saved.beats.map(withProducerList);
     if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
-    Object.assign(content.pedia, saved.pedia);
   } catch {}
   return content;
 }
@@ -127,7 +86,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover', 'leftImage', 'rightImage', 'mapImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
@@ -271,33 +230,6 @@ function producerList(value) {
   }).slice(0, 10);
 }
 
-// Rows for the ch08pedia side box.
-function infoboxRows(value) {
-  let list = value;
-  try { list = JSON.parse(list || '[]'); } catch { list = []; }
-  if (!Array.isArray(list)) return [];
-  return list.slice(0, 40)
-    .map(row => ({ label: text(row?.label, 120), value: text(row?.value, 500) }))
-    .filter(row => row.label || row.value);
-}
-
-function matchupRows(value) {
-  let list = value;
-  try { list = JSON.parse(list || '[]'); } catch { list = []; }
-  if (!Array.isArray(list)) return [];
-  return list.slice(0, 40)
-    .map(row => ({ label: text(row?.label, 120), left: text(row?.left, 200), right: text(row?.right, 200) }))
-    .filter(row => row.label || row.left || row.right);
-}
-
-function pediaSections(value) {
-  let list = value;
-  try { list = JSON.parse(list || '[]'); } catch { list = []; }
-  if (!Array.isArray(list)) return [];
-  return list.slice(0, 100)
-    .map(section => ({ heading: text(section?.heading, 200), body: text(section?.body, 50000) }))
-    .filter(section => section.heading || section.body);
-}
 
 function durationValue(value) {
   const seconds = Number(value);
@@ -518,35 +450,6 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   res.json(content);
 });
 
-const PEDIA_IMAGES = [['image', 'removeImage'], ['leftImage', 'removeLeftImage'], ['rightImage', 'removeRightImage'], ['mapImage', 'removeMapImage']];
-
-app.put('/api/admin/pedia', requireAdminApi, upload.fields(PEDIA_IMAGES.map(([name]) => ({ name, maxCount: 1 }))), async (req, res) => {
-  const body = req.body || {};
-  const old = content.pedia;
-  const images = Object.fromEntries(PEDIA_IMAGES.map(([name, remove]) => {
-    const file = req.files?.[name]?.[0];
-    return [name, file ? fileUrl(file) : body[remove] === 'true' ? '' : old[name]];
-  }));
-
-  content.pedia = {
-    title: text(body.title, 200),
-    intro: text(body.intro, 20000),
-    infoboxTitle: text(body.infoboxTitle, 200),
-    imageCaption: text(body.imageCaption, 300),
-    infobox: infoboxRows(body.infobox),
-    navPrev: text(body.navPrev, 80),
-    navDate: text(body.navDate, 80),
-    navNext: text(body.navNext, 80),
-    matchup: matchupRows(body.matchup),
-    mapCaption: text(body.mapCaption, 300),
-    closing: infoboxRows(body.closing),
-    sections: pediaSections(body.sections),
-    ...images,
-  };
-  await saveContent();
-  await Promise.all(PEDIA_IMAGES.filter(([name]) => images[name] !== old[name]).map(([name]) => removeUpload(old[name])));
-  res.json(content);
-});
 
 // Sets or removes one producer's picture.
 app.put('/api/admin/producers/:name', requireAdminApi, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
