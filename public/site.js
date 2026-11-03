@@ -196,7 +196,7 @@ function createPlayer(beat) {
 
   button.addEventListener('click', () => {
     if (audio.paused) {
-      players.forEach(p => p !== player && p.pause());
+      players.forEach(p => { if (p !== player) { p.pause(); p.restart(); } });
       audio.play();
     } else {
       audio.pause();
@@ -240,6 +240,7 @@ function createPlayer(beat) {
     node,
     draw,
     pause: () => audio.pause(),
+    restart: () => { audio.currentTime = 0; tick(); },
     // Stored at upload; older beats fall back to the audio file's own length.
     duration: () => beat.duration || (Number.isFinite(audio.duration) ? audio.duration : null),
   };
