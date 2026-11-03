@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'contact'];
+const PAGES = ['home', 'beats', 'ch08pedia', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -51,6 +51,71 @@ function renderContact(contact) {
   setText(email, contact.email);
   email.href = contact.email ? 'mailto:' + contact.email : '';
   renderLinks(section.querySelector('.link-list'), contact.socials);
+}
+
+// ---------- ch08pedia ----------
+
+// Paragraphs split on blank lines; [[words]] show as links that don't go anywhere yet.
+function renderProse(container, value) {
+  container.replaceChildren(...(value || '').split(/\n\s*\n/).filter(p => p.trim()).map(paragraph => {
+    const p = document.createElement('p');
+    paragraph.split(/\[\[(.+?)\]\]/).forEach((part, i) => {
+      if (i % 2 === 0) return p.append(part);
+      const link = document.createElement('span');
+      link.className = 'pedia-link';
+      link.textContent = part;
+      p.append(link);
+    });
+    return p;
+  }));
+}
+
+function renderPedia(pedia) {
+  const section = document.getElementById('ch08pedia');
+  section.querySelector('.pedia-title').textContent = pedia.title;
+  renderProse(section.querySelector('.pedia-intro'), pedia.intro);
+
+  const box = section.querySelector('.pedia-infobox');
+  setText(box.querySelector('.pedia-infobox-title'), pedia.infoboxTitle);
+  const figure = box.querySelector('figure');
+  if (pedia.image) figure.querySelector('img').src = pedia.image;
+  figure.hidden = !pedia.image;
+  setText(figure.querySelector('figcaption'), pedia.imageCaption);
+  box.querySelector('dl').replaceChildren(...pedia.infobox.flatMap(row => {
+    const label = document.createElement('dt');
+    label.textContent = row.label;
+    const value = document.createElement('dd');
+    value.textContent = row.value;
+    return [label, value];
+  }));
+  box.hidden = !pedia.infoboxTitle && !pedia.image && pedia.infobox.length === 0;
+
+  const headings = [];
+  section.querySelector('.pedia-sections').replaceChildren(...pedia.sections.map(item => {
+    const block = document.createElement('section');
+    if (item.heading) {
+      const heading = document.createElement('h2');
+      heading.textContent = item.heading;
+      block.append(heading);
+      headings.push([item.heading, heading]);
+    }
+    const body = document.createElement('div');
+    renderProse(body, item.body);
+    block.append(body);
+    return block;
+  }));
+
+  const contents = section.querySelector('.pedia-contents');
+  contents.querySelector('ol').replaceChildren(...headings.map(([label, heading]) => {
+    const li = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => heading.scrollIntoView());
+    li.append(button);
+    return li;
+  }));
+  contents.hidden = headings.length === 0;
 }
 
 // ---------- Beat player ----------
@@ -350,5 +415,6 @@ fetch('/api/content')
   .then(content => {
     renderHome(content.home);
     renderContact(content.contact);
+    renderPedia(content.pedia);
     renderBeats(content.beats, content.producers);
   });

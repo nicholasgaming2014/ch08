@@ -32,6 +32,27 @@ const DEFAULT_CONTENT = {
   beats: [],
   // Producer pictures for the beats page pills, keyed by lowercase producer name.
   producers: {},
+  pedia: {
+    title: '2024 United States presidential election',
+    intro: 'The 2024 United States presidential election took place on November 5, 2024. [[Donald Trump]] and his running mate [[JD Vance]] defeated [[Kamala Harris]] and her running mate [[Tim Walz]], returning Trump to the White House four years after he lost to [[Joe Biden]].',
+    infoboxTitle: '2024 United States presidential election',
+    image: '',
+    imageCaption: '',
+    infobox: [
+      { label: 'Election date', value: 'November 5, 2024' },
+      { label: 'Winner', value: 'Donald Trump (Republican)' },
+      { label: 'Running mate', value: 'JD Vance' },
+      { label: 'Runner-up', value: 'Kamala Harris (Democratic)' },
+      { label: 'Running mate', value: 'Tim Walz' },
+      { label: 'Electoral votes', value: '312 to 226' },
+    ],
+    sections: [
+      { heading: 'Background', body: 'Biden began the cycle as the Democratic incumbent seeking a second term, while Trump ran to return to the office he left in 2021. The race was the first in decades to open with a president and a former president as the expected nominees.' },
+      { heading: 'Nominations', body: 'After a widely criticized debate performance in June, Biden ended his campaign on July 21, 2024 and endorsed Harris, his vice president. Democrats nominated her at their August convention, and she chose Walz, the governor of Minnesota. Trump won the Republican nomination after a primary season he dominated, and he picked Vance, a senator from Ohio.' },
+      { heading: 'Campaign', body: 'Voters ranked the economy, inflation, immigration and abortion among their leading concerns. Trump survived an assassination attempt at a rally in Butler, Pennsylvania on July 13, and a second attempt was stopped in Florida in September.' },
+      { heading: 'Results', body: 'Trump won all seven of the closely watched swing states and carried the Electoral College 312 to 226. He also won the national popular vote, becoming the first Republican to do so since 2004. He took office for his second term on January 20, 2025.' },
+    ],
+  },
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -49,6 +70,7 @@ function loadContent() {
     Object.assign(content.contact, saved.contact);
     if (Array.isArray(saved.beats)) content.beats = saved.beats.map(withProducerList);
     if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
+    Object.assign(content.pedia, saved.pedia);
   } catch {}
   return content;
 }
@@ -228,6 +250,25 @@ function producerList(value) {
     seen.add(key);
     return true;
   }).slice(0, 10);
+}
+
+// Rows for the ch08pedia side box.
+function infoboxRows(value) {
+  let list = value;
+  try { list = JSON.parse(list || '[]'); } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, 40)
+    .map(row => ({ label: text(row?.label, 120), value: text(row?.value, 500) }))
+    .filter(row => row.label || row.value);
+}
+
+function pediaSections(value) {
+  let list = value;
+  try { list = JSON.parse(list || '[]'); } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, 100)
+    .map(section => ({ heading: text(section?.heading, 200), body: text(section?.body, 50000) }))
+    .filter(section => section.heading || section.body);
 }
 
 function durationValue(value) {
@@ -446,6 +487,25 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   content.beats = content.beats.filter(b => b !== beat);
   await saveContent();
   await Promise.all(beatUploads(beat).map(removeUpload));
+  res.json(content);
+});
+
+app.put('/api/admin/pedia', requireAdminApi, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
+  const body = req.body || {};
+  const image = req.files?.image?.[0];
+  const oldImage = content.pedia.image;
+
+  content.pedia = {
+    title: text(body.title, 200),
+    intro: text(body.intro, 20000),
+    infoboxTitle: text(body.infoboxTitle, 200),
+    imageCaption: text(body.imageCaption, 300),
+    infobox: infoboxRows(body.infobox),
+    sections: pediaSections(body.sections),
+    image: image ? fileUrl(image) : body.removeImage === 'true' ? '' : oldImage,
+  };
+  await saveContent();
+  if (content.pedia.image !== oldImage) await removeUpload(oldImage);
   res.json(content);
 });
 

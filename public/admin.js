@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'contact'];
+const TABS = ['home', 'beats', 'ch08pedia', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -295,6 +295,111 @@ homeForm.addEventListener('submit', async e => {
   }
 });
 
+// ---------- ch08pedia ----------
+
+const pediaForm = document.getElementById('pedia-form');
+const pediaPreview = pediaForm.querySelector('.image-preview');
+const infoboxEditor = pediaForm.querySelector('.infobox-editor');
+const sectionEditor = pediaForm.querySelector('.section-editor');
+
+function removeButton(row, label) {
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'button secondary';
+  remove.textContent = '✕';
+  remove.setAttribute('aria-label', label);
+  remove.addEventListener('click', () => row.remove());
+  return remove;
+}
+
+function addInfoboxRow(row = { label: '', value: '' }) {
+  const node = document.createElement('div');
+  node.className = 'link-row';
+  const inputs = [['label', 120], ['value', 500]].map(([key, max]) => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.dataset.key = key;
+    input.placeholder = key;
+    input.maxLength = max;
+    input.value = row[key];
+    return input;
+  });
+  node.append(...inputs, removeButton(node, 'Remove row'));
+  infoboxEditor.append(node);
+}
+
+function addSection(section = { heading: '', body: '' }) {
+  const node = document.createElement('div');
+  node.className = 'pedia-section-row';
+  const top = document.createElement('div');
+  top.className = 'link-row';
+  const heading = document.createElement('input');
+  heading.type = 'text';
+  heading.dataset.key = 'heading';
+  heading.placeholder = 'section heading';
+  heading.maxLength = 200;
+  heading.value = section.heading;
+  top.append(heading, removeButton(node, 'Remove section'));
+  const body = document.createElement('textarea');
+  body.dataset.key = 'body';
+  body.placeholder = 'section text';
+  body.maxLength = 50000;
+  body.value = section.body;
+  node.append(top, body);
+  sectionEditor.append(node);
+}
+
+function fillPedia(pedia) {
+  pediaForm.elements.title.value = pedia.title;
+  pediaForm.intro.value = pedia.intro;
+  pediaForm.infoboxTitle.value = pedia.infoboxTitle;
+  pediaForm.imageCaption.value = pedia.imageCaption;
+  pediaForm.image.value = '';
+  pediaForm.removeImage.checked = false;
+  pediaPreview.src = pedia.image || '';
+  pediaPreview.hidden = !pedia.image;
+  infoboxEditor.replaceChildren();
+  pedia.infobox.forEach(addInfoboxRow);
+  sectionEditor.replaceChildren();
+  pedia.sections.forEach(addSection);
+}
+
+const readRows = (editor, selector) => [...editor.querySelectorAll(selector)].map(row =>
+  Object.fromEntries([...row.querySelectorAll('[data-key]')].map(field => [field.dataset.key, field.value.trim()])));
+
+pediaForm.querySelector('.add-row').addEventListener('click', () => addInfoboxRow());
+pediaForm.querySelector('.add-section').addEventListener('click', () => addSection());
+
+pediaForm.image.addEventListener('change', () => {
+  const file = pediaForm.image.files[0];
+  if (!file) return;
+  pediaPreview.src = URL.createObjectURL(file);
+  pediaPreview.hidden = false;
+  pediaForm.removeImage.checked = false;
+});
+
+pediaForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = new FormData();
+  ['title', 'intro', 'infoboxTitle', 'imageCaption'].forEach(name => data.append(name, pediaForm.elements[name].value));
+  data.append('infobox', JSON.stringify(readRows(infoboxEditor, '.link-row')));
+  data.append('sections', JSON.stringify(readRows(sectionEditor, '.pedia-section-row')));
+  data.append('removeImage', pediaForm.removeImage.checked);
+  if (pediaForm.image.files[0]) data.append('image', pediaForm.image.files[0]);
+
+  setBusy(pediaForm, true);
+  setStatus(pediaForm, 'saving…');
+  try {
+    content = await send('PUT', '/api/admin/pedia', data, p => setStatus(pediaForm, `uploading… ${Math.round(p * 100)}%`));
+    fillPedia(content.pedia);
+    setStatus(pediaForm, 'saved ✓');
+  } catch (err) {
+    setStatus(pediaForm, err.message, true);
+  } finally {
+    setBusy(pediaForm, false);
+  }
+});
+
 // ---------- Contact ----------
 
 const contactForm = document.getElementById('contact-form');
@@ -550,5 +655,6 @@ fetch('/api/content', { cache: 'no-store' })
     content = data;
     fillHome(content.home);
     fillContact(content.contact);
+    fillPedia(content.pedia);
     renderBeats(content.beats);
   });
