@@ -81,26 +81,86 @@ const POS_GROUPS = {
   ATT: ['LW', 'RW', 'ST', 'CF'],
 };
 
-const FORMATION_433 = [
-  { slot: 'GK',  x: 0.50, y: 0.92 },
-  { slot: 'LB',  x: 0.12, y: 0.72 },
-  { slot: 'CB',  x: 0.35, y: 0.78 },
-  { slot: 'CB',  x: 0.65, y: 0.78 },
-  { slot: 'RB',  x: 0.88, y: 0.72 },
-  { slot: 'CM',  x: 0.25, y: 0.52 },
-  { slot: 'CM',  x: 0.50, y: 0.48 },
-  { slot: 'CM',  x: 0.75, y: 0.52 },
-  { slot: 'LW',  x: 0.12, y: 0.25 },
-  { slot: 'ST',  x: 0.50, y: 0.15 },
-  { slot: 'RW',  x: 0.88, y: 0.25 },
-];
+const FORMATIONS = {
+  '4-3-3': [
+    { slot: 'GK',  x: 0.50, y: 0.92 },
+    { slot: 'LB',  x: 0.12, y: 0.72 },
+    { slot: 'CB',  x: 0.35, y: 0.78 },
+    { slot: 'CB',  x: 0.65, y: 0.78 },
+    { slot: 'RB',  x: 0.88, y: 0.72 },
+    { slot: 'CM',  x: 0.25, y: 0.52 },
+    { slot: 'CM',  x: 0.50, y: 0.48 },
+    { slot: 'CM',  x: 0.75, y: 0.52 },
+    { slot: 'LW',  x: 0.12, y: 0.25 },
+    { slot: 'ST',  x: 0.50, y: 0.15 },
+    { slot: 'RW',  x: 0.88, y: 0.25 },
+  ],
+  '4-4-2': [
+    { slot: 'GK',  x: 0.50, y: 0.92 },
+    { slot: 'LB',  x: 0.12, y: 0.72 },
+    { slot: 'CB',  x: 0.35, y: 0.78 },
+    { slot: 'CB',  x: 0.65, y: 0.78 },
+    { slot: 'RB',  x: 0.88, y: 0.72 },
+    { slot: 'LM',  x: 0.12, y: 0.48 },
+    { slot: 'CM',  x: 0.38, y: 0.52 },
+    { slot: 'CM',  x: 0.62, y: 0.52 },
+    { slot: 'RM',  x: 0.88, y: 0.48 },
+    { slot: 'ST',  x: 0.38, y: 0.18 },
+    { slot: 'ST',  x: 0.62, y: 0.18 },
+  ],
+  '4-2-3-1': [
+    { slot: 'GK',  x: 0.50, y: 0.92 },
+    { slot: 'LB',  x: 0.12, y: 0.72 },
+    { slot: 'CB',  x: 0.35, y: 0.78 },
+    { slot: 'CB',  x: 0.65, y: 0.78 },
+    { slot: 'RB',  x: 0.88, y: 0.72 },
+    { slot: 'CDM', x: 0.38, y: 0.56 },
+    { slot: 'CDM', x: 0.62, y: 0.56 },
+    { slot: 'LW',  x: 0.15, y: 0.32 },
+    { slot: 'CAM', x: 0.50, y: 0.35 },
+    { slot: 'RW',  x: 0.85, y: 0.32 },
+    { slot: 'ST',  x: 0.50, y: 0.15 },
+  ],
+  '3-5-2': [
+    { slot: 'GK',  x: 0.50, y: 0.92 },
+    { slot: 'CB',  x: 0.22, y: 0.76 },
+    { slot: 'CB',  x: 0.50, y: 0.80 },
+    { slot: 'CB',  x: 0.78, y: 0.76 },
+    { slot: 'LB',  x: 0.08, y: 0.52 },
+    { slot: 'CM',  x: 0.30, y: 0.52 },
+    { slot: 'CDM', x: 0.50, y: 0.56 },
+    { slot: 'CM',  x: 0.70, y: 0.52 },
+    { slot: 'RB',  x: 0.92, y: 0.52 },
+    { slot: 'ST',  x: 0.38, y: 0.18 },
+    { slot: 'ST',  x: 0.62, y: 0.18 },
+  ],
+  '4-1-2-1-2': [
+    { slot: 'GK',  x: 0.50, y: 0.92 },
+    { slot: 'LB',  x: 0.12, y: 0.72 },
+    { slot: 'CB',  x: 0.35, y: 0.78 },
+    { slot: 'CB',  x: 0.65, y: 0.78 },
+    { slot: 'RB',  x: 0.88, y: 0.72 },
+    { slot: 'CDM', x: 0.50, y: 0.58 },
+    { slot: 'CM',  x: 0.30, y: 0.44 },
+    { slot: 'CM',  x: 0.70, y: 0.44 },
+    { slot: 'CAM', x: 0.50, y: 0.32 },
+    { slot: 'ST',  x: 0.38, y: 0.15 },
+    { slot: 'ST',  x: 0.62, y: 0.15 },
+  ],
+};
+
+const FORMATION_NAMES = Object.keys(FORMATIONS);
 
 const SLOT_COMPAT = {
   GK:  ['GK'],
   LB:  ['LB', 'CB', 'LW', 'LM', 'CDM'],
   CB:  ['CB', 'CDM', 'LB', 'RB'],
   RB:  ['RB', 'CB', 'RW', 'RM', 'CDM'],
+  CDM: ['CDM', 'CM', 'CB'],
   CM:  ['CM', 'CDM', 'CAM', 'LM', 'RM'],
+  CAM: ['CAM', 'CM', 'CF', 'ST'],
+  LM:  ['LM', 'LW', 'CM', 'LB'],
+  RM:  ['RM', 'RW', 'CM', 'RB'],
   LW:  ['LW', 'LM', 'ST', 'CF', 'CAM'],
   RW:  ['RW', 'RM', 'ST', 'CF', 'CAM'],
   ST:  ['ST', 'CF', 'LW', 'RW', 'CAM'],
@@ -123,10 +183,12 @@ function cardTier(overall) {
 // ========== STATE ==========
 
 let mgrState = 'select';
-let homeSquad = [];
+let homeSquad = [];   // array of 11 slots: each null or a player object
 let awaySquad = [];
 let homeName = 'Home';
 let awayName = 'Away';
+let homeFormation = '4-3-3';
+let awayFormation = '4-3-3';
 let selectingTeam = 'home';
 let posFilter = 'ALL';
 let allPlayers = [...BUILTIN_PLAYERS];
@@ -136,6 +198,8 @@ let currentMatch = null;
 let matchAnimFrame = null;
 let matchTimer = null;
 let matchSpeed = 1;
+let dragPlayer = null;
+let dragCard = null;
 
 // ========== MATCH ENGINE ==========
 
@@ -309,9 +373,9 @@ let ballTarget = { x: 0.5, y: 0.5 };
 function initPositions(match) {
   pitchPositions.clear();
   pitchTargets.clear();
-  const placeTeam = (team, side) => {
-    const formation = FORMATION_433;
-    const assigned = assignFormation(team.players);
+  const placeTeam = (team, side, formationName) => {
+    const formation = getFormation(formationName);
+    const assigned = assignFormation(team.players, formationName);
     assigned.forEach((player, i) => {
       const slot = formation[i];
       let x = slot.x, y = slot.y;
@@ -321,19 +385,19 @@ function initPositions(match) {
       pitchTargets.set(key, { x, y });
     });
   };
-  placeTeam(match.home, 'home');
-  placeTeam(match.away, 'away');
+  placeTeam(match.home, 'home', match.homeFormation || '4-3-3');
+  placeTeam(match.away, 'away', match.awayFormation || '4-3-3');
   ballPos = { x: 0.5, y: 0.5 };
   ballTarget = { x: 0.5, y: 0.5 };
 }
 
 function updatePositions(match, event) {
-  const formation = FORMATION_433;
   const attShift = 0.04;
   const driftRange = 0.02;
   const attSide = event?.team || (Math.random() < 0.5 ? 'home' : 'away');
 
   ['home', 'away'].forEach(side => {
+    const formation = getFormation(side === 'home' ? (match.homeFormation || '4-3-3') : (match.awayFormation || '4-3-3'));
     const isAtt = side === attSide || (event?.attTeam === side);
     for (let i = 0; i < 11; i++) {
       const key = side + '_' + i;
@@ -461,8 +525,13 @@ function drawPitch(canvas) {
 
 // ========== FORMATION ASSIGNMENT ==========
 
-function assignFormation(players) {
-  const slots = FORMATION_433.map(s => ({ ...s, assigned: null }));
+function getFormation(name) {
+  return FORMATIONS[name] || FORMATIONS['4-3-3'];
+}
+
+function assignFormation(players, formationName) {
+  const formation = getFormation(formationName || '4-3-3');
+  const slots = formation.map(s => ({ ...s, assigned: null }));
   const unassigned = [...players];
 
   for (let pass = 0; pass < 2; pass++) {
@@ -479,6 +548,14 @@ function assignFormation(players) {
     if (!slot.assigned && unassigned.length) slot.assigned = unassigned.shift();
   }
   return slots.map(s => s.assigned).filter(Boolean);
+}
+
+function filledCount(squad) {
+  return squad.filter(Boolean).length;
+}
+
+function squadPlayers(squad) {
+  return squad.filter(Boolean);
 }
 
 // ========== UI HELPERS ==========
@@ -544,66 +621,207 @@ function renderCard(player, options = {}) {
   return card;
 }
 
-// ========== FORMATION MINI ==========
+// ========== HORIZONTAL PITCH (SELECTION) ==========
 
-function renderFormationMini(players, teamColor) {
-  const container = el('div', 'formation-mini');
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 200 280');
-  svg.setAttribute('aria-hidden', 'true');
+function renderSelectionPitch() {
+  const container = el('div', 'mgr-pitch-select');
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 800 440');
+  svg.setAttribute('aria-label', 'Formation pitch');
+  svg.classList.add('mgr-pitch-svg');
 
-  // Pitch outline
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  Object.entries({ x: 5, y: 5, width: 190, height: 270, rx: 4, fill: 'none', stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1 }).forEach(([k, v]) => rect.setAttribute(k, v));
-  svg.append(rect);
+  const pad = 20;
+  const pw = 760, ph = 400;
 
-  // Halfway
-  const half = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  Object.entries({ x1: 5, y1: 140, x2: 195, y2: 140, stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1 }).forEach(([k, v]) => half.setAttribute(k, v));
+  // Pitch background
+  const bg = document.createElementNS(svgNS, 'rect');
+  Object.entries({ x: 0, y: 0, width: 800, height: 440, rx: 12, fill: '#0d1a0d' }).forEach(([k,v]) => bg.setAttribute(k,v));
+  svg.append(bg);
+
+  // Touchline
+  const touchline = document.createElementNS(svgNS, 'rect');
+  Object.entries({ x: pad, y: pad, width: pw, height: ph, fill: 'none', stroke: 'rgba(255,255,255,0.18)', 'stroke-width': 1.5 }).forEach(([k,v]) => touchline.setAttribute(k,v));
+  svg.append(touchline);
+
+  // Halfway line (vertical)
+  const half = document.createElementNS(svgNS, 'line');
+  Object.entries({ x1: 400, y1: pad, x2: 400, y2: pad + ph, stroke: 'rgba(255,255,255,0.18)', 'stroke-width': 1.5 }).forEach(([k,v]) => half.setAttribute(k,v));
   svg.append(half);
 
   // Center circle
-  const cc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  Object.entries({ cx: 100, cy: 140, r: 22, fill: 'none', stroke: 'rgba(255,255,255,0.12)', 'stroke-width': 1 }).forEach(([k, v]) => cc.setAttribute(k, v));
+  const cc = document.createElementNS(svgNS, 'circle');
+  Object.entries({ cx: 400, cy: pad + ph/2, r: 50, fill: 'none', stroke: 'rgba(255,255,255,0.12)', 'stroke-width': 1.5 }).forEach(([k,v]) => cc.setAttribute(k,v));
   svg.append(cc);
 
-  const assigned = assignFormation(players);
-  FORMATION_433.forEach((slot, i) => {
-    const player = assigned[i];
-    const cx = 5 + slot.x * 190;
-    const cy = 5 + slot.y * 270;
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    Object.entries({ cx, cy, r: player ? 10 : 8, fill: player ? (teamColor || '#fff') : 'rgba(255,255,255,0.1)', stroke: player ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.2)', 'stroke-width': 1 }).forEach(([k, v]) => circle.setAttribute(k, v));
-    svg.append(circle);
-    if (player) {
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', cx);
-      text.setAttribute('y', cy + 20);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('fill', '#ccc');
-      text.setAttribute('font-size', '8');
-      text.setAttribute('font-family', 'Inter, sans-serif');
-      text.textContent = player.name.split(' ').pop();
-      svg.append(text);
-    } else {
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', cx);
-      text.setAttribute('y', cy + 4);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('fill', 'rgba(255,255,255,0.3)');
-      text.setAttribute('font-size', '10');
-      text.textContent = slot.slot;
-      svg.append(text);
+  // Center spot
+  const cs = document.createElementNS(svgNS, 'circle');
+  Object.entries({ cx: 400, cy: pad + ph/2, r: 3, fill: 'rgba(255,255,255,0.25)' }).forEach(([k,v]) => cs.setAttribute(k,v));
+  svg.append(cs);
+
+  // Penalty areas (horizontal: left & right)
+  const paH2 = ph * 0.4, paW2 = pw * 0.12;
+  const gaH2 = ph * 0.2, gaW2 = pw * 0.05;
+  // Left
+  const paL = document.createElementNS(svgNS, 'rect');
+  Object.entries({ x: pad, y: pad + (ph - paH2)/2, width: paW2, height: paH2, fill: 'none', stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1 }).forEach(([k,v]) => paL.setAttribute(k,v));
+  svg.append(paL);
+  const gaL = document.createElementNS(svgNS, 'rect');
+  Object.entries({ x: pad, y: pad + (ph - gaH2)/2, width: gaW2, height: gaH2, fill: 'none', stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1 }).forEach(([k,v]) => gaL.setAttribute(k,v));
+  svg.append(gaL);
+  // Right
+  const paR = document.createElementNS(svgNS, 'rect');
+  Object.entries({ x: pad + pw - paW2, y: pad + (ph - paH2)/2, width: paW2, height: paH2, fill: 'none', stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1 }).forEach(([k,v]) => paR.setAttribute(k,v));
+  svg.append(paR);
+  const gaR = document.createElementNS(svgNS, 'rect');
+  Object.entries({ x: pad + pw - gaW2, y: pad + (ph - gaH2)/2, width: gaW2, height: gaH2, fill: 'none', stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1 }).forEach(([k,v]) => gaR.setAttribute(k,v));
+  svg.append(gaR);
+
+  // Home team labels
+  const homeLabel = document.createElementNS(svgNS, 'text');
+  Object.entries({ x: 200, y: 16, 'text-anchor': 'middle', fill: '#fff', 'font-size': 13, 'font-family': 'Inter, sans-serif', 'font-weight': 600, opacity: 0.5 }).forEach(([k,v]) => homeLabel.setAttribute(k,v));
+  homeLabel.textContent = (homeName || 'Home').toUpperCase();
+  svg.append(homeLabel);
+
+  const awayLabel = document.createElementNS(svgNS, 'text');
+  Object.entries({ x: 600, y: 16, 'text-anchor': 'middle', fill: '#3b82f6', 'font-size': 13, 'font-family': 'Inter, sans-serif', 'font-weight': 600, opacity: 0.5 }).forEach(([k,v]) => awayLabel.setAttribute(k,v));
+  awayLabel.textContent = (awayName || 'Away').toUpperCase();
+  svg.append(awayLabel);
+
+  // Draw slots for both teams
+  const drawSlots = (formation, squad, side, color) => {
+    formation.forEach((slot, i) => {
+      let sx, sy;
+      if (side === 'home') {
+        sx = pad + (1 - slot.y) * (pw / 2 - 10);
+        sy = pad + slot.x * ph;
+      } else {
+        sx = 400 + slot.y * (pw / 2 - 10);
+        sy = pad + (1 - slot.x) * ph;
+      }
+
+      const player = squad[i] || null;
+      const g = document.createElementNS(svgNS, 'g');
+      g.classList.add('pitch-slot');
+      g.dataset.side = side;
+      g.dataset.index = i;
+
+      const circle = document.createElementNS(svgNS, 'circle');
+      if (player) {
+        Object.entries({ cx: sx, cy: sy, r: 18, fill: color, stroke: 'rgba(0,0,0,0.4)', 'stroke-width': 2 }).forEach(([k,v]) => circle.setAttribute(k,v));
+      } else {
+        Object.entries({ cx: sx, cy: sy, r: 18, fill: 'rgba(255,255,255,0.05)', stroke: 'rgba(255,255,255,0.25)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }).forEach(([k,v]) => circle.setAttribute(k,v));
+      }
+      g.append(circle);
+
+      // Drop zone (invisible, larger)
+      const drop = document.createElementNS(svgNS, 'circle');
+      Object.entries({ cx: sx, cy: sy, r: 28, fill: 'transparent', 'pointer-events': 'all' }).forEach(([k,v]) => drop.setAttribute(k,v));
+      g.append(drop);
+
+      if (player) {
+        const name = document.createElementNS(svgNS, 'text');
+        Object.entries({ x: sx, y: sy + 30, 'text-anchor': 'middle', fill: '#ccc', 'font-size': 10, 'font-family': 'Inter, sans-serif', 'pointer-events': 'none' }).forEach(([k,v]) => name.setAttribute(k,v));
+        name.textContent = player.name.split(' ').pop();
+        g.append(name);
+
+        const ovr = document.createElementNS(svgNS, 'text');
+        Object.entries({ x: sx, y: sy + 5, 'text-anchor': 'middle', fill: side === 'home' ? '#000' : '#fff', 'font-size': 14, 'font-weight': 700, 'font-family': 'Inter, sans-serif', 'pointer-events': 'none' }).forEach(([k,v]) => ovr.setAttribute(k,v));
+        ovr.textContent = player.overall;
+        g.append(ovr);
+
+        // Click to remove
+        g.style.cursor = 'pointer';
+        g.addEventListener('click', () => {
+          squad[i] = null;
+          renderTeamSelection();
+        });
+      } else {
+        const label = document.createElementNS(svgNS, 'text');
+        Object.entries({ x: sx, y: sy + 4, 'text-anchor': 'middle', fill: 'rgba(255,255,255,0.35)', 'font-size': 11, 'font-family': 'Inter, sans-serif', 'pointer-events': 'none' }).forEach(([k,v]) => label.setAttribute(k,v));
+        label.textContent = slot.slot;
+        g.append(label);
+      }
+
+      svg.append(g);
+    });
+  };
+
+  drawSlots(getFormation(homeFormation), homeSquad, 'home', '#fff');
+  drawSlots(getFormation(awayFormation), awaySquad, 'away', '#3b82f6');
+
+  // Drop handling on SVG
+  svg.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+  svg.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragPlayer) return;
+    const rect = svg.getBoundingClientRect();
+    const scaleX = 800 / rect.width;
+    const scaleY = 440 / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+
+    let bestDist = Infinity, bestSide = null, bestIdx = -1;
+    const checkSlots = (formation, squad, side) => {
+      formation.forEach((slot, i) => {
+        let sx, sy;
+        if (side === 'home') {
+          sx = pad + (1 - slot.y) * (pw / 2 - 10);
+          sy = pad + slot.x * ph;
+        } else {
+          sx = 400 + slot.y * (pw / 2 - 10);
+          sy = pad + (1 - slot.x) * ph;
+        }
+        const d = Math.hypot(mx - sx, my - sy);
+        if (d < 40 && d < bestDist && !squad[i]) {
+          bestDist = d; bestSide = side; bestIdx = i;
+        }
+      });
+    };
+    checkSlots(getFormation(homeFormation), homeSquad, 'home');
+    checkSlots(getFormation(awayFormation), awaySquad, 'away');
+
+    if (bestSide && bestIdx >= 0) {
+      // Remove from any other slot first
+      removePlayerFromSquads(dragPlayer.id);
+      if (bestSide === 'home') homeSquad[bestIdx] = dragPlayer;
+      else awaySquad[bestIdx] = dragPlayer;
     }
+    dragPlayer = null;
+    dragCard = null;
+    renderTeamSelection();
   });
 
   container.append(svg);
   return container;
 }
 
+function removePlayerFromSquads(playerId) {
+  for (let i = 0; i < homeSquad.length; i++) {
+    if (homeSquad[i] && homeSquad[i].id === playerId) homeSquad[i] = null;
+  }
+  for (let i = 0; i < awaySquad.length; i++) {
+    if (awaySquad[i] && awaySquad[i].id === playerId) awaySquad[i] = null;
+  }
+}
+
+function ensureSquadSize(squad, size) {
+  while (squad.length < size) squad.push(null);
+  if (squad.length > size) {
+    const extra = squad.splice(size);
+    extra.forEach(p => { /* dropped */ });
+  }
+}
+
 // ========== TEAM SELECTION UI ==========
 
 function renderTeamSelection() {
+  ensureSquadSize(homeSquad, getFormation(homeFormation).length);
+  ensureSquadSize(awaySquad, getFormation(awayFormation).length);
+
   const container = document.querySelector('.mgr-content');
   container.innerHTML = '';
 
@@ -614,55 +832,78 @@ function renderTeamSelection() {
   );
   container.append(topBar);
 
-  const teamTabs = el('div', 'mgr-team-tabs');
-  teamTabs.append(
-    btn(homeName || 'Home', `mgr-team-tab${selectingTeam === 'home' ? ' active home-active' : ''}`, () => { selectingTeam = 'home'; renderTeamSelection(); }),
-    btn(awayName || 'Away', `mgr-team-tab${selectingTeam === 'away' ? ' active away-active' : ''}`, () => { selectingTeam = 'away'; renderTeamSelection(); })
-  );
-  container.append(teamTabs);
+  // Team names row
+  const namesRow = el('div', 'mgr-names-row');
+  const homeInput = document.createElement('input');
+  homeInput.type = 'text';
+  homeInput.className = 'mgr-name-input';
+  homeInput.value = homeName;
+  homeInput.placeholder = 'Home Team';
+  homeInput.maxLength = 30;
+  homeInput.addEventListener('input', () => { homeName = homeInput.value; });
 
-  const currentSquad = selectingTeam === 'home' ? homeSquad : awaySquad;
-  const currentName = selectingTeam === 'home' ? homeName : awayName;
-  const teamColor = selectingTeam === 'home' ? '#fff' : '#3b82f6';
+  const vs = el('span', 'mgr-vs', 'vs');
 
-  // Team info row
-  const teamInfo = el('div', 'mgr-team-info');
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.className = 'mgr-name-input';
-  nameInput.value = currentName;
-  nameInput.placeholder = selectingTeam === 'home' ? 'Home Team' : 'Away Team';
-  nameInput.maxLength = 30;
-  nameInput.addEventListener('input', () => {
-    if (selectingTeam === 'home') homeName = nameInput.value;
-    else awayName = nameInput.value;
+  const awayInput = document.createElement('input');
+  awayInput.type = 'text';
+  awayInput.className = 'mgr-name-input away';
+  awayInput.value = awayName;
+  awayInput.placeholder = 'Away Team';
+  awayInput.maxLength = 30;
+  awayInput.addEventListener('input', () => { awayName = awayInput.value; });
+
+  namesRow.append(homeInput, vs, awayInput);
+  container.append(namesRow);
+
+  // Formation selectors
+  const formRow = el('div', 'mgr-formation-selectors');
+
+  const homeFormSel = document.createElement('select');
+  homeFormSel.className = 'mgr-formation-select';
+  FORMATION_NAMES.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === homeFormation) opt.selected = true;
+    homeFormSel.append(opt);
+  });
+  homeFormSel.addEventListener('change', () => {
+    homeFormation = homeFormSel.value;
+    const old = homeSquad.filter(Boolean);
+    homeSquad = [];
+    ensureSquadSize(homeSquad, getFormation(homeFormation).length);
+    old.forEach((p, i) => { if (i < homeSquad.length) homeSquad[i] = p; });
+    renderTeamSelection();
   });
 
-  const count = el('span', 'mgr-count', `${currentSquad.length}/11`);
-  teamInfo.append(nameInput, count);
-  container.append(teamInfo);
+  const homeCount = el('span', 'mgr-count', `${filledCount(homeSquad)}/11`);
 
-  // Formation mini
-  const formationRow = el('div', 'mgr-formation-row');
-  formationRow.append(renderFormationMini(currentSquad, teamColor));
-
-  // Selected players as small removable tags
-  const selectedTags = el('div', 'mgr-selected-tags');
-  currentSquad.forEach(p => {
-    const tag = el('span', 'mgr-player-tag');
-    tag.textContent = p.name;
-    const x = el('span', 'tag-x', '×');
-    x.addEventListener('click', e => {
-      e.stopPropagation();
-      if (selectingTeam === 'home') homeSquad = homeSquad.filter(q => q.id !== p.id);
-      else awaySquad = awaySquad.filter(q => q.id !== p.id);
-      renderTeamSelection();
-    });
-    tag.append(x);
-    selectedTags.append(tag);
+  const awayFormSel = document.createElement('select');
+  awayFormSel.className = 'mgr-formation-select away';
+  FORMATION_NAMES.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === awayFormation) opt.selected = true;
+    awayFormSel.append(opt);
   });
-  formationRow.append(selectedTags);
-  container.append(formationRow);
+  awayFormSel.addEventListener('change', () => {
+    awayFormation = awayFormSel.value;
+    const old = awaySquad.filter(Boolean);
+    awaySquad = [];
+    ensureSquadSize(awaySquad, getFormation(awayFormation).length);
+    old.forEach((p, i) => { if (i < awaySquad.length) awaySquad[i] = p; });
+    renderTeamSelection();
+  });
+
+  const awayCount = el('span', 'mgr-count', `${filledCount(awaySquad)}/11`);
+
+  formRow.append(homeFormSel, homeCount, el('span', 'mgr-form-spacer'), awayCount, awayFormSel);
+  container.append(formRow);
+
+  // Horizontal pitch with both teams
+  container.append(renderSelectionPitch());
+
+  // Hint
+  container.append(el('p', 'mgr-hint', 'Drag cards onto slots, or click a card then click a slot. Click a filled slot to remove.'));
 
   // Filter pills
   const filters = el('div', 'mgr-filters');
@@ -673,7 +914,10 @@ function renderTeamSelection() {
 
   // Player card grid
   const grid = el('div', 'mgr-card-grid');
-  const usedIds = new Set([...homeSquad.map(p => p.id), ...awaySquad.map(p => p.id)]);
+  const usedIds = new Set();
+  homeSquad.forEach(p => { if (p) usedIds.add(p.id); });
+  awaySquad.forEach(p => { if (p) usedIds.add(p.id); });
+
   let filtered = allPlayers.filter(p => {
     if (posFilter !== 'ALL') {
       const group = POS_GROUPS[posFilter] || [];
@@ -685,24 +929,56 @@ function renderTeamSelection() {
 
   filtered.forEach(p => {
     const isUsed = usedIds.has(p.id);
-    const isInCurrent = currentSquad.some(q => q.id === p.id);
-    grid.append(renderCard(p, {
+    const card = renderCard(p, {
       selected: isUsed,
       onClick: () => {
-        if (isInCurrent) {
-          if (selectingTeam === 'home') homeSquad = homeSquad.filter(q => q.id !== p.id);
-          else awaySquad = awaySquad.filter(q => q.id !== p.id);
-        } else if (!isUsed && currentSquad.length < 11) {
-          currentSquad.push(p);
+        if (isUsed) {
+          removePlayerFromSquads(p.id);
+          renderTeamSelection();
+          return;
         }
-        renderTeamSelection();
+        // Click-to-assign: find first empty slot on the active team
+        const squad = selectingTeam === 'home' ? homeSquad : awaySquad;
+        const emptyIdx = squad.findIndex(s => s === null);
+        if (emptyIdx >= 0) {
+          squad[emptyIdx] = p;
+          renderTeamSelection();
+        }
       },
-    }));
+    });
+
+    // Drag support
+    if (!isUsed) {
+      card.draggable = true;
+      card.addEventListener('dragstart', e => {
+        dragPlayer = p;
+        dragCard = card;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', p.id);
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        dragPlayer = null;
+        dragCard = null;
+      });
+    }
+
+    grid.append(card);
   });
   container.append(grid);
 
+  // Team toggle (for click-to-assign)
+  const teamToggle = el('div', 'mgr-team-toggle');
+  teamToggle.append(el('span', 'mgr-toggle-label', 'Click assigns to:'));
+  teamToggle.append(
+    btn('Home', `filter-pill${selectingTeam === 'home' ? ' active' : ''}`, () => { selectingTeam = 'home'; document.querySelectorAll('.mgr-team-toggle .filter-pill').forEach((b, i) => b.classList.toggle('active', i === 0)); }),
+    btn('Away', `filter-pill away-pill${selectingTeam === 'away' ? ' active' : ''}`, () => { selectingTeam = 'away'; document.querySelectorAll('.mgr-team-toggle .filter-pill').forEach((b, i) => b.classList.toggle('active', i === 1)); })
+  );
+  container.append(teamToggle);
+
   // Start match button
-  const canStart = homeSquad.length === 11 && awaySquad.length === 11;
+  const canStart = filledCount(homeSquad) === 11 && filledCount(awaySquad) === 11;
   const startBtn = btn('start match', `button mgr-start${canStart ? '' : ' disabled'}`, canStart ? startMatch : null);
   if (!canStart) startBtn.disabled = true;
   container.append(startBtn);
@@ -713,9 +989,11 @@ function renderTeamSelection() {
 function startMatch() {
   matchSpeed = 1;
   currentMatch = createMatch(
-    { name: homeName || 'Home', players: [...homeSquad] },
-    { name: awayName || 'Away', players: [...awaySquad] }
+    { name: homeName || 'Home', players: squadPlayers(homeSquad) },
+    { name: awayName || 'Away', players: squadPlayers(awaySquad) }
   );
+  currentMatch.homeFormation = homeFormation;
+  currentMatch.awayFormation = awayFormation;
   mgrState = 'match';
   renderMatchView();
   initPositions(currentMatch);
@@ -897,8 +1175,8 @@ function showMatchResult(match) {
       } catch {}
     }),
     btn('play again', 'button secondary', () => {
-      homeSquad = [];
-      awaySquad = [];
+      homeSquad = new Array(getFormation(homeFormation).length).fill(null);
+      awaySquad = new Array(getFormation(awayFormation).length).fill(null);
       mgrState = 'select';
       renderManager();
     }),
@@ -962,5 +1240,7 @@ function initManager(managerData) {
   customPlayers = managerData?.players || [];
   matchHistory = managerData?.history || [];
   allPlayers = [...BUILTIN_PLAYERS, ...customPlayers.map(p => ({ ...p, builtin: false }))];
+  homeSquad = new Array(getFormation(homeFormation).length).fill(null);
+  awaySquad = new Array(getFormation(awayFormation).length).fill(null);
   renderManager();
 }
