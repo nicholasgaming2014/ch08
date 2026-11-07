@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'art', 'contact'];
+const TABS = ['home', 'beats', 'art', 'fc', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -440,6 +440,244 @@ function renderArt(art) {
   document.querySelector('#panel-art .empty-note').hidden = art.length > 0;
 }
 
+// ---------- fc/fifa stats ----------
+
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
+
+function statInput(field) {
+  if (field.type === 'choice') {
+    const select = document.createElement('select');
+    select.name = field.key;
+    field.options.forEach(option => select.add(new Option(option, option)));
+    return select;
+  }
+  const input = document.createElement('input');
+  input.name = field.key;
+  if (field.type === 'bool') {
+    input.type = 'checkbox';
+    return input;
+  }
+  if (field.type === 'text') {
+    input.type = 'text';
+    input.maxLength = 120;
+    if (field.placeholder) input.placeholder = field.placeholder;
+    return input;
+  }
+  input.type = 'number';
+  input.min = 0;
+  input.max = { int: 100000, rating: 10, pct: 100 }[field.type];
+  input.step = field.type === 'int' ? 1 : 0.1;
+  input.inputMode = field.type === 'int' ? 'numeric' : 'decimal';
+  return input;
+}
+
+// One line describing a saved row, e.g. "FC25 · ch08 · 30 mp · 12 goals".
+function rowSummary(table, row) {
+  const schema = FC_SCHEMA[table];
+  const parts = schema.fields
+    .filter(f => ['text', 'choice'].includes(f.type) && f.key !== 'position' && row[f.key])
+    .map(f => row[f.key]);
+  schema.fields
+    .filter(f => !['text', 'choice', 'bool'].includes(f.type) && row[f.key] != null)
+    .slice(0, 3)
+    .forEach(f => parts.push(`${row[f.key]} ${f.short || f.label}`));
+  if (row.me) parts.push('me');
+  return parts.join(' · ');
+}
+
+function fcEditor(table) {
+  const schema = FC_SCHEMA[table];
+  const card = document.createElement('form');
+  card.className = 'admin-card fc-editor';
+  card.innerHTML = `
+    <h2></h2>
+    <div class="fc-entry">
+      <div class="field fc-shot"><span>screenshot (optional)</span>
+        <img class="fc-shot-preview" alt="Stats screenshot" hidden>
+        <input type="file" name="screenshot" accept="${IMAGE_ACCEPT}">
+        <label class="check" hidden><input type="checkbox" name="removeScreenshot"> remove screenshot</label>
+      </div>
+      <div class="fc-fields"></div>
+    </div>
+    <div class="button-row">
+      <button type="submit" class="button">add row</button>
+      <button type="button" class="button secondary fc-cancel" hidden>cancel</button>
+      <span class="status" role="status"></span>
+    </div>
+    <ul class="fc-rows"></ul>`;
+  card.querySelector('h2').textContent = schema.title;
+
+  const fields = card.querySelector('.fc-fields');
+  schema.fields.forEach(field => {
+    const label = document.createElement('label');
+    label.className = field.type === 'bool' ? 'check' : 'field';
+    const input = statInput(field);
+    if (field.type === 'bool') {
+      label.append(input, ` ${field.label}`);
+    } else {
+      const caption = document.createElement('span');
+      caption.textContent = field.label + (field.key === schema.required ? ' *' : '');
+      label.append(caption, input);
+    }
+    fields.append(label);
+  });
+
+  const preview = card.querySelector('.fc-shot-preview');
+  const shotInput = card.elements.screenshot;
+  const removeShot = card.elements.removeScreenshot;
+  const submit = card.querySelector('[type="submit"]');
+  const cancel = card.querySelector('.fc-cancel');
+  let editing = null;
+
+  function showShot(src) {
+    preview.hidden = !src;
+    if (src) preview.src = src;
+  }
+
+  shotInput.addEventListener('change', () => {
+    if (shotInput.files[0]) showShot(URL.createObjectURL(shotInput.files[0]));
+    removeShot.checked = false;
+  });
+
+  function setValues(row) {
+    schema.fields.forEach(field => {
+      const input = card.elements[field.key];
+      if (field.type === 'bool') input.checked = Boolean(row[field.key]);
+      else input.value = row[field.key] ?? (field.type === 'choice' ? field.options[0] : '');
+    });
+  }
+
+  // After adding a row, keep the game/season and screenshot so the next player
+  // from the same screen is quick to enter; clear everything else.
+  function resetForNext() {
+    schema.fields.forEach(field => {
+      const input = card.elements[field.key];
+      if (field.type === 'choice' || field.key === 'season') return;
+      if (field.type === 'bool') input.checked = false;
+      else input.value = '';
+    });
+    shotInput.value = '';
+  }
+
+  function stopEditing() {
+    editing = null;
+    submit.textContent = 'add row';
+    cancel.hidden = true;
+    removeShot.parentElement.hidden = true;
+    removeShot.checked = false;
+    shotInput.value = '';
+    showShot('');
+    setValues({});
+  }
+
+  function startEditing(row) {
+    editing = row;
+    setValues(row);
+    shotInput.value = '';
+    showShot(row.screenshot);
+    removeShot.parentElement.hidden = !row.screenshot;
+    submit.textContent = 'save changes';
+    cancel.hidden = false;
+    setStatus(card, '');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  cancel.addEventListener('click', () => {
+    stopEditing();
+    setStatus(card, '');
+  });
+
+  card.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = new FormData();
+    schema.fields.forEach(field => {
+      const input = card.elements[field.key];
+      data.append(field.key, field.type === 'bool' ? input.checked : input.value);
+    });
+    if (shotInput.files[0]) data.append('screenshot', shotInput.files[0]);
+    if (editing) data.append('removeScreenshot', removeShot.checked);
+
+    setBusy(card, true);
+    setStatus(card, 'saving…');
+    try {
+      const url = editing ? `/api/admin/fc/${table}/${editing.id}` : `/api/admin/fc/${table}`;
+      content = await send(editing ? 'PUT' : 'POST', url, data, p => setStatus(card, `uploading… ${Math.round(p * 100)}%`));
+      if (editing) {
+        stopEditing();
+        setStatus(card, 'saved ✓');
+      } else {
+        resetForNext();
+        setStatus(card, 'added ✓');
+      }
+      renderRows();
+      card.elements[schema.fields.find(f => !['choice', 'bool'].includes(f.type) && f.key !== 'season').key].focus();
+    } catch (err) {
+      setStatus(card, err.message, true);
+    } finally {
+      setBusy(card, false);
+    }
+  });
+
+  function renderRows() {
+    const rows = content.fc?.[table] || [];
+    const list = card.querySelector('.fc-rows');
+    if (!rows.length) {
+      const empty = document.createElement('li');
+      empty.className = 'empty-note';
+      empty.textContent = 'nothing added yet';
+      return list.replaceChildren(empty);
+    }
+    list.replaceChildren(...rows.map(row => {
+      const li = document.createElement('li');
+      li.className = 'fc-row';
+      if (row.screenshot) {
+        const thumb = document.createElement('img');
+        thumb.className = 'art-thumb';
+        thumb.src = row.screenshot;
+        thumb.alt = '';
+        thumb.loading = 'lazy';
+        li.append(thumb);
+      }
+      const summary = document.createElement('span');
+      summary.className = 'fc-row-summary';
+      summary.textContent = rowSummary(table, row);
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'button secondary';
+      editButton.textContent = 'edit';
+      editButton.addEventListener('click', () => startEditing(row));
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'button danger';
+      deleteButton.textContent = 'delete';
+      deleteButton.addEventListener('click', async () => {
+        if (!confirm(`Delete “${rowSummary(table, row)}”? This can’t be undone.`)) return;
+        setBusy(card, true);
+        try {
+          content = await send('DELETE', `/api/admin/fc/${table}/${row.id}`);
+          if (editing?.id === row.id) stopEditing();
+          renderRows();
+          setStatus(card, 'deleted');
+        } catch (err) {
+          setStatus(card, err.message, true);
+        } finally {
+          setBusy(card, false);
+        }
+      });
+      li.append(summary, editButton, deleteButton);
+      return li;
+    }));
+  }
+
+  setValues({});
+  card.renderRows = renderRows;
+  return card;
+}
+
+const fcEditors = Object.keys(FC_SCHEMA).map(fcEditor);
+document.querySelector('.fc-admin').append(...fcEditors);
+const renderFcAdmin = () => fcEditors.forEach(card => card.renderRows());
+
 // ---------- Contact ----------
 
 const contactForm = document.getElementById('contact-form');
@@ -697,4 +935,5 @@ fetch('/api/content', { cache: 'no-store' })
     fillContact(content.contact);
     renderBeats(content.beats);
     renderArt(content.art || []);
+    renderFcAdmin();
   });

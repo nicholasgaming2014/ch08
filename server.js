@@ -4,6 +4,7 @@ const fsp = require('fs/promises');
 const path = require('path');
 const express = require('express');
 const multer = require('multer');
+const FC_SCHEMA = require('./public/fc-schema.js');
 
 // Load a local .env file when there is one (Render sets env vars directly).
 try { process.loadEnvFile(); } catch {}
@@ -34,6 +35,8 @@ const DEFAULT_CONTENT = {
   producers: {},
   // Artwork for the art page collage, newest first.
   art: [],
+  // Stat rows for the fc/fifa page, one list per table in FC_SCHEMA.
+  fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -52,6 +55,9 @@ function loadContent() {
     if (Array.isArray(saved.beats)) content.beats = saved.beats.map(withProducerList);
     if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
     if (Array.isArray(saved.art)) content.art = saved.art;
+    Object.keys(FC_SCHEMA).forEach(table => {
+      if (Array.isArray(saved.fc?.[table])) content.fc[table] = saved.fc[table];
+    });
   } catch {}
   return content;
 }
@@ -89,7 +95,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover', 'images'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'images', 'screenshot'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
@@ -516,6 +522,88 @@ app.delete('/api/admin/art/:id', requireAdminApi, async (req, res) => {
   content.art = content.art.filter(a => a !== piece);
   await saveContent();
   await removeUpload(piece.image);
+  res.json(content);
+});
+
+// ---------- fc/fifa stats ----------
+
+function statValue(field, value) {
+  const raw = String(value ?? '').trim();
+  if (field.type === 'bool') return raw === 'true';
+  if (field.type === 'choice') return field.options.includes(raw) ? raw : field.options[0];
+  if (field.type === 'text') return text(raw, 120);
+  if (raw === '') return null;
+  const n = Number(raw.replace(/[%,\s]/g, ''));
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (field.type === 'int') return n <= 100000 ? Math.round(n) : null;
+  if (field.type === 'rating') return n <= 10 ? Math.round(n * 10) / 10 : null;
+  if (field.type === 'pct') return n <= 100 ? Math.round(n * 10) / 10 : null;
+  return null;
+}
+
+function statRow(schema, body) {
+  return Object.fromEntries(schema.fields.map(field => [field.key, statValue(field, body[field.key])]));
+}
+
+function fcTable(req, res) {
+  const schema = Object.hasOwn(FC_SCHEMA, req.params.table) ? FC_SCHEMA[req.params.table] : null;
+  if (!schema) res.status(404).json({ error: 'Unknown stats table.' });
+  return schema;
+}
+
+const screenshotUpload = upload.fields([{ name: 'screenshot', maxCount: 1 }]);
+
+app.post('/api/admin/fc/:table', requireAdminApi, screenshotUpload, async (req, res) => {
+  const schema = fcTable(req, res);
+  if (!schema) return removeRequestFiles(req);
+  const row = statRow(schema, req.body || {});
+  if (!row[schema.required]) {
+    await removeRequestFiles(req);
+    const field = schema.fields.find(f => f.key === schema.required);
+    return res.status(400).json({ error: `Fill in the ${field.label}.` });
+  }
+  const screenshot = req.files?.screenshot?.[0];
+  content.fc[req.params.table].push({
+    id: crypto.randomBytes(8).toString('hex'),
+    ...row,
+    screenshot: screenshot ? fileUrl(screenshot) : '',
+  });
+  await saveContent();
+  res.status(201).json(content);
+});
+
+app.put('/api/admin/fc/:table/:id', requireAdminApi, screenshotUpload, async (req, res) => {
+  const schema = fcTable(req, res);
+  if (!schema) return removeRequestFiles(req);
+  const entry = content.fc[req.params.table].find(r => r.id === req.params.id);
+  if (!entry) {
+    await removeRequestFiles(req);
+    return res.status(404).json({ error: 'Row not found.' });
+  }
+  const row = statRow(schema, req.body || {});
+  if (!row[schema.required]) {
+    await removeRequestFiles(req);
+    const field = schema.fields.find(f => f.key === schema.required);
+    return res.status(400).json({ error: `Fill in the ${field.label}.` });
+  }
+  const oldScreenshot = entry.screenshot;
+  const screenshot = req.files?.screenshot?.[0];
+  Object.assign(entry, row, {
+    screenshot: screenshot ? fileUrl(screenshot) : req.body?.removeScreenshot === 'true' ? '' : oldScreenshot,
+  });
+  await saveContent();
+  if (entry.screenshot !== oldScreenshot) await removeUpload(oldScreenshot);
+  res.json(content);
+});
+
+app.delete('/api/admin/fc/:table/:id', requireAdminApi, async (req, res) => {
+  if (!fcTable(req, res)) return;
+  const rows = content.fc[req.params.table];
+  const entry = rows.find(r => r.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Row not found.' });
+  content.fc[req.params.table] = rows.filter(r => r !== entry);
+  await saveContent();
+  await removeUpload(entry.screenshot);
   res.json(content);
 });
 

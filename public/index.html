@@ -26,6 +26,7 @@
     <a href="/#home" class="menu-link">home</a>
     <a href="/#beats" class="menu-link">beats</a>
     <a href="/#art" class="menu-link">art</a>
+    <a href="/#fc" class="menu-link">fc/fifa</a>
 
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link">admin</a>
@@ -71,6 +72,29 @@
         <h1 class="page-title">art</h1>
         <div class="art-collage"></div>
         <p class="empty-note" hidden>no artwork yet</p>
+      </div>
+    </section>
+
+    <section id="fc" class="page" hidden>
+      <div class="fc-column">
+        <h1 class="page-title">fc/fifa</h1>
+
+        <section class="fc-block" aria-labelledby="fc-proclubs-title">
+          <h2 id="fc-proclubs-title" class="fc-heading">pro clubs</h2>
+          <div class="fc-filters" data-filter="game" role="group" aria-label="Pick a game"></div>
+          <div class="fc-table" data-table="proClubs"></div>
+        </section>
+
+        <section class="fc-block" aria-labelledby="fc-career-title">
+          <h2 id="fc-career-title" class="fc-heading">southampton career mode</h2>
+          <div class="fc-filters" data-filter="season" role="group" aria-label="Pick a season"></div>
+          <h3 class="fc-subheading">seasons</h3>
+          <div class="fc-table" data-table="careerSeasons"></div>
+          <h3 class="fc-subheading">players</h3>
+          <div class="fc-table" data-table="careerPlayers"></div>
+          <h3 class="fc-subheading">trophies</h3>
+          <ul class="fc-trophies"></ul>
+        </section>
       </div>
     </section>
 
@@ -158,6 +182,7 @@
   </template>
 
   <script src="/menu.js"></script>
+  <script src="/fc-schema.js"></script>
   <script src="/site.js"></script>
 </body>
 </html>

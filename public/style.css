@@ -867,6 +867,7 @@ h2 {
 .admin input[type="email"],
 .admin input[type="url"],
 .admin input[type="number"],
+.admin select,
 .admin textarea {
   width: 100%;
   padding: 10px 12px;
@@ -883,6 +884,7 @@ h2 {
 }
 
 .admin input:focus,
+.admin select:focus,
 .admin textarea:focus {
   outline: none;
   border-color: #fff;
@@ -1346,5 +1348,259 @@ h2 {
     height: auto;
     max-height: 320px;
     object-fit: contain;
+  }
+}
+
+/* fc/fifa: stat tables */
+.fc-column {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.fc-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fc-heading {
+  font-size: 24px;
+}
+
+.fc-subheading {
+  margin-top: 10px;
+  color: #8e8e93;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.fc-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fc-scroll {
+  overflow-x: auto;
+  background: #1c1c1e;
+  border-radius: 16px;
+}
+
+.fc-scroll:focus-visible {
+  outline: 2px solid #0a84ff;
+  outline-offset: 2px;
+}
+
+.fc-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fc-scroll th,
+.fc-scroll td {
+  padding: 10px 12px;
+  text-align: right;
+  border-top: 1px solid #2c2c2e;
+}
+
+.fc-scroll .text {
+  text-align: left;
+}
+
+.fc-scroll thead th {
+  border-top: 0;
+  color: #8e8e93;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* The first column (name or season) stays put while the rest scrolls on phones. */
+.fc-scroll th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #1c1c1e;
+  text-align: left;
+  font-weight: 600;
+}
+
+.fc-scroll thead th button {
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.fc-scroll thead th button:hover,
+.fc-scroll thead th[aria-sort] button {
+  color: #fff;
+}
+
+.fc-scroll thead th[aria-sort="descending"] button::after {
+  content: " ↓";
+}
+
+.fc-scroll thead th[aria-sort="ascending"] button::after {
+  content: " ↑";
+}
+
+.fc-scroll tbody tr:hover td,
+.fc-scroll tbody tr:hover th {
+  background: #2c2c2e;
+}
+
+.fc-scroll tr.is-me th,
+.fc-scroll tr.is-me td {
+  background: #102a43;
+}
+
+.me-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #0a84ff;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+.fc-table .empty-note {
+  padding: 16px;
+  background: #1c1c1e;
+  border-radius: 16px;
+}
+
+.fc-trophies {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  background: #1c1c1e;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.fc-trophies .empty-note {
+  padding: 16px;
+}
+
+.fc-trophy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 16px;
+}
+
+.fc-trophy + .fc-trophy {
+  border-top: 1px solid #2c2c2e;
+}
+
+.fc-trophy svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: #ffd60a;
+}
+
+.fc-trophy-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.fc-trophy-season {
+  color: #8e8e93;
+  font-size: 14px;
+}
+
+/* Admin fc/fifa entry */
+.fc-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fc-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* The screenshot stays in view while typing the numbers next to it. */
+.fc-shot {
+  position: sticky;
+  top: 16px;
+}
+
+.fc-shot-preview {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  background: #111;
+  border: 1px solid #222;
+}
+
+.fc-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.fc-fields .check {
+  min-height: 44px;
+}
+
+.fc-rows {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  border-top: 1px solid #222;
+}
+
+.fc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #222;
+}
+
+.fc-row-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.fc-row .button {
+  flex: none;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.fc-rows .empty-note {
+  padding: 12px 0;
+}
+
+@media (max-width: 700px) {
+  .fc-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-shot {
+    position: static;
   }
 }

@@ -27,6 +27,7 @@
     <a href="/#home" class="menu-link">home</a>
     <a href="/#beats" class="menu-link">beats</a>
     <a href="/#art" class="menu-link">art</a>
+    <a href="/#fc" class="menu-link">fc/fifa</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link active">admin</a>
     <form method="post" action="/admin/logout">
@@ -41,6 +42,7 @@
       <a href="#home" class="menu-link">home</a>
       <a href="#beats" class="menu-link">beats</a>
       <a href="#art" class="menu-link">art</a>
+      <a href="#fc" class="menu-link">fc/fifa</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
 
@@ -141,6 +143,13 @@
       <div class="admin-art-list"></div>
     </section>
 
+    <!-- fc/fifa -->
+    <section id="panel-fc" class="admin-panel" hidden>
+      <p class="hint">upload a screenshot of the stats screen, then type the numbers in. the screenshot stays on screen while you add each player, and it’s saved with the first row. leave a stat blank if the game doesn’t show it.</p>
+      <div class="fc-admin"></div>
+      <a href="/#fc" class="button secondary" target="_blank" style="text-decoration:none;align-self:flex-start">view page</a>
+    </section>
+
     <!-- Contact -->
     <section id="panel-contact" class="admin-panel" hidden>
       <form id="contact-form" class="admin-card">
@@ -204,6 +213,7 @@
   </template>
 
   <script src="/menu.js"></script>
+  <script src="/fc-schema.js"></script>
   <script src="/admin.js"></script>
 </body>
 </html>

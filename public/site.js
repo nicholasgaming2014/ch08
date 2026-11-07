@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'art', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'fc', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -215,6 +215,206 @@ function renderArt(art) {
     return figure;
   }));
   section.querySelector('.empty-note').hidden = art.length > 0;
+}
+
+// ---------- fc/fifa stats ----------
+
+const ALL = 'all';
+let fcData = Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []]));
+const fcView = { game: ALL, season: ALL };
+// Current sort per table; clicking a column header changes it.
+const fcSort = {
+  proClubs: { key: 'goals', desc: true },
+  careerPlayers: { key: 'goals', desc: true },
+  careerSeasons: { key: 'season', desc: false },
+};
+
+const fieldOf = (table, key) => FC_SCHEMA[table].fields.find(f => f.key === key);
+
+function formatStat(field, value) {
+  if (value == null || value === '') return '–';
+  if (field.type === 'rating') return Number(value).toFixed(1);
+  if (field.type === 'pct') return `${Math.round(value * 10) / 10}%`;
+  return String(value);
+}
+
+// Combines one player's rows (several games or seasons) into all-time totals.
+// Totals add up; averages are weighted by matches/appearances when known.
+function combinePlayers(table, rows) {
+  const schema = FC_SCHEMA[table];
+  const groups = new Map();
+  rows.forEach(row => {
+    const key = row.player.trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+  return [...groups.values()].map(group => {
+    const combined = {
+      player: group[0].player,
+      me: group.some(r => r.me),
+      position: group.map(r => r.position).filter(Boolean).at(-1) || '',
+    };
+    schema.fields.forEach(field => {
+      const values = group.filter(r => r[field.key] != null);
+      if (field.total) {
+        combined[field.key] = values.length ? values.reduce((sum, r) => sum + r[field.key], 0) : null;
+      } else if (field.average) {
+        const weighted = values.filter(r => r[schema.weight] > 0);
+        const weight = weighted.reduce((sum, r) => sum + r[schema.weight], 0);
+        combined[field.key] = weight
+          ? weighted.reduce((sum, r) => sum + r[field.key] * r[schema.weight], 0) / weight
+          : values.length ? values.reduce((sum, r) => sum + r[field.key], 0) / values.length : null;
+      }
+    });
+    return combined;
+  });
+}
+
+function compareStat(a, b, key, desc) {
+  const x = a[key];
+  const y = b[key];
+  if (x == null && y == null) return 0;
+  if (x == null) return 1;
+  if (y == null) return -1;
+  const order = typeof x === 'string' ? x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' }) : x - y;
+  return desc ? -order : order;
+}
+
+// Draws a sortable table. `columns` are field keys from the schema, plus optional computed columns.
+function renderStatTable(table, rows, columns, emptyText) {
+  const container = document.querySelector(`.fc-table[data-table="${table}"]`);
+  if (!rows.length) {
+    const note = document.createElement('p');
+    note.className = 'empty-note';
+    note.textContent = emptyText;
+    return container.replaceChildren(note);
+  }
+  const sort = fcSort[table];
+  const sorted = [...rows].sort((a, b) => compareStat(a, b, sort.key, sort.desc));
+
+  const tableEl = document.createElement('table');
+  const head = tableEl.createTHead().insertRow();
+  columns.forEach(column => {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    const field = column.field || fieldOf(table, column.key);
+    if (field.type === 'text') th.className = 'text';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = field.short || field.label;
+    button.title = field.label;
+    if (sort.key === column.key) th.setAttribute('aria-sort', sort.desc ? 'descending' : 'ascending');
+    button.addEventListener('click', () => {
+      // Numbers start high-to-low; text starts a–z.
+      const numeric = !['text', 'choice'].includes(field.type);
+      fcSort[table] = sort.key === column.key ? { key: column.key, desc: !sort.desc } : { key: column.key, desc: numeric };
+      renderFc();
+    });
+    th.append(button);
+    head.append(th);
+  });
+
+  const body = tableEl.createTBody();
+  sorted.forEach(row => {
+    const tr = body.insertRow();
+    if (row.me) tr.className = 'is-me';
+    columns.forEach((column, i) => {
+      const cell = document.createElement(i === 0 ? 'th' : 'td');
+      if (i === 0) cell.scope = 'row';
+      const field = column.field || fieldOf(table, column.key);
+      if (field.type === 'text') cell.className = 'text';
+      cell.textContent = formatStat(field, row[column.key]);
+      if (column.key === 'player' && row.me) {
+        const tag = document.createElement('span');
+        tag.className = 'me-tag';
+        tag.textContent = 'me';
+        cell.append(' ', tag);
+      }
+      tr.append(cell);
+    });
+  });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'fc-scroll';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', `${FC_SCHEMA[table].title} table`);
+  wrap.append(tableEl);
+  container.replaceChildren(wrap);
+}
+
+function renderFilters(kind, values) {
+  const container = document.querySelector(`.fc-filters[data-filter="${kind}"]`);
+  if (!values.includes(fcView[kind])) fcView[kind] = ALL;
+  container.replaceChildren(...[ALL, ...values].map(value => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'filter-pill';
+    button.textContent = value === ALL ? 'all-time' : value;
+    const active = fcView[kind] === value;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active);
+    button.addEventListener('click', () => {
+      fcView[kind] = value;
+      renderFc();
+    });
+    return button;
+  }));
+}
+
+const columnsOf = (table, skip) => FC_SCHEMA[table].fields.filter(f => !skip.includes(f.key)).map(f => ({ key: f.key }));
+
+function renderFc() {
+  // Pro clubs: one game, or every game combined per player.
+  renderFilters('game', fieldOf('proClubs', 'game').options);
+  const proRows = fcView.game === ALL
+    ? combinePlayers('proClubs', fcData.proClubs)
+    : fcData.proClubs.filter(r => r.game === fcView.game);
+  renderStatTable('proClubs', proRows, columnsOf('proClubs', ['game', 'me']),
+    fcView.game === ALL ? 'no pro clubs stats yet' : `no ${fcView.game} stats yet`);
+
+  // Career mode: every season in any of the three career tables.
+  const seasons = [...new Set(['careerSeasons', 'careerPlayers', 'trophies']
+    .flatMap(table => fcData[table].map(r => r.season)).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  renderFilters('season', seasons);
+  const inSeason = row => fcView.season === ALL || row.season === fcView.season;
+
+  const seasonRows = fcData.careerSeasons.filter(inSeason).map(row => ({
+    ...row,
+    goalDiff: row.goalsFor != null && row.goalsAgainst != null ? row.goalsFor - row.goalsAgainst : null,
+  }));
+  const seasonColumns = columnsOf('careerSeasons', ['points']);
+  seasonColumns.push({ key: 'goalDiff', field: { label: 'goal difference', short: 'gd', type: 'int' } }, { key: 'points' });
+  renderStatTable('careerSeasons', seasonRows, seasonColumns, 'no seasons yet');
+
+  const playerRows = fcView.season === ALL
+    ? combinePlayers('careerPlayers', fcData.careerPlayers)
+    : fcData.careerPlayers.filter(inSeason);
+  renderStatTable('careerPlayers', playerRows, columnsOf('careerPlayers', ['season']), 'no player stats yet');
+
+  const trophies = fcData.trophies.filter(inSeason)
+    .sort((a, b) => (a.season || '').localeCompare(b.season || '', undefined, { numeric: true }));
+  const list = document.querySelector('.fc-trophies');
+  if (!trophies.length) {
+    const li = document.createElement('li');
+    li.className = 'empty-note';
+    li.textContent = 'no trophies yet';
+    return list.replaceChildren(li);
+  }
+  list.replaceChildren(...trophies.map(trophy => {
+    const li = document.createElement('li');
+    li.className = 'fc-trophy';
+    li.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M10 17h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    const name = document.createElement('span');
+    name.className = 'fc-trophy-name';
+    name.textContent = trophy.name;
+    const season = document.createElement('span');
+    season.className = 'fc-trophy-season';
+    season.textContent = trophy.season;
+    li.append(name, season);
+    return li;
+  }));
 }
 
 // ---------- Beat player ----------
@@ -516,5 +716,7 @@ fetch('/api/content')
     renderHome(content.home);
     renderContact(content.contact);
     renderArt(content.art || []);
+    if (content.fc) fcData = content.fc;
+    renderFc();
     renderBeats(content.beats, content.producers);
   });
