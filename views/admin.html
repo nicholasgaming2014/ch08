@@ -28,6 +28,7 @@
     <a href="/#beats" class="menu-link">beats</a>
     <a href="/#art" class="menu-link">art</a>
     <a href="/#fc" class="menu-link">fc/fifa</a>
+    <a href="/#manager" class="menu-link">ch08 manager</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link active">admin</a>
     <form method="post" action="/admin/logout">
@@ -43,6 +44,7 @@
       <a href="#beats" class="menu-link">beats</a>
       <a href="#art" class="menu-link">art</a>
       <a href="#fc" class="menu-link">fc/fifa</a>
+      <a href="#manager" class="menu-link">manager</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
 
@@ -148,6 +150,75 @@
       <p class="hint">upload a screenshot of the stats screen, then type the numbers in. the screenshot stays on screen while you add each player, and it’s saved with the first row. leave a stat blank if the game doesn’t show it.</p>
       <div class="fc-admin"></div>
       <a href="/#fc" class="button secondary" target="_blank" style="text-decoration:none;align-self:flex-start">view page</a>
+    </section>
+
+    <!-- Manager -->
+    <section id="panel-manager" class="admin-panel" hidden>
+      <form id="manager-player-form" class="admin-card">
+        <h2>add a player</h2>
+        <p class="hint">add custom players to the ch08 manager roster. built-in players can't be edited here.</p>
+        <div class="field-row">
+          <label class="field"><span>name</span>
+            <input type="text" name="name" maxlength="120" required>
+          </label>
+          <label class="field"><span>position</span>
+            <select name="position" required>
+              <option value="GK">GK</option>
+              <option value="CB">CB</option>
+              <option value="LB">LB</option>
+              <option value="RB">RB</option>
+              <option value="CDM">CDM</option>
+              <option value="CM">CM</option>
+              <option value="CAM">CAM</option>
+              <option value="LW">LW</option>
+              <option value="RW">RW</option>
+              <option value="ST" selected>ST</option>
+              <option value="CF">CF</option>
+            </select>
+          </label>
+          <label class="field"><span>overall</span>
+            <input type="number" name="overall" min="1" max="99" value="75" inputmode="numeric">
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>pace</span>
+            <input type="number" name="pace" min="1" max="99" value="50" inputmode="numeric">
+          </label>
+          <label class="field"><span>shooting</span>
+            <input type="number" name="shooting" min="1" max="99" value="50" inputmode="numeric">
+          </label>
+          <label class="field"><span>passing</span>
+            <input type="number" name="passing" min="1" max="99" value="50" inputmode="numeric">
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>dribbling</span>
+            <input type="number" name="dribbling" min="1" max="99" value="50" inputmode="numeric">
+          </label>
+          <label class="field"><span>defending</span>
+            <input type="number" name="defending" min="1" max="99" value="50" inputmode="numeric">
+          </label>
+          <label class="field"><span>physical</span>
+            <input type="number" name="physical" min="1" max="99" value="50" inputmode="numeric">
+          </label>
+        </div>
+        <label class="field"><span>photo (optional)</span>
+          <input type="file" name="photo" accept="image/jpeg,image/png,image/gif,image/webp">
+        </label>
+        <div class="button-row">
+          <button type="submit" class="button">add player</button>
+          <button type="button" class="button secondary mgr-cancel" hidden>cancel</button>
+          <span class="status" role="status"></span>
+        </div>
+      </form>
+
+      <h2>custom players</h2>
+      <p class="empty-note mgr-empty" hidden>no custom players yet</p>
+      <div class="mgr-player-list"></div>
+
+      <h2>match history</h2>
+      <p class="empty-note mgr-history-empty" hidden>no matches yet</p>
+      <div class="mgr-history-list"></div>
     </section>
 
     <!-- Contact -->

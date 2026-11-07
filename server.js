@@ -37,6 +37,8 @@ const DEFAULT_CONTENT = {
   art: [],
   // Stat rows for the fc/fifa page, one list per table in FC_SCHEMA.
   fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
+  // Football manager: custom players and match history.
+  manager: { players: [], history: [] },
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -58,6 +60,10 @@ function loadContent() {
     Object.keys(FC_SCHEMA).forEach(table => {
       if (Array.isArray(saved.fc?.[table])) content.fc[table] = saved.fc[table];
     });
+    if (saved.manager && typeof saved.manager === 'object') {
+      if (Array.isArray(saved.manager.players)) content.manager.players = saved.manager.players;
+      if (Array.isArray(saved.manager.history)) content.manager.history = saved.manager.history;
+    }
   } catch {}
   return content;
 }
@@ -95,7 +101,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover', 'images', 'screenshot'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'images', 'screenshot', 'photo'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
@@ -620,6 +626,114 @@ app.put('/api/admin/producers/:name', requireAdminApi, upload.fields([{ name: 'i
   else if (req.body?.remove === 'true') delete content.producers[key];
   await saveContent();
   if (content.producers[key] !== oldImage) await removeUpload(oldImage);
+  res.json(content);
+});
+
+// ---------- Manager ----------
+
+const MAX_MANAGER_HISTORY = 50;
+
+function managerStatValue(value, max = 99) {
+  const n = Math.round(Number(value));
+  return n >= 0 && n <= max ? n : null;
+}
+
+app.post('/api/admin/manager/players', requireAdminApi, upload.fields([{ name: 'photo', maxCount: 1 }]), async (req, res) => {
+  const body = req.body || {};
+  const name = text(body.name, 120);
+  const position = text(body.position, 10);
+  if (!name || !position) {
+    await removeRequestFiles(req);
+    return res.status(400).json({ error: 'A player needs a name and position.' });
+  }
+  const photo = req.files?.photo?.[0];
+  const player = {
+    id: crypto.randomBytes(8).toString('hex'),
+    name,
+    position,
+    overall: managerStatValue(body.overall) ?? 75,
+    pace: managerStatValue(body.pace) ?? 50,
+    shooting: managerStatValue(body.shooting) ?? 50,
+    passing: managerStatValue(body.passing) ?? 50,
+    dribbling: managerStatValue(body.dribbling) ?? 50,
+    defending: managerStatValue(body.defending) ?? 50,
+    physical: managerStatValue(body.physical) ?? 50,
+    photo: fileUrl(photo) || '',
+  };
+  content.manager.players.push(player);
+  await saveContent();
+  res.status(201).json(content);
+});
+
+app.put('/api/admin/manager/players/:id', requireAdminApi, upload.fields([{ name: 'photo', maxCount: 1 }]), async (req, res) => {
+  const player = content.manager.players.find(p => p.id === req.params.id);
+  if (!player) {
+    await removeRequestFiles(req);
+    return res.status(404).json({ error: 'Player not found.' });
+  }
+  const body = req.body || {};
+  const name = text(body.name, 120);
+  const position = text(body.position, 10);
+  if (!name || !position) {
+    await removeRequestFiles(req);
+    return res.status(400).json({ error: 'A player needs a name and position.' });
+  }
+  const photo = req.files?.photo?.[0];
+  const oldPhoto = player.photo;
+  Object.assign(player, {
+    name,
+    position,
+    overall: managerStatValue(body.overall) ?? player.overall,
+    pace: managerStatValue(body.pace) ?? player.pace,
+    shooting: managerStatValue(body.shooting) ?? player.shooting,
+    passing: managerStatValue(body.passing) ?? player.passing,
+    dribbling: managerStatValue(body.dribbling) ?? player.dribbling,
+    defending: managerStatValue(body.defending) ?? player.defending,
+    physical: managerStatValue(body.physical) ?? player.physical,
+    photo: photo ? fileUrl(photo) : body.removePhoto === 'true' ? '' : oldPhoto,
+  });
+  await saveContent();
+  if (player.photo !== oldPhoto) await removeUpload(oldPhoto);
+  res.json(content);
+});
+
+app.delete('/api/admin/manager/players/:id', requireAdminApi, async (req, res) => {
+  const player = content.manager.players.find(p => p.id === req.params.id);
+  if (!player) return res.status(404).json({ error: 'Player not found.' });
+  content.manager.players = content.manager.players.filter(p => p !== player);
+  await saveContent();
+  await removeUpload(player.photo);
+  res.json(content);
+});
+
+app.post('/api/admin/manager/history', requireAdminApi, async (req, res) => {
+  const body = req.body || {};
+  const entry = {
+    id: crypto.randomBytes(8).toString('hex'),
+    date: new Date().toISOString(),
+    homeTeam: text(body.homeTeam, 60),
+    awayTeam: text(body.awayTeam, 60),
+    homeScore: Math.max(0, Math.min(99, Math.round(Number(body.homeScore)) || 0)),
+    awayScore: Math.max(0, Math.min(99, Math.round(Number(body.awayScore)) || 0)),
+    homePlayers: Array.isArray(body.homePlayers) ? body.homePlayers.slice(0, 11).map(n => text(n, 120)) : [],
+    awayPlayers: Array.isArray(body.awayPlayers) ? body.awayPlayers.slice(0, 11).map(n => text(n, 120)) : [],
+    events: Array.isArray(body.events) ? body.events.slice(0, 200) : [],
+    stats: body.stats || {},
+    possession: body.possession || {},
+  };
+  content.manager.history.push(entry);
+  if (content.manager.history.length > MAX_MANAGER_HISTORY) {
+    content.manager.history = content.manager.history.slice(-MAX_MANAGER_HISTORY);
+  }
+  await saveContent();
+  res.status(201).json(content);
+});
+
+app.delete('/api/admin/manager/history/:id', requireAdminApi, async (req, res) => {
+  const entry = content.manager.history.find(m => m.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Match not found.' });
+  content.manager.history = content.manager.history.filter(m => m !== entry);
+  await saveContent();
   res.json(content);
 });
 

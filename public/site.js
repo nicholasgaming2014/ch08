@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'art', 'fc', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'fc', 'manager', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -719,4 +719,5 @@ fetch('/api/content')
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);
+    if (typeof initManager === 'function') initManager(content.manager);
   });
