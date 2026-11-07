@@ -44,14 +44,95 @@ function renderHome(home) {
   renderLinks(section.querySelector('.link-list'), home.links);
 }
 
+// Tile colors for the social rows, matched on the link's host.
+const SOCIAL_TILES = [
+  [host => host.endsWith('instagram.com'), '#d6297a'],
+  [host => host.endsWith('youtube.com') || host === 'youtu.be', '#ff0033'],
+  [host => host.endsWith('soundcloud.com'), '#ff5500'],
+  [host => host.endsWith('spotify.com'), '#1db954'],
+  [host => host.endsWith('music.apple.com'), '#fa2d48'],
+  [host => host.endsWith('tiktok.com'), '#fe2c55'],
+  [host => host.endsWith('x.com') || host.endsWith('twitter.com'), '#48484a'],
+];
+
+const CHEVRON = '<svg class="row-chevron" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function socialRow(link) {
+  const isMail = link.url.startsWith('mailto:');
+  const host = isMail ? link.url.slice(7) : new URL(link.url).hostname.replace(/^www\./, '');
+  const row = document.createElement('a');
+  row.className = 'panel-row';
+  row.href = link.url;
+  if (!isMail) {
+    row.target = '_blank';
+    row.rel = 'noopener';
+  }
+
+  const icon = document.createElement('span');
+  icon.className = 'row-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.setProperty('--tile', SOCIAL_TILES.find(([matches]) => matches(host))?.[1] || '#0a84ff');
+  icon.textContent = link.label.trim().charAt(0).toLowerCase();
+
+  const text = document.createElement('span');
+  text.className = 'row-text';
+  const title = document.createElement('span');
+  title.className = 'row-title';
+  title.textContent = link.label;
+  const detail = document.createElement('span');
+  detail.className = 'row-detail';
+  detail.textContent = host;
+  text.append(title, detail);
+
+  row.append(icon, text);
+  row.insertAdjacentHTML('beforeend', CHEVRON);
+  return row;
+}
+
 function renderContact(contact) {
   const section = document.getElementById('contact');
-  setText(section.querySelector('.contact-paragraph'), contact.paragraph);
-  const email = section.querySelector('.contact-email');
-  setText(email, contact.email);
-  email.href = contact.email ? 'mailto:' + contact.email : '';
-  renderLinks(section.querySelector('.link-list'), contact.socials);
+  section.querySelector('.contact-paragraph').textContent = contact.paragraph;
+  section.querySelector('.contact-intro').hidden = !contact.paragraph;
+
+  section.querySelector('.contact-email').href = contact.email ? 'mailto:' + contact.email : '';
+  section.querySelector('.contact-address').textContent = contact.email;
+  section.querySelector('.contact-email-group').hidden = !contact.email;
+
+  section.querySelector('.contact-socials').replaceChildren(...contact.socials.map(socialRow));
+  section.querySelector('.contact-social-group').hidden = contact.socials.length === 0;
 }
+
+// Copies the email address and confirms in the row for a moment.
+const copyRow = document.querySelector('.contact-copy');
+let copyTimer = null;
+// Older browsers and non-https pages lack the clipboard API, so fall back to a hidden field.
+function copyWithField(value) {
+  const field = document.createElement('textarea');
+  field.value = value;
+  field.setAttribute('readonly', '');
+  field.style.cssText = 'position:fixed;opacity:0';
+  document.body.append(field);
+  field.select();
+  const copied = document.execCommand('copy');
+  field.remove();
+  return copied;
+}
+
+copyRow.addEventListener('click', async () => {
+  const status = copyRow.querySelector('.row-status');
+  const address = document.querySelector('.contact-address').textContent;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(address);
+    copied = true;
+  } catch {
+    copied = copyWithField(address);
+  }
+  status.textContent = copied ? 'copied' : 'couldn’t copy';
+  status.classList.toggle('error', !copied);
+  clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => { status.textContent = ''; }, 2000);
+});
 
 // ---------- Beat player ----------
 

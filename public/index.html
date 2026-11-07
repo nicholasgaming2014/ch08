@@ -65,13 +65,43 @@
       </div>
     </section>
 
-
     <section id="contact" class="page" hidden>
       <div class="content-column contact">
         <h1 class="page-title">contact</h1>
-        <p class="contact-paragraph" hidden></p>
-        <a class="contact-email" hidden></a>
-        <div class="link-list" hidden></div>
+
+        <div class="panel contact-intro" hidden>
+          <p class="contact-paragraph"></p>
+        </div>
+
+        <div class="panel-group contact-email-group" hidden>
+          <h2 class="panel-label">email</h2>
+          <div class="panel">
+            <a class="panel-row contact-email">
+              <span class="row-icon" style="--tile: #0a84ff" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-title">send an email</span>
+                <span class="row-detail contact-address"></span>
+              </span>
+              <svg class="row-chevron" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <button type="button" class="panel-row contact-copy">
+              <span class="row-icon" style="--tile: #5e5ce6" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M9 9h10v11H9z M5 15V4h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="row-text">
+                <span class="row-title">copy address</span>
+              </span>
+              <span class="row-status" aria-live="polite"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-group contact-social-group" hidden>
+          <h2 class="panel-label">socials</h2>
+          <div class="panel contact-socials"></div>
+        </div>
       </div>
     </section>
   </main>
