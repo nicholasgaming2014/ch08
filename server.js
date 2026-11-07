@@ -32,6 +32,8 @@ const DEFAULT_CONTENT = {
   beats: [],
   // Producer pictures for the beats page pills, keyed by lowercase producer name.
   producers: {},
+  // Artwork for the art page collage, newest first.
+  art: [],
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -49,6 +51,7 @@ function loadContent() {
     Object.assign(content.contact, saved.contact);
     if (Array.isArray(saved.beats)) content.beats = saved.beats.map(withProducerList);
     if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
+    if (Array.isArray(saved.art)) content.art = saved.art;
   } catch {}
   return content;
 }
@@ -86,7 +89,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'images'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
@@ -450,6 +453,71 @@ app.delete('/api/admin/beats/:id', requireAdminApi, async (req, res) => {
   res.json(content);
 });
 
+
+// ---------- Art ----------
+
+const MAX_ART_UPLOAD = 30;
+
+function findArt(req, res) {
+  const piece = content.art.find(a => a.id === req.params.id);
+  if (!piece) res.status(404).json({ error: 'Artwork not found.' });
+  return piece;
+}
+
+const sizeValue = value => {
+  const n = Math.round(Number(value));
+  return n > 0 && n < 100000 ? n : null;
+};
+
+// Uploads several images at once. `details` lines up with the files: [{ title, width, height }].
+app.post('/api/admin/art', requireAdminApi, upload.array('images', MAX_ART_UPLOAD), async (req, res) => {
+  const files = req.files || [];
+  if (!files.length) return res.status(400).json({ error: 'Pick at least one image.' });
+  let details = [];
+  try { details = JSON.parse(req.body?.details || '[]'); } catch {}
+  if (!Array.isArray(details)) details = [];
+
+  const now = Date.now();
+  const pieces = files.map((file, i) => ({
+    id: crypto.randomBytes(8).toString('hex'),
+    title: text(details[i]?.title, 200),
+    image: fileUrl(file),
+    width: sizeValue(details[i]?.width),
+    height: sizeValue(details[i]?.height),
+    createdAt: new Date(now + i).toISOString(),
+  }));
+  content.art.unshift(...pieces);
+  await saveContent();
+  res.status(201).json(content);
+});
+
+app.put('/api/admin/art/:id', requireAdminApi, async (req, res) => {
+  const piece = findArt(req, res);
+  if (!piece) return;
+  piece.title = text(req.body?.title, 200);
+  await saveContent();
+  res.json(content);
+});
+
+app.post('/api/admin/art/:id/move', requireAdminApi, async (req, res) => {
+  const index = content.art.findIndex(a => a.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Artwork not found.' });
+  const target = index + (req.body?.direction === 'up' ? -1 : 1);
+  if (target >= 0 && target < content.art.length) {
+    [content.art[index], content.art[target]] = [content.art[target], content.art[index]];
+    await saveContent();
+  }
+  res.json(content);
+});
+
+app.delete('/api/admin/art/:id', requireAdminApi, async (req, res) => {
+  const piece = findArt(req, res);
+  if (!piece) return;
+  content.art = content.art.filter(a => a !== piece);
+  await saveContent();
+  await removeUpload(piece.image);
+  res.json(content);
+});
 
 // Sets or removes one producer's picture.
 app.put('/api/admin/producers/:name', requireAdminApi, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {

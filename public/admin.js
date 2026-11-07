@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'contact'];
+const TABS = ['home', 'beats', 'art', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -295,6 +295,151 @@ homeForm.addEventListener('submit', async e => {
   }
 });
 
+// ---------- Art ----------
+
+const artForm = document.getElementById('art-upload');
+const artStaging = artForm.querySelector('.art-staging');
+const MAX_ART_UPLOAD = 30;
+let staged = [];
+
+// Reads an image's pixel size so the public collage can reserve its space.
+function imageSize(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve({ width: null, height: null });
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function renderStaging() {
+  artStaging.replaceChildren(...staged.map(item => {
+    const row = document.createElement('div');
+    row.className = 'link-row art-row';
+    const thumb = document.createElement('img');
+    thumb.className = 'art-thumb';
+    thumb.src = item.preview;
+    thumb.alt = '';
+    const title = document.createElement('input');
+    title.type = 'text';
+    title.placeholder = 'title (optional)';
+    title.maxLength = 200;
+    title.value = item.title;
+    title.addEventListener('input', () => { item.title = title.value; });
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'button secondary';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', 'Remove this image');
+    remove.addEventListener('click', () => {
+      staged = staged.filter(s => s !== item);
+      renderStaging();
+    });
+    row.append(thumb, title, remove);
+    return row;
+  }));
+}
+
+artForm.images.addEventListener('change', () => {
+  const files = [...artForm.images.files];
+  artForm.images.value = '';
+  const room = MAX_ART_UPLOAD - staged.length;
+  files.slice(0, room).forEach(file => staged.push({ file, title: '', preview: URL.createObjectURL(file) }));
+  renderStaging();
+  setStatus(artForm, files.length > room ? `only ${MAX_ART_UPLOAD} images fit in one upload` : '', files.length > room);
+});
+
+artForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!staged.length) return setStatus(artForm, 'pick at least one image first', true);
+
+  setBusy(artForm, true);
+  setStatus(artForm, 'preparing…');
+  try {
+    const sizes = await Promise.all(staged.map(item => imageSize(item.file)));
+    const data = new FormData();
+    data.append('details', JSON.stringify(staged.map((item, i) => ({ title: item.title.trim(), ...sizes[i] }))));
+    staged.forEach(item => data.append('images', item.file));
+    content = await send('POST', '/api/admin/art', data, p => setStatus(artForm, `uploading… ${Math.round(p * 100)}%`));
+    const count = staged.length;
+    staged = [];
+    renderStaging();
+    renderArt(content.art);
+    setStatus(artForm, `uploaded ${count} ✓`);
+  } catch (err) {
+    setStatus(artForm, err.message, true);
+  } finally {
+    setBusy(artForm, false);
+  }
+});
+
+function artEditor(piece, index, total) {
+  const form = document.createElement('form');
+  form.className = 'admin-card admin-art';
+
+  const thumb = document.createElement('img');
+  thumb.className = 'art-thumb large';
+  thumb.src = piece.image;
+  thumb.alt = '';
+  thumb.loading = 'lazy';
+
+  const fields = document.createElement('div');
+  fields.className = 'admin-beat-fields';
+  const label = document.createElement('label');
+  label.className = 'field';
+  label.innerHTML = '<span>title (optional)</span>';
+  const title = document.createElement('input');
+  title.type = 'text';
+  title.maxLength = 200;
+  title.value = piece.title;
+  label.append(title);
+
+  const buttons = document.createElement('div');
+  buttons.className = 'button-row';
+  buttons.innerHTML = `
+    <button type="submit" class="button">save</button>
+    <button type="button" class="button secondary move-up" aria-label="Move up">↑</button>
+    <button type="button" class="button secondary move-down" aria-label="Move down">↓</button>
+    <button type="button" class="button danger delete">delete</button>
+    <span class="status" role="status"></span>`;
+  fields.append(label, buttons);
+  form.append(thumb, fields);
+
+  buttons.querySelector('.move-up').disabled = index === 0;
+  buttons.querySelector('.move-down').disabled = index === total - 1;
+
+  async function run(action, message) {
+    setBusy(form, true);
+    setStatus(form, message);
+    try {
+      content = await action();
+      renderArt(content.art);
+    } catch (err) {
+      setStatus(form, err.message, true);
+      setBusy(form, false);
+    }
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    run(() => send('PUT', `/api/admin/art/${piece.id}`, { title: title.value }), 'saving…');
+  });
+  buttons.querySelector('.move-up').addEventListener('click', () =>
+    run(() => send('POST', `/api/admin/art/${piece.id}/move`, { direction: 'up' }), 'moving…'));
+  buttons.querySelector('.move-down').addEventListener('click', () =>
+    run(() => send('POST', `/api/admin/art/${piece.id}/move`, { direction: 'down' }), 'moving…'));
+  buttons.querySelector('.delete').addEventListener('click', () => {
+    if (!confirm(`Delete ${piece.title ? `“${piece.title}”` : 'this artwork'}? This can’t be undone.`)) return;
+    run(() => send('DELETE', `/api/admin/art/${piece.id}`), 'deleting…');
+  });
+  return form;
+}
+
+function renderArt(art) {
+  document.querySelector('.admin-art-list').replaceChildren(...art.map((piece, i) => artEditor(piece, i, art.length)));
+  document.querySelector('#panel-art .empty-note').hidden = art.length > 0;
+}
+
 // ---------- Contact ----------
 
 const contactForm = document.getElementById('contact-form');
@@ -551,4 +696,5 @@ fetch('/api/content', { cache: 'no-store' })
     fillHome(content.home);
     fillContact(content.contact);
     renderBeats(content.beats);
+    renderArt(content.art || []);
   });

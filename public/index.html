@@ -25,6 +25,7 @@
   <nav id="menu" class="menu" aria-label="Main menu">
     <a href="/#home" class="menu-link">home</a>
     <a href="/#beats" class="menu-link">beats</a>
+    <a href="/#art" class="menu-link">art</a>
 
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link">admin</a>
@@ -62,6 +63,14 @@
         </div>
         <div class="beat-list"></div>
         <p class="empty-note" hidden>no beats yet</p>
+      </div>
+    </section>
+
+    <section id="art" class="page" hidden>
+      <div class="art-column">
+        <h1 class="page-title">art</h1>
+        <div class="art-collage"></div>
+        <p class="empty-note" hidden>no artwork yet</p>
       </div>
     </section>
 
@@ -105,6 +114,22 @@
       </div>
     </section>
   </main>
+
+  <dialog class="art-viewer" aria-label="Artwork viewer">
+    <button type="button" class="viewer-button viewer-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button type="button" class="viewer-button viewer-prev" aria-label="Previous artwork">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <figure class="viewer-figure">
+      <img alt="">
+      <figcaption></figcaption>
+    </figure>
+    <button type="button" class="viewer-button viewer-next" aria-label="Next artwork">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </dialog>
 
   <template id="beat-template">
     <article class="beat">

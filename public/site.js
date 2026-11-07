@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -44,16 +44,28 @@ function renderHome(home) {
   renderLinks(section.querySelector('.link-list'), home.links);
 }
 
-// Tile colors for the social rows, matched on the link's host.
-const SOCIAL_TILES = [
-  [host => host.endsWith('instagram.com'), '#d6297a'],
-  [host => host.endsWith('youtube.com') || host === 'youtu.be', '#ff0033'],
-  [host => host.endsWith('soundcloud.com'), '#ff5500'],
-  [host => host.endsWith('spotify.com'), '#1db954'],
-  [host => host.endsWith('music.apple.com'), '#fa2d48'],
-  [host => host.endsWith('tiktok.com'), '#fe2c55'],
-  [host => host.endsWith('x.com') || host.endsWith('twitter.com'), '#48484a'],
+// Logo and tile color for each social row, matched on the link's host.
+// Logos are Simple Icons (CC0) in public/icons/brands.
+const SOCIAL_BRANDS = [
+  ['instagram', '#d6297a', host => host.endsWith('instagram.com')],
+  ['youtube', '#ff0033', host => host.endsWith('youtube.com') || host === 'youtu.be'],
+  ['soundcloud', '#ff5500', host => host.endsWith('soundcloud.com')],
+  ['spotify', '#1db954', host => host.endsWith('spotify.com')],
+  ['applemusic', '#fa2d48', host => host.endsWith('music.apple.com')],
+  ['tiktok', '#000', host => host.endsWith('tiktok.com')],
+  ['x', '#000', host => host.endsWith('x.com') || host.endsWith('twitter.com')],
+  ['threads', '#000', host => host.endsWith('threads.net') || host.endsWith('threads.com')],
+  ['facebook', '#0866ff', host => host.endsWith('facebook.com') || host === 'fb.com'],
+  ['twitch', '#9146ff', host => host.endsWith('twitch.tv')],
+  ['discord', '#5865f2', host => host.endsWith('discord.gg') || host.endsWith('discord.com')],
+  ['bandcamp', '#408294', host => host.endsWith('bandcamp.com')],
+  ['snapchat', '#fffc00', host => host.endsWith('snapchat.com')],
+  ['github', '#24292f', host => host.endsWith('github.com')],
+  ['patreon', '#000', host => host.endsWith('patreon.com')],
+  ['linktree', '#43e660', host => host.endsWith('linktr.ee')],
 ];
+// Logos drawn black on these light tiles; white everywhere else.
+const DARK_GLYPH = new Set(['snapchat', 'linktree']);
 
 const CHEVRON = '<svg class="row-chevron" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -71,8 +83,13 @@ function socialRow(link) {
   const icon = document.createElement('span');
   icon.className = 'row-icon';
   icon.setAttribute('aria-hidden', 'true');
-  icon.style.setProperty('--tile', SOCIAL_TILES.find(([matches]) => matches(host))?.[1] || '#0a84ff');
-  icon.textContent = link.label.trim().charAt(0).toLowerCase();
+  const [brand, tile] = SOCIAL_BRANDS.find(([, , matches]) => matches(host)) || ['link', '#0a84ff'];
+  icon.style.setProperty('--tile', tile);
+  const logo = document.createElement('span');
+  logo.className = 'row-logo';
+  logo.style.setProperty('--logo', `url(/icons/brands/${brand}.svg)`);
+  if (DARK_GLYPH.has(brand)) logo.style.background = '#000';
+  icon.append(logo);
 
   const text = document.createElement('span');
   text.className = 'row-text';
@@ -133,6 +150,72 @@ copyRow.addEventListener('click', async () => {
   clearTimeout(copyTimer);
   copyTimer = setTimeout(() => { status.textContent = ''; }, 2000);
 });
+
+// ---------- Art ----------
+
+const viewer = document.querySelector('.art-viewer');
+let artPieces = [];
+let viewing = 0;
+
+function showPiece(index) {
+  viewing = (index + artPieces.length) % artPieces.length;
+  const piece = artPieces[viewing];
+  const img = viewer.querySelector('img');
+  img.src = piece.image;
+  img.alt = piece.title || 'Artwork';
+  setText(viewer.querySelector('figcaption'), piece.title);
+  const single = artPieces.length < 2;
+  viewer.querySelector('.viewer-prev').hidden = single;
+  viewer.querySelector('.viewer-next').hidden = single;
+}
+
+function openViewer(index) {
+  showPiece(index);
+  viewer.showModal();
+}
+
+viewer.querySelector('.viewer-close').addEventListener('click', () => viewer.close());
+viewer.querySelector('.viewer-prev').addEventListener('click', () => showPiece(viewing - 1));
+viewer.querySelector('.viewer-next').addEventListener('click', () => showPiece(viewing + 1));
+viewer.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') showPiece(viewing - 1);
+  if (e.key === 'ArrowRight') showPiece(viewing + 1);
+});
+// Clicking the dark area around the picture closes it.
+viewer.addEventListener('click', e => {
+  if (e.target === viewer || e.target.classList.contains('viewer-figure')) viewer.close();
+});
+
+function renderArt(art) {
+  artPieces = art;
+  const section = document.getElementById('art');
+  section.querySelector('.art-collage').replaceChildren(...art.map((piece, i) => {
+    const figure = document.createElement('figure');
+    figure.className = 'art-piece';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', piece.title ? `View ${piece.title}` : 'View artwork');
+    const img = document.createElement('img');
+    img.src = piece.image;
+    img.alt = piece.title || '';
+    img.loading = 'lazy';
+    // Known size reserves the space so the collage doesn't jump while images load.
+    if (piece.width && piece.height) {
+      img.width = piece.width;
+      img.height = piece.height;
+    }
+    button.append(img);
+    button.addEventListener('click', () => openViewer(i));
+    figure.append(button);
+    if (piece.title) {
+      const caption = document.createElement('figcaption');
+      caption.textContent = piece.title;
+      figure.append(caption);
+    }
+    return figure;
+  }));
+  section.querySelector('.empty-note').hidden = art.length > 0;
+}
 
 // ---------- Beat player ----------
 
@@ -432,5 +515,6 @@ fetch('/api/content')
   .then(content => {
     renderHome(content.home);
     renderContact(content.contact);
+    renderArt(content.art || []);
     renderBeats(content.beats, content.producers);
   });

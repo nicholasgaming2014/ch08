@@ -345,6 +345,20 @@ h2 {
   height: 18px;
 }
 
+/* Brand logos are single-color SVGs used as masks, so the glyph color comes from CSS. */
+.row-logo {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  -webkit-mask: var(--logo) center / contain no-repeat;
+  mask: var(--logo) center / contain no-repeat;
+}
+
+/* Black tiles need an edge to stand out from the dark panel. */
+.row-icon {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
 .row-text {
   flex: 1;
   min-width: 0;
@@ -1108,3 +1122,229 @@ h2 {
   padding: 8px 12px;
 }
 
+
+/* Art: a masonry-style collage and a full-screen viewer */
+.art-column {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.art-collage {
+  columns: 3 260px;
+  column-gap: 12px;
+}
+
+.art-piece {
+  break-inside: avoid;
+  margin: 0 0 12px;
+}
+
+.art-piece button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: #111;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.art-piece img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.art-piece button:hover img {
+  transform: scale(1.03);
+  opacity: 0.9;
+}
+
+.art-piece button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.art-piece figcaption {
+  padding: 8px 4px 0;
+  color: #c7c7cc;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.art-viewer {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #fff;
+}
+
+.art-viewer[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.art-viewer::backdrop {
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.viewer-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 64px 72px;
+}
+
+.viewer-figure img {
+  max-width: 100%;
+  max-height: calc(100% - 40px);
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.viewer-figure figcaption {
+  font-size: 15px;
+  color: #e5e5ea;
+  text-align: center;
+}
+
+.viewer-button {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: rgba(44, 44, 46, 0.85);
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+}
+
+.viewer-button:hover {
+  background: #48484a;
+}
+
+.viewer-button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.viewer-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.viewer-close {
+  top: 16px;
+  right: 16px;
+}
+
+.viewer-prev {
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.viewer-next {
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 600px) {
+  .art-collage {
+    columns: 2;
+    column-gap: 8px;
+  }
+
+  .art-piece {
+    margin-bottom: 8px;
+  }
+
+  .viewer-figure {
+    padding: 72px 12px;
+  }
+
+  .viewer-prev,
+  .viewer-next {
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art-piece img {
+    transition: none;
+  }
+
+  .art-piece button:hover img {
+    transform: none;
+  }
+}
+
+/* Admin art list */
+.art-staging {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.art-row {
+  align-items: center;
+}
+
+.art-thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #111;
+}
+
+.art-thumb.large {
+  width: 120px;
+  height: 120px;
+}
+
+.admin-art {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+@media (max-width: 600px) {
+  .admin-art {
+    flex-direction: column;
+  }
+
+  .art-thumb.large {
+    width: 100%;
+    height: auto;
+    max-height: 320px;
+    object-fit: contain;
+  }
+}

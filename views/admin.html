@@ -26,6 +26,7 @@
   <nav id="menu" class="menu" aria-label="Main menu">
     <a href="/#home" class="menu-link">home</a>
     <a href="/#beats" class="menu-link">beats</a>
+    <a href="/#art" class="menu-link">art</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link active">admin</a>
     <form method="post" action="/admin/logout">
@@ -39,6 +40,7 @@
     <nav class="admin-tabs" aria-label="Admin sections">
       <a href="#home" class="menu-link">home</a>
       <a href="#beats" class="menu-link">beats</a>
+      <a href="#art" class="menu-link">art</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
 
@@ -116,6 +118,27 @@
       <h2>your beats</h2>
       <p class="empty-note" hidden>no beats yet</p>
       <div class="admin-beat-list beat-list"></div>
+    </section>
+
+    <!-- Art -->
+    <section id="panel-art" class="admin-panel" hidden>
+      <form id="art-upload" class="admin-card">
+        <h2>upload artwork</h2>
+        <p class="hint">pick one or more images, up to 30 at a time. titles are optional.</p>
+        <label class="field"><span>images (jpg, png, gif, webp)</span>
+          <input type="file" name="images" accept="image/jpeg,image/png,image/gif,image/webp" multiple>
+        </label>
+        <div class="art-staging"></div>
+        <div class="button-row">
+          <button type="submit" class="button">upload</button>
+          <a href="/#art" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
+          <span class="status" role="status"></span>
+        </div>
+      </form>
+
+      <h2>your artwork</h2>
+      <p class="empty-note" hidden>no artwork yet</p>
+      <div class="admin-art-list"></div>
     </section>
 
     <!-- Contact -->
