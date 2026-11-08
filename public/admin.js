@@ -1044,15 +1044,145 @@ mgrForm.addEventListener('submit', async e => {
   setBusy(mgrForm, true);
   setStatus(mgrForm, 'saving…');
   try {
-    const url = mgrEditing ? `/api/admin/manager/players/${mgrEditing.id}` : '/api/admin/manager/players';
-    content = await send(mgrEditing ? 'PUT' : 'POST', url, data);
+    let url, method;
+    if (mgrEditing) {
+      if (mgrEditing.builtin) {
+        url = `/api/admin/manager/builtin/${mgrEditing.id}`;
+        method = 'PUT';
+      } else {
+        url = `/api/admin/manager/players/${mgrEditing.id}`;
+        method = 'PUT';
+      }
+    } else {
+      url = '/api/admin/manager/players';
+      method = 'POST';
+    }
+    content = await send(method, url, data);
     if (mgrEditing) mgrStopEdit();
     else mgrForm.reset();
     renderMgrPlayers();
+    renderMgrDb();
     setStatus(mgrForm, mgrEditing ? 'saved ✓' : 'added ✓');
   } catch (err) { setStatus(mgrForm, err.message, true); }
   finally { setBusy(mgrForm, false); }
 });
+
+// ---------- Player Database ----------
+
+let dbSearchTerm = '';
+
+function mgrDbRow(player, isDeleted) {
+  const row = document.createElement('div');
+  row.className = 'fc-row' + (isDeleted ? ' mgr-db-deleted' : '');
+  const info = document.createElement('span');
+  info.className = 'fc-row-summary';
+  const tag = player.builtin ? '(built-in)' : '(custom)';
+  info.textContent = `${player.name} — ${player.position} ${player.overall} ${tag}${isDeleted ? ' [deleted]' : ''}`;
+  row.append(info);
+
+  if (isDeleted) {
+    const restoreBtn = document.createElement('button');
+    restoreBtn.type = 'button';
+    restoreBtn.className = 'button secondary';
+    restoreBtn.textContent = 'restore';
+    restoreBtn.addEventListener('click', async () => {
+      try {
+        content = await send('POST', `/api/admin/manager/builtin/${player.id}/restore`);
+        renderMgrDb();
+      } catch (err) { alert(err.message); }
+    });
+    row.append(restoreBtn);
+  } else {
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'button secondary';
+    editBtn.textContent = 'edit';
+    editBtn.addEventListener('click', () => mgrDbStartEdit(player));
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'button danger';
+    deleteBtn.textContent = 'delete';
+    deleteBtn.addEventListener('click', async () => {
+      if (!confirm(`Delete "${player.name}"?`)) return;
+      try {
+        if (player.builtin) {
+          content = await send('DELETE', `/api/admin/manager/builtin/${player.id}`);
+        } else {
+          content = await send('DELETE', `/api/admin/manager/players/${player.id}`);
+        }
+        renderMgrDb();
+        renderMgrPlayers();
+      } catch (err) { alert(err.message); }
+    });
+    row.append(editBtn, deleteBtn);
+  }
+
+  return row;
+}
+
+function mgrDbStartEdit(player) {
+  mgrEditing = player;
+  mgrForm.name.value = player.name;
+  mgrForm.position.value = player.position;
+  mgrForm.overall.value = player.overall;
+  mgrForm.pace.value = player.pace;
+  mgrForm.shooting.value = player.shooting;
+  mgrForm.passing.value = player.passing;
+  mgrForm.dribbling.value = player.dribbling;
+  mgrForm.defending.value = player.defending;
+  mgrForm.physical.value = player.physical;
+  mgrForm.querySelector('[type="submit"]').textContent = player.builtin ? 'save built-in edits' : 'save changes';
+  mgrCancel.hidden = false;
+  mgrForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderMgrDb() {
+  if (typeof BUILTIN_PLAYERS === 'undefined') return;
+  const list = document.querySelector('.mgr-db-list');
+  if (!list) return;
+
+  const edits = content.manager?.builtinEdits || {};
+  const deleted = new Set(content.manager?.deletedBuiltinIds || []);
+
+  const builtins = BUILTIN_PLAYERS.map(p => {
+    const merged = edits[p.id] ? { ...p, ...edits[p.id], builtin: true } : { ...p, builtin: true };
+    return { player: merged, isDeleted: deleted.has(p.id) };
+  });
+  const customs = (content.manager?.players || []).map(p => ({ player: { ...p, builtin: false }, isDeleted: false }));
+  let all = [...builtins, ...customs];
+
+  if (dbSearchTerm) {
+    const q = dbSearchTerm.toLowerCase();
+    all = all.filter(({ player }) =>
+      player.name.toLowerCase().includes(q) || player.position.toLowerCase().includes(q)
+    );
+  }
+
+  all.sort((a, b) => {
+    if (a.isDeleted !== b.isDeleted) return a.isDeleted ? 1 : -1;
+    return b.player.overall - a.player.overall;
+  });
+
+  list.replaceChildren(...all.map(({ player, isDeleted }) => mgrDbRow(player, isDeleted)));
+}
+
+const dbSearch = document.querySelector('.mgr-db-search');
+if (dbSearch) {
+  dbSearch.addEventListener('input', () => { dbSearchTerm = dbSearch.value; renderMgrDb(); });
+}
+
+const deleteAllBtn = document.querySelector('.mgr-delete-all');
+if (deleteAllBtn) {
+  deleteAllBtn.addEventListener('click', async () => {
+    if (!confirm('Delete ALL players (built-in and custom)? This cannot be easily undone.')) return;
+    if (!confirm('Are you sure? This will remove every player from the database.')) return;
+    try {
+      content = await send('DELETE', '/api/admin/manager/all-players');
+      renderMgrDb();
+      renderMgrPlayers();
+    } catch (err) { alert(err.message); }
+  });
+}
 
 // ---------- Load ----------
 
@@ -1067,4 +1197,5 @@ fetch('/api/content', { cache: 'no-store' })
     renderFcAdmin();
     renderMgrPlayers();
     renderMgrHistory();
+    renderMgrDb();
   });

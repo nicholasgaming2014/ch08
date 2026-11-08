@@ -156,7 +156,7 @@
     <section id="panel-manager" class="admin-panel" hidden>
       <form id="manager-player-form" class="admin-card">
         <h2>add a player</h2>
-        <p class="hint">add custom players to the ch08 manager roster. built-in players can't be edited here.</p>
+        <p class="hint">add custom players to the ch08 manager roster. to edit built-in players, use the player database below.</p>
         <div class="field-row">
           <label class="field"><span>name</span>
             <input type="text" name="name" maxlength="120" required>
@@ -215,6 +215,14 @@
       <h2>custom players</h2>
       <p class="empty-note mgr-empty" hidden>no custom players yet</p>
       <div class="mgr-player-list"></div>
+
+      <h2>player database</h2>
+      <p class="hint">all players (built-in + custom). edit or delete any player. deleted built-ins can be restored.</p>
+      <div class="mgr-db-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <input type="text" class="mgr-db-search" placeholder="search players…" style="flex:1;min-width:150px;padding:8px 12px;background:#111;color:#fff;border:1px solid #333;border-radius:8px;font-family:inherit;font-size:14px;">
+        <button type="button" class="button danger mgr-delete-all">delete all players</button>
+      </div>
+      <div class="mgr-db-list"></div>
 
       <h2>match history</h2>
       <p class="empty-note mgr-history-empty" hidden>no matches yet</p>
@@ -285,6 +293,7 @@
 
   <script src="/menu.js"></script>
   <script src="/fc-schema.js"></script>
+  <script src="/manager.js"></script>
   <script src="/admin.js"></script>
 </body>
 </html>

@@ -1753,11 +1753,55 @@ h2 {
 
 .away-pill.active { background: #3b82f6 !important; border-color: #3b82f6 !important; }
 
-/* Card grid */
-.mgr-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+/* Formation actions */
+.mgr-formation-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mgr-formation-actions .button.small {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* Draggable slot */
+.slot-dragging circle:first-child {
+  stroke: #facc15 !important;
+  stroke-width: 3 !important;
+  stroke-dasharray: none !important;
+}
+
+/* Card strip (horizontal scroll) */
+.mgr-card-strip {
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0 12px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mgr-card-strip::-webkit-scrollbar {
+  height: 6px;
+}
+
+.mgr-card-strip::-webkit-scrollbar-track {
+  background: #111;
+  border-radius: 3px;
+}
+
+.mgr-card-strip::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+.mgr-card-strip .mgr-card {
+  flex: 0 0 130px;
+  scroll-snap-align: start;
 }
 
 /* FUT-style player card */
@@ -2119,12 +2163,28 @@ h2 {
   border-top: 1px solid #222;
 }
 
+/* Player database in admin */
+.mgr-db-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #222;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.mgr-db-deleted {
+  opacity: 0.4;
+}
+
+.mgr-db-deleted .fc-row-summary {
+  text-decoration: line-through;
+}
+
 @media (max-width: 600px) {
   .mgr-column { max-width: 100%; }
 
-  .mgr-card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 8px;
+  .mgr-card-strip .mgr-card {
+    flex: 0 0 110px;
   }
 
   .mgr-pitch {

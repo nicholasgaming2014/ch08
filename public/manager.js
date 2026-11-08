@@ -149,7 +149,11 @@ const FORMATIONS = {
   ],
 };
 
-const FORMATION_NAMES = Object.keys(FORMATIONS);
+let customFormations = [];
+
+function allFormationNames() {
+  return [...Object.keys(FORMATIONS), ...customFormations.map(f => f.name)];
+}
 
 const SLOT_COMPAT = {
   GK:  ['GK'],
@@ -526,7 +530,10 @@ function drawPitch(canvas) {
 // ========== FORMATION ASSIGNMENT ==========
 
 function getFormation(name) {
-  return FORMATIONS[name] || FORMATIONS['4-3-3'];
+  if (FORMATIONS[name]) return FORMATIONS[name];
+  const custom = customFormations.find(f => f.name === name);
+  if (custom) return custom.slots;
+  return FORMATIONS['4-3-3'];
 }
 
 function assignFormation(players, formationName) {
@@ -688,18 +695,29 @@ function renderSelectionPitch() {
   awayLabel.textContent = (awayName || 'Away').toUpperCase();
   svg.append(awayLabel);
 
+  const SNAP = 0.05;
+  function snap(v) { return Math.round(v / SNAP) * SNAP; }
+
+  function slotToSvg(slot, side) {
+    if (side === 'home') {
+      return { sx: pad + (1 - slot.y) * (pw / 2 - 10), sy: pad + slot.x * ph };
+    }
+    return { sx: 400 + slot.y * (pw / 2 - 10), sy: pad + (1 - slot.x) * ph };
+  }
+
+  function svgToSlot(svgX, svgY, side) {
+    if (side === 'home') {
+      return { x: snap(Math.max(0, Math.min(1, (svgY - pad) / ph))), y: snap(Math.max(0, Math.min(1, 1 - (svgX - pad) / (pw / 2 - 10)))) };
+    }
+    return { x: snap(Math.max(0, Math.min(1, 1 - (svgY - pad) / ph))), y: snap(Math.max(0, Math.min(1, (svgX - 400) / (pw / 2 - 10)))) };
+  }
+
+  let draggingSlot = null;
+
   // Draw slots for both teams
   const drawSlots = (formation, squad, side, color) => {
     formation.forEach((slot, i) => {
-      let sx, sy;
-      if (side === 'home') {
-        sx = pad + (1 - slot.y) * (pw / 2 - 10);
-        sy = pad + slot.x * ph;
-      } else {
-        sx = 400 + slot.y * (pw / 2 - 10);
-        sy = pad + (1 - slot.x) * ph;
-      }
-
+      const { sx, sy } = slotToSvg(slot, side);
       const player = squad[i] || null;
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('pitch-slot');
@@ -714,7 +732,6 @@ function renderSelectionPitch() {
       }
       g.append(circle);
 
-      // Drop zone (invisible, larger)
       const drop = document.createElementNS(svgNS, 'circle');
       Object.entries({ cx: sx, cy: sy, r: 28, fill: 'transparent', 'pointer-events': 'all' }).forEach(([k,v]) => drop.setAttribute(k,v));
       g.append(drop);
@@ -730,7 +747,6 @@ function renderSelectionPitch() {
         ovr.textContent = player.overall;
         g.append(ovr);
 
-        // Click to remove
         g.style.cursor = 'pointer';
         g.addEventListener('click', () => {
           squad[i] = null;
@@ -743,12 +759,70 @@ function renderSelectionPitch() {
         g.append(label);
       }
 
+      // Slot dragging (hold to move position)
+      let longPress = null;
+      const startDragSlot = (clientX, clientY) => {
+        draggingSlot = { side, index: i, g, formation };
+        g.classList.add('slot-dragging');
+      };
+
+      g.addEventListener('pointerdown', e => {
+        if (draggingSlot) return;
+        e.preventDefault();
+        longPress = setTimeout(() => startDragSlot(e.clientX, e.clientY), 300);
+      });
+      g.addEventListener('pointerup', () => { clearTimeout(longPress); });
+      g.addEventListener('pointerleave', () => { clearTimeout(longPress); });
+
       svg.append(g);
     });
   };
 
   drawSlots(getFormation(homeFormation), homeSquad, 'home', '#fff');
   drawSlots(getFormation(awayFormation), awaySquad, 'away', '#3b82f6');
+
+  // Slot drag movement
+  svg.addEventListener('pointermove', e => {
+    if (!draggingSlot) return;
+    e.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const scaleX = 800 / rect.width;
+    const scaleY = 440 / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+
+    const newPos = svgToSlot(mx, my, draggingSlot.side);
+    const { sx, sy } = slotToSvg(newPos, draggingSlot.side);
+
+    const circles = draggingSlot.g.querySelectorAll('circle');
+    circles.forEach(c => { c.setAttribute('cx', sx); c.setAttribute('cy', sy); });
+    const texts = draggingSlot.g.querySelectorAll('text');
+    texts.forEach(t => {
+      t.setAttribute('x', sx);
+      const baseY = t.getAttribute('y');
+      if (t.classList.contains('slot-name')) t.setAttribute('y', sy + 30);
+      else if (parseFloat(baseY) > parseFloat(t.getAttribute('x'))) t.setAttribute('y', sy + 30);
+    });
+  });
+
+  svg.addEventListener('pointerup', e => {
+    if (!draggingSlot) return;
+    const rect = svg.getBoundingClientRect();
+    const scaleX = 800 / rect.width;
+    const scaleY = 440 / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+
+    const newPos = svgToSlot(mx, my, draggingSlot.side);
+    draggingSlot.formation[draggingSlot.index] = {
+      ...draggingSlot.formation[draggingSlot.index],
+      x: newPos.x,
+      y: newPos.y,
+    };
+    draggingSlot.g.classList.remove('slot-dragging');
+    draggingSlot = null;
+    renderTeamSelection();
+  });
 
   // Drop handling on SVG
   svg.addEventListener('dragover', e => {
@@ -860,7 +934,7 @@ function renderTeamSelection() {
 
   const homeFormSel = document.createElement('select');
   homeFormSel.className = 'mgr-formation-select';
-  FORMATION_NAMES.forEach(f => {
+  allFormationNames().forEach(f => {
     const opt = document.createElement('option');
     opt.value = f; opt.textContent = f;
     if (f === homeFormation) opt.selected = true;
@@ -879,7 +953,7 @@ function renderTeamSelection() {
 
   const awayFormSel = document.createElement('select');
   awayFormSel.className = 'mgr-formation-select away';
-  FORMATION_NAMES.forEach(f => {
+  allFormationNames().forEach(f => {
     const opt = document.createElement('option');
     opt.value = f; opt.textContent = f;
     if (f === awayFormation) opt.selected = true;
@@ -899,11 +973,68 @@ function renderTeamSelection() {
   formRow.append(homeFormSel, homeCount, el('span', 'mgr-form-spacer'), awayCount, awayFormSel);
   container.append(formRow);
 
+  // Formation actions row
+  const formActions = el('div', 'mgr-formation-actions');
+  const saveFormBtn = btn('save formation', 'button secondary small', async () => {
+    const side = selectingTeam;
+    const formName = side === 'home' ? homeFormation : awayFormation;
+    const currentSlots = getFormation(formName).map(s => ({ ...s }));
+    const isCustom = customFormations.find(f => f.name === formName);
+    if (isCustom) {
+      const res = await fetch(`/api/admin/manager/formations/${isCustom.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'ch08-admin' },
+        body: JSON.stringify({ name: formName, slots: currentSlots }),
+      });
+      if (res.ok) { const d = await res.json(); Object.assign(isCustom, d); renderTeamSelection(); }
+    } else {
+      alert('Built-in formations can\'t be overwritten. Use "New Formation" to save a copy.');
+    }
+  });
+
+  const newFormBtn = btn('new formation', 'button secondary small', async () => {
+    const name = prompt('Formation name:');
+    if (!name || !name.trim()) return;
+    const side = selectingTeam;
+    const currentSlots = getFormation(side === 'home' ? homeFormation : awayFormation).map(s => ({ ...s }));
+    const res = await fetch('/api/admin/manager/formations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'ch08-admin' },
+      body: JSON.stringify({ name: name.trim(), slots: currentSlots }),
+    });
+    if (res.ok) {
+      const d = await res.json();
+      customFormations.push(d);
+      if (side === 'home') homeFormation = d.name; else awayFormation = d.name;
+      renderTeamSelection();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Failed to save');
+    }
+  });
+
+  const delFormBtn = btn('delete', 'button danger small', async () => {
+    const side = selectingTeam;
+    const formName = side === 'home' ? homeFormation : awayFormation;
+    const isCustom = customFormations.find(f => f.name === formName);
+    if (!isCustom) { alert('Cannot delete built-in formations.'); return; }
+    if (!confirm(`Delete formation "${formName}"?`)) return;
+    const res = await fetch(`/api/admin/manager/formations/${isCustom.id}`, {
+      method: 'DELETE', headers: { 'X-Requested-With': 'ch08-admin' },
+    });
+    if (res.ok) {
+      customFormations = customFormations.filter(f => f.id !== isCustom.id);
+      if (side === 'home') homeFormation = '4-3-3'; else awayFormation = '4-3-3';
+      renderTeamSelection();
+    }
+  });
+
+  formActions.append(saveFormBtn, newFormBtn, delFormBtn);
+  container.append(formActions);
+
   // Horizontal pitch with both teams
   container.append(renderSelectionPitch());
 
   // Hint
-  container.append(el('p', 'mgr-hint', 'Drag cards onto slots, or click a card then click a slot. Click a filled slot to remove.'));
+  container.append(el('p', 'mgr-hint', 'Drag cards onto slots, or click a card then click a slot. Hold a slot to drag its position.'));
 
   // Filter pills
   const filters = el('div', 'mgr-filters');
@@ -912,8 +1043,8 @@ function renderTeamSelection() {
   });
   container.append(filters);
 
-  // Player card grid
-  const grid = el('div', 'mgr-card-grid');
+  // Player card strip (horizontal scroll)
+  const grid = el('div', 'mgr-card-strip');
   const usedIds = new Set();
   homeSquad.forEach(p => { if (p) usedIds.add(p.id); });
   awaySquad.forEach(p => { if (p) usedIds.add(p.id); });
@@ -1236,10 +1367,20 @@ function renderManager() {
   }
 }
 
+function buildAllPlayers(managerData) {
+  const edits = managerData?.builtinEdits || {};
+  const deleted = new Set(managerData?.deletedBuiltinIds || []);
+  const builtins = BUILTIN_PLAYERS
+    .filter(p => !deleted.has(p.id))
+    .map(p => edits[p.id] ? { ...p, ...edits[p.id], builtin: true } : p);
+  return [...builtins, ...(managerData?.players || []).map(p => ({ ...p, builtin: false }))];
+}
+
 function initManager(managerData) {
   customPlayers = managerData?.players || [];
   matchHistory = managerData?.history || [];
-  allPlayers = [...BUILTIN_PLAYERS, ...customPlayers.map(p => ({ ...p, builtin: false }))];
+  customFormations = managerData?.customFormations || [];
+  allPlayers = buildAllPlayers(managerData);
   homeSquad = new Array(getFormation(homeFormation).length).fill(null);
   awaySquad = new Array(getFormation(awayFormation).length).fill(null);
   renderManager();

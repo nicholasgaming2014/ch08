@@ -38,7 +38,7 @@ const DEFAULT_CONTENT = {
   // Stat rows for the fc/fifa page, one list per table in FC_SCHEMA.
   fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
   // Football manager: custom players and match history.
-  manager: { players: [], history: [] },
+  manager: { players: [], history: [], customFormations: [], builtinEdits: {}, deletedBuiltinIds: [] },
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -63,6 +63,9 @@ function loadContent() {
     if (saved.manager && typeof saved.manager === 'object') {
       if (Array.isArray(saved.manager.players)) content.manager.players = saved.manager.players;
       if (Array.isArray(saved.manager.history)) content.manager.history = saved.manager.history;
+      if (Array.isArray(saved.manager.customFormations)) content.manager.customFormations = saved.manager.customFormations;
+      if (saved.manager.builtinEdits && typeof saved.manager.builtinEdits === 'object') content.manager.builtinEdits = saved.manager.builtinEdits;
+      if (Array.isArray(saved.manager.deletedBuiltinIds)) content.manager.deletedBuiltinIds = saved.manager.deletedBuiltinIds;
     }
   } catch {}
   return content;
@@ -733,6 +736,109 @@ app.delete('/api/admin/manager/history/:id', requireAdminApi, async (req, res) =
   const entry = content.manager.history.find(m => m.id === req.params.id);
   if (!entry) return res.status(404).json({ error: 'Match not found.' });
   content.manager.history = content.manager.history.filter(m => m !== entry);
+  await saveContent();
+  res.json(content);
+});
+
+// Custom formations
+app.post('/api/admin/manager/formations', requireAdminApi, async (req, res) => {
+  const body = req.body || {};
+  const name = text(body.name, 40);
+  if (!name) return res.status(400).json({ error: 'Formation needs a name.' });
+  const slots = Array.isArray(body.slots) ? body.slots.slice(0, 11).map(s => ({
+    slot: text(String(s.slot || ''), 10) || 'CM',
+    x: Math.max(0, Math.min(1, Number(s.x) || 0.5)),
+    y: Math.max(0, Math.min(1, Number(s.y) || 0.5)),
+  })) : [];
+  if (slots.length !== 11) return res.status(400).json({ error: 'Formation needs exactly 11 slots.' });
+  const formation = { id: crypto.randomBytes(8).toString('hex'), name, slots };
+  content.manager.customFormations.push(formation);
+  await saveContent();
+  res.status(201).json(content);
+});
+
+app.put('/api/admin/manager/formations/:id', requireAdminApi, async (req, res) => {
+  const f = content.manager.customFormations.find(f => f.id === req.params.id);
+  if (!f) return res.status(404).json({ error: 'Formation not found.' });
+  const body = req.body || {};
+  if (body.name) f.name = text(body.name, 40);
+  if (Array.isArray(body.slots) && body.slots.length === 11) {
+    f.slots = body.slots.map(s => ({
+      slot: text(String(s.slot || ''), 10) || 'CM',
+      x: Math.max(0, Math.min(1, Number(s.x) || 0.5)),
+      y: Math.max(0, Math.min(1, Number(s.y) || 0.5)),
+    }));
+  }
+  await saveContent();
+  res.json(content);
+});
+
+app.delete('/api/admin/manager/formations/:id', requireAdminApi, async (req, res) => {
+  const f = content.manager.customFormations.find(f => f.id === req.params.id);
+  if (!f) return res.status(404).json({ error: 'Formation not found.' });
+  content.manager.customFormations = content.manager.customFormations.filter(x => x !== f);
+  await saveContent();
+  res.json(content);
+});
+
+// Built-in player edits
+app.put('/api/admin/manager/builtin/:id', requireAdminApi, upload.fields([{ name: 'photo', maxCount: 1 }]), async (req, res) => {
+  const body = req.body || {};
+  const name = text(body.name, 120);
+  const position = text(body.position, 10);
+  if (!name || !position) {
+    await removeRequestFiles(req);
+    return res.status(400).json({ error: 'A player needs a name and position.' });
+  }
+  const photo = req.files?.photo?.[0];
+  const existing = content.manager.builtinEdits[req.params.id];
+  const oldPhoto = existing?.photo || '';
+  content.manager.builtinEdits[req.params.id] = {
+    name,
+    position,
+    overall: managerStatValue(body.overall) ?? 75,
+    pace: managerStatValue(body.pace) ?? 50,
+    shooting: managerStatValue(body.shooting) ?? 50,
+    passing: managerStatValue(body.passing) ?? 50,
+    dribbling: managerStatValue(body.dribbling) ?? 50,
+    defending: managerStatValue(body.defending) ?? 50,
+    physical: managerStatValue(body.physical) ?? 50,
+    photo: photo ? fileUrl(photo) : body.removePhoto === 'true' ? '' : oldPhoto,
+  };
+  content.manager.deletedBuiltinIds = content.manager.deletedBuiltinIds.filter(id => id !== req.params.id);
+  await saveContent();
+  if (content.manager.builtinEdits[req.params.id].photo !== oldPhoto) await removeUpload(oldPhoto);
+  res.json(content);
+});
+
+app.delete('/api/admin/manager/builtin/:id', requireAdminApi, async (req, res) => {
+  if (!content.manager.deletedBuiltinIds.includes(req.params.id)) {
+    content.manager.deletedBuiltinIds.push(req.params.id);
+  }
+  const edit = content.manager.builtinEdits[req.params.id];
+  if (edit?.photo) await removeUpload(edit.photo);
+  delete content.manager.builtinEdits[req.params.id];
+  await saveContent();
+  res.json(content);
+});
+
+app.post('/api/admin/manager/builtin/:id/restore', requireAdminApi, async (req, res) => {
+  content.manager.deletedBuiltinIds = content.manager.deletedBuiltinIds.filter(id => id !== req.params.id);
+  delete content.manager.builtinEdits[req.params.id];
+  await saveContent();
+  res.json(content);
+});
+
+app.delete('/api/admin/manager/all-players', requireAdminApi, async (req, res) => {
+  for (const p of content.manager.players) {
+    if (p.photo) await removeUpload(p.photo);
+  }
+  for (const edit of Object.values(content.manager.builtinEdits)) {
+    if (edit.photo) await removeUpload(edit.photo);
+  }
+  content.manager.players = [];
+  content.manager.builtinEdits = {};
+  content.manager.deletedBuiltinIds = Array.from({ length: 50 }, (_, i) => `bp${String(i).padStart(3, '0')}`);
   await saveContent();
   res.json(content);
 });
