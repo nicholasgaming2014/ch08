@@ -373,19 +373,36 @@ let pitchPositions = new Map();
 let pitchTargets = new Map();
 let ballPos = { x: 0.5, y: 0.5 };
 let ballTarget = { x: 0.5, y: 0.5 };
+let ballTrail = [];
+let simActions = [];
+let ballCarrier = null;
+let lastPassTime = 0;
+let simClock = 0;
 
 function initPositions(match) {
   pitchPositions.clear();
   pitchTargets.clear();
+  ballTrail = [];
+  simActions = [];
+  ballCarrier = null;
+  simClock = 0;
+
   const placeTeam = (team, side, formationName) => {
     const formation = getFormation(formationName);
     const assigned = assignFormation(team.players, formationName);
     assigned.forEach((player, i) => {
       const slot = formation[i];
-      let x = slot.x, y = slot.y;
-      if (side === 'away') { x = 1 - x; y = 1 - y; }
+      // Horizontal: home attacks right, away attacks left
+      let x, y;
+      if (side === 'home') {
+        x = slot.y;        // depth becomes horizontal
+        y = slot.x;        // width becomes vertical
+      } else {
+        x = 1 - slot.y;
+        y = 1 - slot.x;
+      }
       const key = side + '_' + i;
-      pitchPositions.set(key, { x, y });
+      pitchPositions.set(key, { x, y, vx: 0, vy: 0 });
       pitchTargets.set(key, { x, y });
     });
   };
@@ -393,52 +410,125 @@ function initPositions(match) {
   placeTeam(match.away, 'away', match.awayFormation || '4-3-3');
   ballPos = { x: 0.5, y: 0.5 };
   ballTarget = { x: 0.5, y: 0.5 };
+
+  // Start idle passing
+  startIdlePassing('home', match);
+}
+
+function startIdlePassing(side, match) {
+  const keys = [];
+  for (let i = 0; i < 11; i++) keys.push(side + '_' + i);
+  const randomKey = keys[Math.floor(Math.random() * keys.length)];
+  ballCarrier = randomKey;
+}
+
+function nearestTeammate(carrierKey) {
+  const side = carrierKey.split('_')[0];
+  const carrierPos = pitchPositions.get(carrierKey);
+  if (!carrierPos) return null;
+  let best = null, bestD = Infinity;
+  pitchPositions.forEach((pos, key) => {
+    if (key === carrierKey || !key.startsWith(side)) return;
+    const d = Math.hypot(pos.x - carrierPos.x, pos.y - carrierPos.y);
+    if (d < bestD) { bestD = d; best = key; }
+  });
+  return best;
+}
+
+function randomTeammate(carrierKey) {
+  const side = carrierKey.split('_')[0];
+  const teammates = [];
+  pitchPositions.forEach((pos, key) => {
+    if (key !== carrierKey && key.startsWith(side)) teammates.push(key);
+  });
+  return teammates.length ? teammates[Math.floor(Math.random() * teammates.length)] : null;
 }
 
 function updatePositions(match, event) {
-  const attShift = 0.04;
-  const driftRange = 0.02;
-  const attSide = event?.team || (Math.random() < 0.5 ? 'home' : 'away');
+  const attShift = 0.06;
+  const driftRange = 0.03;
+  const attSide = event?.team || event?.attTeam || (Math.random() < 0.5 ? 'home' : 'away');
+  const defSide = attSide === 'home' ? 'away' : 'home';
 
   ['home', 'away'].forEach(side => {
     const formation = getFormation(side === 'home' ? (match.homeFormation || '4-3-3') : (match.awayFormation || '4-3-3'));
-    const isAtt = side === attSide || (event?.attTeam === side);
+    const isAtt = side === attSide;
     for (let i = 0; i < 11; i++) {
       const key = side + '_' + i;
       const slot = formation[i];
-      let x = slot.x, y = slot.y;
-      if (side === 'away') { x = 1 - x; y = 1 - y; }
-      const shift = isAtt ? -attShift : attShift;
-      const yTarget = side === 'home' ? y + shift : y - shift;
+      let x, y;
+      if (side === 'home') { x = slot.y; y = slot.x; }
+      else { x = 1 - slot.y; y = 1 - slot.x; }
+
+      const shift = isAtt ? attShift : -attShift;
+      const xTarget = x + shift;
       const dx = (Math.random() - 0.5) * driftRange * 2;
       const dy = (Math.random() - 0.5) * driftRange * 2;
       pitchTargets.set(key, {
-        x: Math.max(0.03, Math.min(0.97, x + dx)),
-        y: Math.max(0.03, Math.min(0.97, yTarget + dy)),
+        x: Math.max(0.03, Math.min(0.97, xTarget + dx)),
+        y: Math.max(0.03, Math.min(0.97, y + dy)),
       });
     }
   });
 
   if (event) {
     const side = event.team;
-    if (event.type === 'goal' || event.type === 'miss') {
-      ballTarget = side === 'home' ? { x: 0.5 + (Math.random() - 0.5) * 0.3, y: 0.05 } : { x: 0.5 + (Math.random() - 0.5) * 0.3, y: 0.95 };
+    const goalX = side === 'home' ? 0.98 : 0.02;
+    if (event.type === 'goal') {
+      ballTarget = { x: goalX, y: 0.5 + (Math.random() - 0.5) * 0.15 };
+      simActions.push({ type: 'goal', time: simClock, side });
+      ballCarrier = null;
+    } else if (event.type === 'miss') {
+      ballTarget = { x: goalX + (side === 'home' ? 0.05 : -0.05), y: 0.5 + (Math.random() - 0.5) * 0.5 };
+      simActions.push({ type: 'miss', time: simClock, side });
+      ballCarrier = null;
     } else if (event.type === 'save') {
-      const goalSide = event.attTeam === 'home' ? 'away' : 'home';
-      ballTarget = goalSide === 'away' ? { x: 0.5, y: 0.05 } : { x: 0.5, y: 0.95 };
+      const defGoalX = event.attTeam === 'home' ? 0.98 : 0.02;
+      ballTarget = { x: defGoalX, y: 0.5 };
+      simActions.push({ type: 'save', time: simClock, side: event.attTeam });
+      // GK gets ball
+      ballCarrier = (event.attTeam === 'home' ? 'away' : 'home') + '_0';
     } else if (event.type === 'corner') {
-      const endY = side === 'home' ? 0.02 : 0.98;
-      ballTarget = { x: Math.random() < 0.5 ? 0.02 : 0.98, y: endY };
+      const cornerX = side === 'home' ? 0.98 : 0.02;
+      ballTarget = { x: cornerX, y: Math.random() < 0.5 ? 0.02 : 0.98 };
+      ballCarrier = null;
+    } else if (event.type === 'foul') {
+      ballTarget = { x: 0.5 + (Math.random() - 0.5) * 0.3, y: 0.5 + (Math.random() - 0.5) * 0.3 };
+      if (event.card) simActions.push({ type: 'card', cardType: event.card, time: simClock, side: event.team });
+      // Fouled team gets ball
+      const otherSide = event.team === 'home' ? 'away' : 'home';
+      const carrier = randomTeammate(otherSide + '_5') || otherSide + '_5';
+      ballCarrier = carrier;
     } else {
-      ballTarget = { x: 0.5 + (Math.random() - 0.5) * 0.4, y: 0.5 + (Math.random() - 0.5) * 0.4 };
+      // offside, freekick etc — ball moves to midfield area
+      ballTarget = { x: 0.5 + (Math.random() - 0.5) * 0.3, y: 0.5 + (Math.random() - 0.5) * 0.3 };
+      const carrier = randomTeammate(side + '_5') || side + '_5';
+      ballCarrier = carrier;
     }
   } else {
-    ballTarget = { x: 0.5 + (Math.random() - 0.5) * 0.5, y: 0.5 + (Math.random() - 0.5) * 0.5 };
+    // Idle: pass between players
+    if (ballCarrier) {
+      const target = randomTeammate(ballCarrier);
+      if (target) {
+        const tPos = pitchPositions.get(target);
+        if (tPos) {
+          ballTarget = { x: tPos.x, y: tPos.y };
+          ballCarrier = target;
+        }
+      }
+    } else {
+      const side = Math.random() < 0.5 ? 'home' : 'away';
+      ballCarrier = side + '_' + Math.floor(Math.random() * 11);
+      startIdlePassing(side, match);
+    }
   }
 }
 
 function lerpPositions() {
-  const t = 0.06;
+  const t = 0.05;
+  const ballT = 0.08;
+  simClock++;
+
   pitchPositions.forEach((pos, key) => {
     const target = pitchTargets.get(key);
     if (target) {
@@ -446,13 +536,30 @@ function lerpPositions() {
       pos.y += (target.y - pos.y) * t;
     }
   });
-  ballPos.x += (ballTarget.x - ballPos.x) * t * 1.5;
-  ballPos.y += (ballTarget.y - ballPos.y) * t * 1.5;
+
+  // Ball follows carrier or moves to target
+  if (ballCarrier && pitchPositions.has(ballCarrier)) {
+    const cp = pitchPositions.get(ballCarrier);
+    ballTarget = { x: cp.x, y: cp.y };
+  }
+
+  const dx = ballTarget.x - ballPos.x;
+  const dy = ballTarget.y - ballPos.y;
+  const dist = Math.hypot(dx, dy);
+  const speed = Math.min(dist, 0.03);
+  if (dist > 0.005) {
+    ballPos.x += (dx / dist) * speed;
+    ballPos.y += (dy / dist) * speed;
+  }
+
+  ballTrail.push({ x: ballPos.x, y: ballPos.y });
+  if (ballTrail.length > 12) ballTrail.shift();
+
+  // Expire old actions
+  simActions = simActions.filter(a => simClock - a.time < 90);
 }
 
 function drawPitch(canvas) {
-  const w = canvas.width;
-  const h = canvas.height;
   const ctx = canvas.getContext('2d');
   const ratio = window.devicePixelRatio || 1;
   const cw = canvas.clientWidth;
@@ -461,70 +568,202 @@ function drawPitch(canvas) {
   canvas.height = ch * ratio;
   ctx.scale(ratio, ratio);
 
+  // Dark green pitch
   ctx.fillStyle = '#0d1a0d';
   ctx.fillRect(0, 0, cw, ch);
 
-  const pad = 12;
+  // Grass stripes
+  const stripeCount = 12;
+  for (let i = 0; i < stripeCount; i++) {
+    if (i % 2 === 0) continue;
+    ctx.fillStyle = 'rgba(255,255,255,0.015)';
+    const sw = cw / stripeCount;
+    ctx.fillRect(sw * i, 0, sw, ch);
+  }
+
+  const pad = 16;
   const pw = cw - pad * 2;
   const ph = ch - pad * 2;
   const px = pad;
   const py = pad;
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1.5;
 
   // Touchline
   ctx.strokeRect(px, py, pw, ph);
-  // Halfway
+  // Halfway (vertical)
   ctx.beginPath();
-  ctx.moveTo(px, py + ph / 2);
-  ctx.lineTo(px + pw, py + ph / 2);
+  ctx.moveTo(px + pw / 2, py);
+  ctx.lineTo(px + pw / 2, py + ph);
   ctx.stroke();
   // Center circle
   ctx.beginPath();
-  ctx.arc(px + pw / 2, py + ph / 2, ph * 0.1, 0, Math.PI * 2);
+  ctx.arc(px + pw / 2, py + ph / 2, Math.min(pw, ph) * 0.1, 0, Math.PI * 2);
   ctx.stroke();
   // Center spot
   ctx.beginPath();
   ctx.arc(px + pw / 2, py + ph / 2, 2, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.fill();
-  // Penalty areas
-  const paW = pw * 0.4;
-  const paH = ph * 0.15;
-  ctx.strokeRect(px + (pw - paW) / 2, py, paW, paH);
-  ctx.strokeRect(px + (pw - paW) / 2, py + ph - paH, paW, paH);
-  // Goal areas
-  const gaW = pw * 0.2;
-  const gaH = ph * 0.06;
-  ctx.strokeRect(px + (pw - gaW) / 2, py, gaW, gaH);
-  ctx.strokeRect(px + (pw - gaW) / 2, py + ph - gaH, gaW, gaH);
+
+  // Penalty areas (left & right)
+  const paH = ph * 0.44;
+  const paW = pw * 0.14;
+  const gaH = ph * 0.22;
+  const gaW = pw * 0.05;
+  ctx.strokeRect(px, py + (ph - paH) / 2, paW, paH);
+  ctx.strokeRect(px + pw - paW, py + (ph - paH) / 2, paW, paH);
+  ctx.strokeRect(px, py + (ph - gaH) / 2, gaW, gaH);
+  ctx.strokeRect(px + pw - gaW, py + (ph - gaH) / 2, gaW, gaH);
+
+  // Penalty arcs
+  ctx.beginPath();
+  ctx.arc(px + paW, py + ph / 2, ph * 0.1, -0.6, 0.6);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(px + pw - paW, py + ph / 2, ph * 0.1, Math.PI - 0.6, Math.PI + 0.6);
+  ctx.stroke();
+
+  // Goals (thicker lines at edges)
+  const goalH = ph * 0.12;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.strokeRect(px - 4, py + (ph - goalH) / 2, 4, goalH);
+  ctx.strokeRect(px + pw, py + (ph - goalH) / 2, 4, goalH);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+
+  // Ball trail
+  if (ballTrail.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(px + ballTrail[0].x * pw, py + ballTrail[0].y * ph);
+    for (let i = 1; i < ballTrail.length; i++) {
+      ctx.lineTo(px + ballTrail[i].x * pw, py + ballTrail[i].y * ph);
+    }
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.15)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
 
   // Players
-  const r = Math.max(6, Math.min(10, pw * 0.018));
+  const r = Math.max(7, Math.min(11, pw * 0.015));
   pitchPositions.forEach((pos, key) => {
     const isHome = key.startsWith('home');
     const cx = px + pos.x * pw;
     const cy = py + pos.y * ph;
+
+    // Glow for ball carrier
+    if (key === ballCarrier) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.2)';
+      ctx.fill();
+    }
+
+    // Player circle
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = isHome ? '#fff' : '#3b82f6';
-    ctx.fill();
-    ctx.strokeStyle = isHome ? '#ccc' : '#2563eb';
+    if (isHome) {
+      ctx.fillStyle = '#e8e8e8';
+      ctx.fill();
+      ctx.strokeStyle = '#aaa';
+    } else {
+      ctx.fillStyle = '#3b82f6';
+      ctx.fill();
+      ctx.strokeStyle = '#1d4ed8';
+    }
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // Player number inside circle
+    const idx = parseInt(key.split('_')[1]);
+    ctx.fillStyle = isHome ? '#111' : '#fff';
+    ctx.font = `bold ${Math.round(r * 0.9)}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(idx === 0 ? '1' : String(idx + 1), cx, cy + 0.5);
   });
 
   // Ball
   const bx = px + ballPos.x * pw;
-  const by = px + ballPos.y * ph;
+  const by = py + ballPos.y * ph;
+  // Ball shadow
   ctx.beginPath();
-  ctx.arc(bx, by, Math.max(3, r * 0.5), 0, Math.PI * 2);
-  ctx.fillStyle = '#facc15';
+  ctx.arc(bx + 1, by + 1, Math.max(4, r * 0.45), 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fill();
-  ctx.strokeStyle = '#ca8a04';
-  ctx.lineWidth = 1;
+  // Ball
+  ctx.beginPath();
+  ctx.arc(bx, by, Math.max(4, r * 0.45), 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 0.8;
   ctx.stroke();
+
+  // Event flash effects
+  simActions.forEach(a => {
+    const age = simClock - a.time;
+    if (a.type === 'goal' && age < 60) {
+      const alpha = Math.max(0, 0.4 - age * 0.007);
+      const goalX = a.side === 'home' ? px + pw : px;
+      ctx.fillStyle = `rgba(250, 204, 21, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(goalX, py + ph / 2, 30 + age * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (a.type === 'miss' && age < 30) {
+      const alpha = Math.max(0, 0.3 - age * 0.01);
+      ctx.fillStyle = `rgba(255, 80, 80, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(bx, by, 15 + age, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // HUD: Scoreboard + clock
+  if (currentMatch) {
+    const m = currentMatch;
+    const hudW = 220, hudH = 28;
+    const hudX = (cw - hudW) / 2, hudY = 4;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(hudX, hudY, hudW, hudH, 6);
+    ctx.fill();
+
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.textBaseline = 'middle';
+    const midY = hudY + hudH / 2;
+
+    // Home name
+    ctx.fillStyle = '#e8e8e8';
+    ctx.textAlign = 'right';
+    ctx.fillText(m.home.name.substring(0, 10), hudX + 68, midY);
+
+    // Score
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 14px Inter, sans-serif';
+    ctx.fillText(`${m.home.score} - ${m.away.score}`, hudX + hudW / 2, midY);
+
+    // Away name
+    ctx.fillStyle = '#60a5fa';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(m.away.name.substring(0, 10), hudX + hudW - 68, midY);
+
+    // Clock
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(hudX + hudW / 2 - 16, hudY + hudH + 2, 32, 16, 4);
+    ctx.fill();
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold 10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(m.minute > 0 ? `${m.minute}'` : '0\'', hudX + hudW / 2, hudY + hudH + 10);
+  }
 }
 
 // ========== FORMATION ASSIGNMENT ==========
@@ -588,16 +827,15 @@ function btn(text, cls, handler) {
 function renderCard(player, options = {}) {
   const { selected, onClick, small } = options;
   const tier = cardTier(player.overall);
-  const colors = CARD_COLORS[tier];
 
   const card = el('div', `mgr-card tier-${tier}${selected ? ' selected' : ''}${small ? ' small' : ''}`);
   card.dataset.id = player.id;
 
-  const header = el('div', 'card-header');
-  const ovr = el('span', 'card-ovr', String(player.overall));
-  const pos = el('span', 'card-pos', player.position);
-  header.append(ovr, pos);
+  // Left column: OVR + POS stacked
+  const badge = el('div', 'card-badge');
+  badge.append(el('span', 'card-ovr', String(player.overall)), el('span', 'card-pos', player.position));
 
+  // Photo area (no circular border)
   const photoDiv = el('div', 'card-photo');
   if (player.photo) {
     const img = document.createElement('img');
@@ -609,8 +847,10 @@ function renderCard(player, options = {}) {
     photoDiv.classList.add('silhouette');
   }
 
+  // Name bar
   const name = el('div', 'card-name', player.name);
 
+  // Stats row: label on top, value below
   const stats = el('div', 'card-stats');
   const statData = [
     ['PAC', player.pace], ['SHO', player.shooting], ['PAS', player.passing],
@@ -618,11 +858,11 @@ function renderCard(player, options = {}) {
   ];
   statData.forEach(([label, value]) => {
     const s = el('div', 'card-stat');
-    s.append(el('span', 'stat-val', String(value)), el('span', 'stat-label', label));
+    s.append(el('span', 'stat-label', label), el('span', 'stat-val', String(value)));
     stats.append(s);
   });
 
-  card.append(header, photoDiv, name, stats);
+  card.append(badge, photoDiv, name, stats);
   if (onClick) card.addEventListener('click', () => onClick(player));
   card.style.cursor = onClick ? 'pointer' : 'default';
   return card;
@@ -1137,25 +1377,18 @@ function renderMatchView() {
 
   const match = currentMatch;
 
-  // Scoreboard
-  const scoreboard = el('div', 'mgr-scoreboard');
-  const homeEl = el('span', 'mgr-team-name home', match.home.name);
-  const scoreEl = el('span', 'mgr-score', `${match.home.score} : ${match.away.score}`);
-  const awayEl = el('span', 'mgr-team-name away', match.away.name);
-  scoreboard.append(homeEl, scoreEl, awayEl);
-
+  // Speed controls
   const infoRow = el('div', 'mgr-info-row');
-  const minuteEl = el('span', 'mgr-minute', match.minute > 0 ? `${match.minute}'` : 'kick off');
   const speedBtns = el('div', 'mgr-speed');
   [1, 2, 5].forEach(s => {
     speedBtns.append(btn(`${s}x`, `filter-pill${matchSpeed === s ? ' active' : ''}`, () => { matchSpeed = s; renderMatchViewUpdate(); }));
   });
-  infoRow.append(minuteEl, speedBtns);
-  container.append(scoreboard, infoRow);
+  infoRow.append(speedBtns);
+  container.append(infoRow);
 
-  // Pitch canvas
+  // Horizontal pitch canvas (wider aspect ratio)
   const canvas = document.createElement('canvas');
-  canvas.className = 'mgr-pitch';
+  canvas.className = 'mgr-pitch mgr-pitch-horizontal';
   container.append(canvas);
 
   // Possession bar
@@ -1184,11 +1417,6 @@ function renderMatchView() {
 
 function renderMatchViewUpdate() {
   const match = currentMatch;
-  const minuteEl = document.querySelector('.mgr-minute');
-  if (minuteEl) minuteEl.textContent = match.minute > 0 ? `${match.minute}'` : 'kick off';
-
-  const scoreEl = document.querySelector('.mgr-score');
-  if (scoreEl) scoreEl.textContent = `${match.home.score} : ${match.away.score}`;
 
   const possHome = document.querySelector('.mgr-poss-fill.home');
   if (possHome) possHome.style.width = match.possession.home + '%';
@@ -1219,7 +1447,7 @@ async function runMatch() {
   addCommentary('And we\'re underway!', 'kickoff');
 
   const delay = () => new Promise(r => {
-    matchTimer = setTimeout(r, [2000, 1000, 400][Math.min(2, matchSpeed - 1)] || 1000);
+    matchTimer = setTimeout(r, [2400, 1200, 500][Math.min(2, matchSpeed - 1)] || 1200);
   });
 
   for (let minute = 1; minute <= 90 + match.stoppageTime; minute++) {

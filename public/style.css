@@ -1804,15 +1804,15 @@ h2 {
   scroll-snap-align: start;
 }
 
-/* FUT-style player card */
+/* FC-style player card */
 .mgr-card {
   position: relative;
-  border-radius: 10px;
-  padding: 10px 8px 8px;
+  border-radius: 12px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  overflow: hidden;
   transition: transform 0.15s, box-shadow 0.15s;
   user-select: none;
 }
@@ -1834,40 +1834,45 @@ h2 {
 
 /* Card tier colors */
 .mgr-card.tier-legend {
-  background: linear-gradient(160deg, #1a1a2e, #16213e 40%, #0f3460);
+  background: linear-gradient(170deg, #1a1a2e 0%, #16213e 35%, #0f3460 100%);
   border: 1px solid #c6a338;
 }
 
 .mgr-card.tier-gold {
-  background: linear-gradient(160deg, #c6a338, #8b6914);
+  background: linear-gradient(170deg, #e2c759 0%, #c6a338 30%, #8b6914 100%);
 }
 
 .mgr-card.tier-silver {
-  background: linear-gradient(160deg, #b8b8b8, #707070);
+  background: linear-gradient(170deg, #d0d0d0 0%, #a8a8a8 30%, #707070 100%);
 }
 
 .mgr-card.tier-bronze {
-  background: linear-gradient(160deg, #a5694e, #6b3a20);
+  background: linear-gradient(170deg, #c5845a 0%, #a5694e 30%, #6b3a20 100%);
 }
 
-.card-header {
-  width: 100%;
+/* Badge: OVR + POS stacked top-left */
+.card-badge {
+  position: absolute;
+  top: 6px;
+  left: 8px;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+  line-height: 1;
 }
 
 .card-ovr {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1;
 }
 
 .card-pos {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  padding-top: 4px;
+  margin-top: 1px;
 }
 
 .tier-legend .card-ovr,
@@ -1879,43 +1884,51 @@ h2 {
 .tier-bronze .card-ovr,
 .tier-bronze .card-pos { color: #fff; }
 
+/* Photo: no circle, blends into card */
 .card-photo {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+  width: 100%;
+  height: 90px;
   overflow: hidden;
-  background: rgba(0,0,0,0.15);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 
 .card-photo img {
-  width: 100%;
-  height: 100%;
+  width: 80px;
+  height: 80px;
   object-fit: cover;
+  object-position: top;
 }
 
 .card-photo.silhouette {
-  background: rgba(0,0,0,0.2);
+  background: none;
 }
 
 .card-photo.silhouette::after {
   content: '';
   display: block;
-  width: 100%;
-  height: 100%;
-  background: rgba(255,255,255,0.15);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E") center / 60% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E") center / 60% no-repeat;
+  width: 70px;
+  height: 70px;
+  background: rgba(0,0,0,0.2);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E") center / 70% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E") center / 70% no-repeat;
 }
 
 .card-name {
   width: 100%;
   text-align: center;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 2px 6px;
+  border-top: 1px solid rgba(0,0,0,0.15);
 }
 
 .tier-legend .card-name { color: #fff; }
@@ -1926,8 +1939,8 @@ h2 {
 .card-stats {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px 4px;
+  grid-template-columns: repeat(6, 1fr);
+  padding: 2px 4px 6px;
 }
 
 .card-stat {
@@ -1937,18 +1950,19 @@ h2 {
   gap: 0;
 }
 
-.stat-val {
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.3;
-}
-
 .stat-label {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 600;
   letter-spacing: 0.06em;
   opacity: 0.7;
+  line-height: 1.4;
+}
+
+.stat-val {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
 }
 
 .tier-legend .stat-val { color: #e0c868; }
@@ -2001,14 +2015,7 @@ h2 {
 .mgr-info-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.mgr-minute {
-  font-size: 15px;
-  font-weight: 600;
-  color: #8e8e93;
-  font-variant-numeric: tabular-nums;
+  justify-content: center;
 }
 
 .mgr-speed {
@@ -2027,6 +2034,12 @@ h2 {
   height: 360px;
   border-radius: 12px;
   border: 1px solid #222;
+}
+
+.mgr-pitch-horizontal {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  max-height: 500px;
 }
 
 /* Possession bar */
