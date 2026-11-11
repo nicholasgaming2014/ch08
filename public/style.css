@@ -191,23 +191,23 @@ h2 {
 }
 
 .collage-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 1fr;
-  grid-auto-flow: dense;
-  gap: 2px;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
+}
+
+.collage-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 .collage-cell {
   position: relative;
   overflow: hidden;
-  background: #000;
+  min-width: 0;
 }
-
-.collage-cell.span-col { grid-column: span 2; }
-.collage-cell.span-row { grid-row: span 2; }
 
 .collage-cell img {
   width: 100%;
@@ -1412,6 +1412,112 @@ h2 {
     max-height: 320px;
     object-fit: contain;
   }
+}
+
+/* Clips */
+.clips-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.clip-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.clip-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.clip-pill:hover { background: #333; }
+.clip-pill.active { background: #fff; color: #000; border-color: #fff; }
+
+.clip-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.clip-card {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.clip-card:hover { transform: scale(1.02); }
+
+.clip-card.expanded {
+  grid-column: 1 / -1;
+  transform: none;
+  cursor: default;
+}
+
+.clip-card video {
+  width: 100%;
+  display: block;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #000;
+}
+
+.clip-card.expanded video {
+  aspect-ratio: auto;
+  object-fit: contain;
+  max-height: 70vh;
+}
+
+.clip-info {
+  padding: 8px 10px;
+}
+
+.clip-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.clip-meta {
+  font-size: 12px;
+  color: #888;
+  margin: 2px 0 0;
+}
+
+.clip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.clip-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #222;
+  color: #aaa;
+}
+
+@media (max-width: 900px) {
+  .clip-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .clip-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* fc/fifa: stat tables */

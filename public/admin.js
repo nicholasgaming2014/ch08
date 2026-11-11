@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'art', 'fc', 'contact'];
+const TABS = ['home', 'beats', 'art', 'clips', 'fc', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -450,6 +450,142 @@ function artEditor(piece, index, total) {
 function renderArt(art) {
   document.querySelector('.admin-art-list').replaceChildren(...art.map((piece, i) => artEditor(piece, i, art.length)));
   document.querySelector('#panel-art .empty-note').hidden = art.length > 0;
+}
+
+// ---------- Clips ----------
+
+const clipForm = document.getElementById('clip-upload');
+const clipPeopleList = clipForm?.querySelector('.clip-people-list');
+
+function addClipPersonRow(list, name = '') {
+  const row = document.createElement('div');
+  row.className = 'link-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'person name';
+  input.maxLength = 120;
+  input.value = name;
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'button secondary';
+  remove.textContent = '✕';
+  remove.setAttribute('aria-label', 'Remove person');
+  remove.addEventListener('click', () => row.remove());
+  row.append(input, remove);
+  list.append(row);
+}
+
+function readClipPeople(list) {
+  return [...list.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+}
+
+if (clipForm) {
+  addClipPersonRow(clipPeopleList);
+  clipForm.querySelector('.add-clip-person').addEventListener('click', () => {
+    addClipPersonRow(clipPeopleList);
+    clipPeopleList.lastElementChild.querySelector('input').focus();
+  });
+
+  clipForm.video.addEventListener('change', () => {
+    const file = clipForm.video.files[0];
+    if (file && !clipForm.title.value) clipForm.title.value = file.name.replace(/\.[^.]+$/, '');
+  });
+
+  clipForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const video = clipForm.video.files[0];
+    if (!video) return;
+
+    setBusy(clipForm, true);
+    setStatus(clipForm, 'reading video…');
+    try {
+      const duration = await new Promise(resolve => {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => resolve(v.duration);
+        v.onerror = () => resolve(null);
+        v.src = URL.createObjectURL(video);
+      });
+      const data = new FormData();
+      data.append('title', clipForm.title.value);
+      data.append('date', clipForm.date.value);
+      data.append('game', clipForm.game.value);
+      data.append('people', JSON.stringify(readClipPeople(clipPeopleList)));
+      if (duration) data.append('duration', duration);
+      data.append('video', video);
+
+      content = await send('POST', '/api/admin/clips', data, p => setStatus(clipForm, `uploading… ${Math.round(p * 100)}%`));
+      renderClipsAdmin(content.clips);
+      clipForm.reset();
+      clipPeopleList.replaceChildren();
+      addClipPersonRow(clipPeopleList);
+      setStatus(clipForm, 'uploaded ✓');
+    } catch (err) {
+      setStatus(clipForm, err.message, true);
+    } finally {
+      setBusy(clipForm, false);
+    }
+  });
+}
+
+function clipEditor(clip) {
+  const card = document.createElement('div');
+  card.className = 'admin-card';
+  card.style.cssText = 'display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;';
+
+  const video = document.createElement('video');
+  video.src = clip.video;
+  video.controls = true;
+  video.preload = 'metadata';
+  video.style.cssText = 'width:200px;border-radius:6px;';
+
+  const fields = document.createElement('div');
+  fields.style.cssText = 'flex:1;min-width:200px;';
+
+  const titleP = document.createElement('p');
+  titleP.style.cssText = 'font-weight:600;color:#fff;margin:0 0 4px;';
+  titleP.textContent = clip.title;
+
+  const metaP = document.createElement('p');
+  metaP.style.cssText = 'font-size:13px;color:#888;margin:0 0 8px;';
+  const parts = [];
+  if (clip.date) parts.push(clip.date);
+  if (clip.duration) {
+    const m = Math.floor(clip.duration / 60);
+    const s = Math.round(clip.duration % 60);
+    parts.push(m + ':' + String(s).padStart(2, '0'));
+  }
+  if (clip.game) parts.push(clip.game);
+  if (clip.people?.length) parts.push(clip.people.join(', '));
+  metaP.textContent = parts.join(' · ');
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'button danger';
+  del.textContent = 'delete';
+  del.addEventListener('click', async () => {
+    if (!confirm(`Delete "${clip.title}"? This can't be undone.`)) return;
+    del.disabled = true;
+    try {
+      content = await send('DELETE', `/api/admin/clips/${clip.id}`);
+      renderClipsAdmin(content.clips);
+    } catch (err) {
+      del.disabled = false;
+      alert(err.message);
+    }
+  });
+
+  fields.append(titleP, metaP, del);
+  card.append(video, fields);
+  return card;
+}
+
+function renderClipsAdmin(clips) {
+  const list = document.querySelector('.admin-clip-list');
+  if (list) {
+    list.replaceChildren(...(clips || []).map(clipEditor));
+    document.querySelector('#panel-clips .empty-note').hidden = clips?.length > 0;
+  }
 }
 
 // ---------- fc/fifa stats ----------
@@ -947,5 +1083,6 @@ fetch('/api/content', { cache: 'no-store' })
     fillContact(content.contact);
     renderBeats(content.beats);
     renderArt(content.art || []);
+    renderClipsAdmin(content.clips || []);
     renderFcAdmin();
   });

@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'art', 'fc', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'clips', 'fc', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -37,47 +37,205 @@ function renderHome(home) {
   const grid = document.querySelector('.collage-grid');
   const gifs = home.collageGifs || [];
   if (gifs.length === 0 && home.image) gifs.push(home.image);
-  const count = gifs.length;
-  if (count === 0) { grid.replaceChildren(); return; }
+  if (gifs.length === 0) { grid.replaceChildren(); return; }
 
-  const cols = count === 1 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4;
-  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-
-  // Figure out how many grid cells the big items will consume
-  // so we can set rows to fill the viewport exactly
-  const shuffled = gifs.map((url, i) => ({ url, i }));
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const bigCount = count > 3 ? Math.max(1, Math.floor(count * 0.3)) : 0;
-  const bigSet = new Set(shuffled.slice(0, bigCount).map(s => s.i));
-  const spanTypes = new Map();
-  bigSet.forEach(i => spanTypes.set(i, Math.random() < 0.5 ? 'span-col' : 'span-row'));
-
-  // Count total cell-units consumed: span-col = 2 wide, span-row = 2 tall (occupies 2 row-slots in 1 col)
-  let totalCells = 0;
-  for (let i = 0; i < count; i++) {
-    const span = spanTypes.get(i);
-    if (span === 'span-col') totalCells += 2;
-    else if (span === 'span-row') totalCells += 2;
-    else totalCells += 1;
-  }
-  const rows = Math.max(count === 1 ? 1 : 2, Math.ceil(totalCells / cols));
-  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-
-  grid.replaceChildren(...gifs.map((url, i) => {
-    const cell = document.createElement('div');
-    cell.className = 'collage-cell';
-    const span = spanTypes.get(i);
-    if (span) cell.classList.add(span);
-    const img = document.createElement('img');
+  Promise.all(gifs.map(url => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ url, ratio: img.naturalWidth / img.naturalHeight });
+    img.onerror = () => resolve({ url, ratio: 16 / 9 });
     img.src = url;
-    img.alt = '';
-    cell.append(img);
-    return cell;
+  }))).then(images => {
+    const containerW = grid.clientWidth || window.innerWidth;
+    const targetRows = Math.max(2, Math.round(Math.sqrt(images.length * 0.8)));
+    const targetH = (window.innerHeight - 60) / targetRows;
+
+    // ~30% of images get a size boost for visual variety
+    const boosted = new Set();
+    if (images.length > 3) {
+      const order = images.map((_, i) => i).sort(() => Math.random() - 0.5);
+      const n = Math.max(1, Math.floor(images.length * 0.3));
+      for (let i = 0; i < n; i++) boosted.add(order[i]);
+    }
+
+    // Pack images into rows using justified layout
+    const rows = [];
+    let row = [];
+    let rowW = 0;
+    for (let i = 0; i < images.length; i++) {
+      const scale = boosted.has(i) ? 1.8 : 1;
+      const w = images[i].ratio * targetH * scale;
+      row.push({ ...images[i], weight: w, idx: i });
+      rowW += w;
+      if (rowW >= containerW && row.length > 0) {
+        rows.push(row);
+        row = [];
+        rowW = 0;
+      }
+    }
+    if (row.length > 0) rows.push(row);
+
+    grid.replaceChildren(...rows.map(r => {
+      const totalW = r.reduce((s, img) => s + img.weight, 0);
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'collage-row';
+      r.forEach(item => {
+        const pct = (item.weight / totalW) * 100;
+        const cell = document.createElement('div');
+        cell.className = 'collage-cell';
+        cell.style.flex = `${pct} 0 0%`;
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = '';
+        cell.append(img);
+        rowDiv.append(cell);
+      });
+      return rowDiv;
+    }));
+  });
+}
+
+// ---------- Clips ----------
+
+let clipSort = 'newest';
+let clipPersonFilter = null;
+let clipGameFilter = null;
+
+function formatDuration(sec) {
+  if (!sec) return '';
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function renderClips(clips) {
+  const grid = document.querySelector('.clip-grid');
+  const empty = document.querySelector('#clips .empty-note');
+  if (!clips || !clips.length) {
+    grid.replaceChildren();
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+
+  // Build pills
+  const people = new Set();
+  const games = new Set();
+  clips.forEach(c => {
+    (c.people || []).forEach(p => people.add(p));
+    if (c.game) games.add(c.game);
+  });
+
+  function renderPills(container, values, active, onClick) {
+    const allBtn = document.createElement('button');
+    allBtn.className = 'clip-pill' + (active === null ? ' active' : '');
+    allBtn.textContent = 'all';
+    allBtn.addEventListener('click', () => onClick(null));
+    container.replaceChildren(allBtn, ...[...values].sort().map(v => {
+      const btn = document.createElement('button');
+      btn.className = 'clip-pill' + (active === v ? ' active' : '');
+      btn.textContent = v;
+      btn.addEventListener('click', () => onClick(v));
+      return btn;
+    }));
+  }
+
+  renderPills(document.querySelector('.people-pills'), people, clipPersonFilter, v => {
+    clipPersonFilter = v;
+    renderClips(clips);
+  });
+  renderPills(document.querySelector('.game-pills'), games, clipGameFilter, v => {
+    clipGameFilter = v;
+    renderClips(clips);
+  });
+
+  // Filter
+  let filtered = clips.filter(c => {
+    if (clipPersonFilter && !(c.people || []).includes(clipPersonFilter)) return false;
+    if (clipGameFilter && c.game !== clipGameFilter) return false;
+    return true;
+  });
+
+  // Sort
+  filtered = [...filtered].sort((a, b) => {
+    if (clipSort === 'newest') return (b.date || b.createdAt || '').localeCompare(a.date || a.createdAt || '');
+    if (clipSort === 'oldest') return (a.date || a.createdAt || '').localeCompare(b.date || b.createdAt || '');
+    if (clipSort === 'shortest') return (a.duration || 9999) - (b.duration || 9999);
+    if (clipSort === 'longest') return (b.duration || 0) - (a.duration || 0);
+    return 0;
+  });
+
+  grid.replaceChildren(...filtered.map(clip => {
+    const card = document.createElement('div');
+    card.className = 'clip-card';
+
+    const video = document.createElement('video');
+    video.src = clip.video;
+    video.preload = 'metadata';
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+
+    const info = document.createElement('div');
+    info.className = 'clip-info';
+
+    const title = document.createElement('p');
+    title.className = 'clip-title';
+    title.textContent = clip.title;
+
+    const meta = document.createElement('p');
+    meta.className = 'clip-meta';
+    const parts = [];
+    if (clip.date) parts.push(clip.date);
+    if (clip.duration) parts.push(formatDuration(clip.duration));
+    if (clip.game) parts.push(clip.game);
+    meta.textContent = parts.join(' · ');
+
+    const tags = document.createElement('div');
+    tags.className = 'clip-tags';
+    (clip.people || []).forEach(p => {
+      const tag = document.createElement('span');
+      tag.className = 'clip-tag';
+      tag.textContent = p;
+      tags.append(tag);
+    });
+
+    info.append(title, meta);
+    if (clip.people?.length) info.append(tags);
+    card.append(video, info);
+
+    card.addEventListener('click', () => {
+      const wasExpanded = card.classList.contains('expanded');
+      grid.querySelectorAll('.clip-card.expanded').forEach(c => {
+        c.classList.remove('expanded');
+        c.querySelector('video').pause();
+        c.querySelector('video').muted = true;
+        c.querySelector('video').controls = false;
+      });
+      if (!wasExpanded) {
+        card.classList.add('expanded');
+        video.muted = false;
+        video.controls = true;
+        video.currentTime = 0;
+        video.play();
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    card.addEventListener('mouseenter', () => {
+      if (!card.classList.contains('expanded')) video.play().catch(() => {});
+    });
+    card.addEventListener('mouseleave', () => {
+      if (!card.classList.contains('expanded')) { video.pause(); video.currentTime = 0; }
+    });
+
+    return card;
   }));
 }
+
+document.getElementById('clip-sort')?.addEventListener('change', function() {
+  clipSort = this.value;
+  if (window._clipData) renderClips(window._clipData);
+});
 
 // Logo and tile color for each social row, matched on the link's host.
 // Logos are Simple Icons (CC0) in public/icons/brands.
@@ -751,6 +909,8 @@ fetch('/api/content')
     renderHome(content.home);
     renderContact(content.contact);
     renderArt(content.art || []);
+    window._clipData = content.clips || [];
+    renderClips(window._clipData);
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);

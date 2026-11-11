@@ -37,6 +37,7 @@ const DEFAULT_CONTENT = {
   art: [],
   // Stat rows for the fc/fifa page, one list per table in FC_SCHEMA.
   fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
+  clips: [],
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -62,6 +63,7 @@ function loadContent() {
     Object.keys(FC_SCHEMA).forEach(table => {
       if (Array.isArray(saved.fc?.[table])) content.fc[table] = saved.fc[table];
     });
+    if (Array.isArray(saved.clips)) content.clips = saved.clips;
   } catch {}
   return content;
 }
@@ -87,6 +89,7 @@ const AUDIO_TYPES = {
   'audio/ogg': '.ogg', 'audio/flac': '.flac', 'audio/x-flac': '.flac',
 };
 const IMAGE_TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' };
+const VIDEO_TYPES = { 'video/mp4': '.mp4', 'video/quicktime': '.mov', 'video/webm': '.webm' };
 const SONG_COVER_FIELD = /^songCover_\d{1,2}$/;
 
 const upload = multer({
@@ -100,7 +103,8 @@ const upload = multer({
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
     const isImage = ['image', 'cover', 'images', 'screenshot', 'photo', 'collageGifs'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
-    const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isImage ? IMAGE_TYPES : {};
+    const isVideo = file.fieldname === 'video';
+    const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isVideo ? VIDEO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
     cb(new Error(`That file type (${file.mimetype || 'unknown'}) isn't supported.`));
   },
@@ -612,6 +616,79 @@ app.delete('/api/admin/fc/:table/:id', requireAdminApi, async (req, res) => {
   content.fc[req.params.table] = rows.filter(r => r !== entry);
   await saveContent();
   await removeUpload(entry.screenshot);
+  res.json(content);
+});
+
+// ---------- Clips ----------
+
+function parseStringArray(value, max = 20, maxLen = 120) {
+  let list = value;
+  try { list = JSON.parse(list || '[]'); } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  return list.map(s => text(s, maxLen)).filter(Boolean).slice(0, max);
+}
+
+function findClip(req, res) {
+  const clip = content.clips.find(c => c.id === req.params.id);
+  if (!clip) res.status(404).json({ error: 'Clip not found.' });
+  return clip;
+}
+
+app.post('/api/admin/clips', requireAdminApi, upload.fields([{ name: 'video', maxCount: 1 }]), async (req, res) => {
+  const body = req.body || {};
+  const video = req.files?.video?.[0];
+  const title = text(body.title, 200);
+  if (!video || !title) {
+    await removeRequestFiles(req);
+    return res.status(400).json({ error: 'A clip needs a video file and a title.' });
+  }
+  const clip = {
+    id: crypto.randomBytes(8).toString('hex'),
+    title,
+    date: text(body.date, 20),
+    people: parseStringArray(body.people),
+    game: text(body.game, 120),
+    video: fileUrl(video),
+    duration: durationValue(body.duration),
+    createdAt: new Date().toISOString(),
+  };
+  content.clips.unshift(clip);
+  await saveContent();
+  res.status(201).json(content);
+});
+
+app.put('/api/admin/clips/:id', requireAdminApi, upload.fields([{ name: 'video', maxCount: 1 }]), async (req, res) => {
+  const clip = findClip(req, res);
+  if (!clip) return removeRequestFiles(req);
+  const body = req.body || {};
+  const title = text(body.title, 200);
+  if (!title) {
+    await removeRequestFiles(req);
+    return res.status(400).json({ error: 'A clip needs a title.' });
+  }
+  const newVideo = req.files?.video?.[0];
+  const oldVideo = clip.video;
+  Object.assign(clip, {
+    title,
+    date: text(body.date, 20),
+    people: parseStringArray(body.people),
+    game: text(body.game, 120),
+    duration: durationValue(body.duration) ?? clip.duration,
+  });
+  if (newVideo) {
+    clip.video = fileUrl(newVideo);
+    await removeUpload(oldVideo);
+  }
+  await saveContent();
+  res.json(content);
+});
+
+app.delete('/api/admin/clips/:id', requireAdminApi, async (req, res) => {
+  const clip = findClip(req, res);
+  if (!clip) return;
+  content.clips = content.clips.filter(c => c !== clip);
+  await saveContent();
+  await removeUpload(clip.video);
   res.json(content);
 });
 

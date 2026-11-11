@@ -31,6 +31,7 @@
     <a href="/#home" class="menu-link">home</a>
     <a href="/#beats" class="menu-link">beats</a>
     <a href="/#art" class="menu-link">art</a>
+    <a href="/#clips" class="menu-link">clips</a>
     <a href="/#fc" class="menu-link">fc/fifa</a>
     <a href="/#contact" class="menu-link">contact</a>
     <a href="/admin" class="menu-link active">admin</a>
@@ -46,6 +47,7 @@
       <a href="#home" class="menu-link">home</a>
       <a href="#beats" class="menu-link">beats</a>
       <a href="#art" class="menu-link">art</a>
+      <a href="#clips" class="menu-link">clips</a>
       <a href="#fc" class="menu-link">fc/fifa</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
@@ -144,6 +146,38 @@
       <h2>your artwork</h2>
       <p class="empty-note" hidden>no artwork yet</p>
       <div class="admin-art-list"></div>
+    </section>
+
+    <!-- Clips -->
+    <section id="panel-clips" class="admin-panel" hidden>
+      <form id="clip-upload" class="admin-card">
+        <h2>upload a clip</h2>
+        <label class="field"><span>video file (mp4, mov, webm)</span>
+          <input type="file" name="video" accept="video/mp4,video/quicktime,video/webm" required>
+        </label>
+        <label class="field"><span>title</span>
+          <input type="text" name="title" maxlength="200" required>
+        </label>
+        <label class="field"><span>date</span>
+          <input type="date" name="date">
+        </label>
+        <label class="field"><span>game</span>
+          <input type="text" name="game" maxlength="120" placeholder="FC25, NBA 2K, etc.">
+        </label>
+        <div class="field"><span>people in the clip</span>
+          <div class="clip-people-list"></div>
+          <button type="button" class="button secondary add-clip-person" style="align-self:flex-start">+ add person</button>
+        </div>
+        <div class="button-row">
+          <button type="submit" class="button">upload clip</button>
+          <a href="/#clips" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
+          <span class="status" role="status"></span>
+        </div>
+      </form>
+
+      <h2>your clips</h2>
+      <p class="empty-note" hidden>no clips yet</p>
+      <div class="admin-clip-list"></div>
     </section>
 
     <!-- fc/fifa -->
