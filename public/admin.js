@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'art', 'fc', 'manager', 'contact'];
+const TABS = ['home', 'beats', 'art', 'fc', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -251,26 +251,36 @@ document.querySelectorAll('.add-link').forEach(button => {
 // ---------- Home ----------
 
 const homeForm = document.getElementById('home-form');
-const homePreview = homeForm.querySelector('.image-preview');
+let homeKeptGifs = [];
 
 function fillHome(home) {
-  homeForm.headline.value = home.headline;
-  homeForm.bigText.value = home.bigText;
-  homeForm.paragraph.value = home.paragraph;
-  homeForm.image.value = '';
-  homeForm.removeImage.checked = false;
-  homePreview.src = home.image || '';
-  homePreview.hidden = !home.image;
+  homeForm.headline.value = home.headline || '';
+  homeForm.bigText.value = home.bigText || '';
+  homeForm.paragraph.value = home.paragraph || '';
+  homeForm.collageGifs.value = '';
+  homeKeptGifs = (home.collageGifs || []).slice();
+  renderCollageGifList();
   fillLinks(homeForm.querySelector('.link-editor'), home.links);
 }
 
-homeForm.image.addEventListener('change', () => {
-  const file = homeForm.image.files[0];
-  if (!file) return;
-  homePreview.src = URL.createObjectURL(file);
-  homePreview.hidden = false;
-  homeForm.removeImage.checked = false;
-});
+function renderCollageGifList() {
+  const list = homeForm.querySelector('.collage-gif-list');
+  list.replaceChildren(...homeKeptGifs.map((url, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:inline-block;position:relative;margin:4px;';
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    img.style.cssText = 'width:100px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #333;';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '✕';
+    btn.style.cssText = 'position:absolute;top:2px;right:2px;background:#e00;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;line-height:1;';
+    btn.addEventListener('click', () => { homeKeptGifs.splice(i, 1); renderCollageGifList(); });
+    wrap.append(img, btn);
+    return wrap;
+  }));
+}
 
 homeForm.addEventListener('submit', async e => {
   e.preventDefault();
@@ -279,8 +289,10 @@ homeForm.addEventListener('submit', async e => {
   data.append('bigText', homeForm.bigText.value);
   data.append('paragraph', homeForm.paragraph.value);
   data.append('links', JSON.stringify(readLinks(homeForm.querySelector('.link-editor'))));
-  data.append('removeImage', homeForm.removeImage.checked);
-  if (homeForm.image.files[0]) data.append('image', homeForm.image.files[0]);
+  data.append('keptGifs', JSON.stringify(homeKeptGifs));
+  for (const file of homeForm.collageGifs.files) {
+    data.append('collageGifs', file);
+  }
 
   setBusy(homeForm, true);
   setStatus(homeForm, 'saving…');
@@ -925,265 +937,6 @@ function renderProducers() {
   producerCard.hidden = names.size === 0;
 }
 
-// ---------- Manager ----------
-
-const mgrForm = document.getElementById('manager-player-form');
-const mgrCancel = mgrForm.querySelector('.mgr-cancel');
-let mgrEditing = null;
-
-function mgrPlayerRow(player) {
-  const row = document.createElement('div');
-  row.className = 'fc-row';
-  if (player.photo) {
-    const thumb = document.createElement('img');
-    thumb.className = 'art-thumb';
-    thumb.src = player.photo;
-    thumb.alt = '';
-    thumb.loading = 'lazy';
-    row.append(thumb);
-  }
-  const summary = document.createElement('span');
-  summary.className = 'fc-row-summary';
-  summary.textContent = `${player.name} — ${player.position} ${player.overall}`;
-  const editBtn = document.createElement('button');
-  editBtn.type = 'button';
-  editBtn.className = 'button secondary';
-  editBtn.textContent = 'edit';
-  editBtn.addEventListener('click', () => mgrStartEdit(player));
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = 'button';
-  deleteBtn.className = 'button danger';
-  deleteBtn.textContent = 'delete';
-  deleteBtn.addEventListener('click', async () => {
-    if (!confirm(`Delete "${player.name}"?`)) return;
-    setBusy(mgrForm, true);
-    try {
-      content = await send('DELETE', `/api/admin/manager/players/${player.id}`);
-      renderMgrPlayers();
-      setStatus(mgrForm, 'deleted');
-    } catch (err) { setStatus(mgrForm, err.message, true); }
-    finally { setBusy(mgrForm, false); }
-  });
-  row.append(summary, editBtn, deleteBtn);
-  return row;
-}
-
-function renderMgrPlayers() {
-  const players = content.manager?.players || [];
-  const list = document.querySelector('.mgr-player-list');
-  list.replaceChildren(...players.map(mgrPlayerRow));
-  document.querySelector('.mgr-empty').hidden = players.length > 0;
-}
-
-function renderMgrHistory() {
-  const history = content.manager?.history || [];
-  const list = document.querySelector('.mgr-history-list');
-  list.replaceChildren(...history.slice().reverse().map(m => {
-    const row = document.createElement('div');
-    row.className = 'fc-row';
-    const summary = document.createElement('span');
-    summary.className = 'fc-row-summary';
-    const d = new Date(m.date);
-    summary.textContent = `${m.homeTeam} ${m.homeScore} - ${m.awayScore} ${m.awayTeam}  (${d.toLocaleDateString()})`;
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'button danger';
-    deleteBtn.textContent = 'delete';
-    deleteBtn.addEventListener('click', async () => {
-      if (!confirm('Delete this match result?')) return;
-      try {
-        content = await send('DELETE', `/api/admin/manager/history/${m.id}`);
-        renderMgrHistory();
-      } catch (err) { setStatus(mgrForm, err.message, true); }
-    });
-    row.append(summary, deleteBtn);
-    return row;
-  }));
-  document.querySelector('.mgr-history-empty').hidden = history.length > 0;
-}
-
-function mgrStartEdit(player) {
-  mgrEditing = player;
-  mgrForm.name.value = player.name;
-  mgrForm.position.value = player.position;
-  mgrForm.overall.value = player.overall;
-  mgrForm.pace.value = player.pace;
-  mgrForm.shooting.value = player.shooting;
-  mgrForm.passing.value = player.passing;
-  mgrForm.dribbling.value = player.dribbling;
-  mgrForm.defending.value = player.defending;
-  mgrForm.physical.value = player.physical;
-  mgrForm.querySelector('[type="submit"]').textContent = 'save changes';
-  mgrCancel.hidden = false;
-  mgrForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function mgrStopEdit() {
-  mgrEditing = null;
-  mgrForm.reset();
-  mgrForm.querySelector('[type="submit"]').textContent = 'add player';
-  mgrCancel.hidden = true;
-}
-
-mgrCancel.addEventListener('click', () => { mgrStopEdit(); setStatus(mgrForm, ''); });
-
-mgrForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const data = new FormData();
-  data.append('name', mgrForm.name.value);
-  data.append('position', mgrForm.position.value);
-  data.append('overall', mgrForm.overall.value);
-  data.append('pace', mgrForm.pace.value);
-  data.append('shooting', mgrForm.shooting.value);
-  data.append('passing', mgrForm.passing.value);
-  data.append('dribbling', mgrForm.dribbling.value);
-  data.append('defending', mgrForm.defending.value);
-  data.append('physical', mgrForm.physical.value);
-  if (mgrForm.photo.files[0]) data.append('photo', mgrForm.photo.files[0]);
-
-  setBusy(mgrForm, true);
-  setStatus(mgrForm, 'saving…');
-  try {
-    let url, method;
-    if (mgrEditing) {
-      if (mgrEditing.builtin) {
-        url = `/api/admin/manager/builtin/${mgrEditing.id}`;
-        method = 'PUT';
-      } else {
-        url = `/api/admin/manager/players/${mgrEditing.id}`;
-        method = 'PUT';
-      }
-    } else {
-      url = '/api/admin/manager/players';
-      method = 'POST';
-    }
-    content = await send(method, url, data);
-    if (mgrEditing) mgrStopEdit();
-    else mgrForm.reset();
-    renderMgrPlayers();
-    renderMgrDb();
-    setStatus(mgrForm, mgrEditing ? 'saved ✓' : 'added ✓');
-  } catch (err) { setStatus(mgrForm, err.message, true); }
-  finally { setBusy(mgrForm, false); }
-});
-
-// ---------- Player Database ----------
-
-let dbSearchTerm = '';
-
-function mgrDbRow(player, isDeleted) {
-  const row = document.createElement('div');
-  row.className = 'fc-row' + (isDeleted ? ' mgr-db-deleted' : '');
-  const info = document.createElement('span');
-  info.className = 'fc-row-summary';
-  const tag = player.builtin ? '(built-in)' : '(custom)';
-  info.textContent = `${player.name} — ${player.position} ${player.overall} ${tag}${isDeleted ? ' [deleted]' : ''}`;
-  row.append(info);
-
-  if (isDeleted) {
-    const restoreBtn = document.createElement('button');
-    restoreBtn.type = 'button';
-    restoreBtn.className = 'button secondary';
-    restoreBtn.textContent = 'restore';
-    restoreBtn.addEventListener('click', async () => {
-      try {
-        content = await send('POST', `/api/admin/manager/builtin/${player.id}/restore`);
-        renderMgrDb();
-      } catch (err) { alert(err.message); }
-    });
-    row.append(restoreBtn);
-  } else {
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'button secondary';
-    editBtn.textContent = 'edit';
-    editBtn.addEventListener('click', () => mgrDbStartEdit(player));
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'button danger';
-    deleteBtn.textContent = 'delete';
-    deleteBtn.addEventListener('click', async () => {
-      if (!confirm(`Delete "${player.name}"?`)) return;
-      try {
-        if (player.builtin) {
-          content = await send('DELETE', `/api/admin/manager/builtin/${player.id}`);
-        } else {
-          content = await send('DELETE', `/api/admin/manager/players/${player.id}`);
-        }
-        renderMgrDb();
-        renderMgrPlayers();
-      } catch (err) { alert(err.message); }
-    });
-    row.append(editBtn, deleteBtn);
-  }
-
-  return row;
-}
-
-function mgrDbStartEdit(player) {
-  mgrEditing = player;
-  mgrForm.name.value = player.name;
-  mgrForm.position.value = player.position;
-  mgrForm.overall.value = player.overall;
-  mgrForm.pace.value = player.pace;
-  mgrForm.shooting.value = player.shooting;
-  mgrForm.passing.value = player.passing;
-  mgrForm.dribbling.value = player.dribbling;
-  mgrForm.defending.value = player.defending;
-  mgrForm.physical.value = player.physical;
-  mgrForm.querySelector('[type="submit"]').textContent = player.builtin ? 'save built-in edits' : 'save changes';
-  mgrCancel.hidden = false;
-  mgrForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function renderMgrDb() {
-  if (typeof BUILTIN_PLAYERS === 'undefined') return;
-  const list = document.querySelector('.mgr-db-list');
-  if (!list) return;
-
-  const edits = content.manager?.builtinEdits || {};
-  const deleted = new Set(content.manager?.deletedBuiltinIds || []);
-
-  const builtins = BUILTIN_PLAYERS.map(p => {
-    const merged = edits[p.id] ? { ...p, ...edits[p.id], builtin: true } : { ...p, builtin: true };
-    return { player: merged, isDeleted: deleted.has(p.id) };
-  });
-  const customs = (content.manager?.players || []).map(p => ({ player: { ...p, builtin: false }, isDeleted: false }));
-  let all = [...builtins, ...customs];
-
-  if (dbSearchTerm) {
-    const q = dbSearchTerm.toLowerCase();
-    all = all.filter(({ player }) =>
-      player.name.toLowerCase().includes(q) || player.position.toLowerCase().includes(q)
-    );
-  }
-
-  all.sort((a, b) => {
-    if (a.isDeleted !== b.isDeleted) return a.isDeleted ? 1 : -1;
-    return b.player.overall - a.player.overall;
-  });
-
-  list.replaceChildren(...all.map(({ player, isDeleted }) => mgrDbRow(player, isDeleted)));
-}
-
-const dbSearch = document.querySelector('.mgr-db-search');
-if (dbSearch) {
-  dbSearch.addEventListener('input', () => { dbSearchTerm = dbSearch.value; renderMgrDb(); });
-}
-
-const deleteAllBtn = document.querySelector('.mgr-delete-all');
-if (deleteAllBtn) {
-  deleteAllBtn.addEventListener('click', async () => {
-    if (!confirm('Delete ALL players (built-in and custom)? This cannot be easily undone.')) return;
-    if (!confirm('Are you sure? This will remove every player from the database.')) return;
-    try {
-      content = await send('DELETE', '/api/admin/manager/all-players');
-      renderMgrDb();
-      renderMgrPlayers();
-    } catch (err) { alert(err.message); }
-  });
-}
-
 // ---------- Load ----------
 
 fetch('/api/content', { cache: 'no-store' })
@@ -1195,7 +948,4 @@ fetch('/api/content', { cache: 'no-store' })
     renderBeats(content.beats);
     renderArt(content.art || []);
     renderFcAdmin();
-    renderMgrPlayers();
-    renderMgrHistory();
-    renderMgrDb();
   });

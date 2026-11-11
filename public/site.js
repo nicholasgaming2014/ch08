@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'art', 'fc', 'manager', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'fc', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -34,14 +34,22 @@ function renderLinks(container, links) {
 }
 
 function renderHome(home) {
-  const section = document.getElementById('home');
-  setText(section.querySelector('.home-headline'), home.headline);
-  setText(section.querySelector('.home-big'), home.bigText);
-  setText(section.querySelector('.home-paragraph'), home.paragraph);
-  const img = section.querySelector('.hero-gif');
-  if (home.image) img.src = home.image;
-  img.hidden = !home.image;
-  renderLinks(section.querySelector('.link-list'), home.links);
+  const grid = document.querySelector('.collage-grid');
+  const gifs = home.collageGifs || [];
+  if (gifs.length === 0 && home.image) gifs.push(home.image);
+  const count = gifs.length;
+  const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.replaceChildren(...gifs.map(url => {
+    const cell = document.createElement('div');
+    cell.className = 'collage-cell';
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    img.loading = 'lazy';
+    cell.append(img);
+    return cell;
+  }));
 }
 
 // Logo and tile color for each social row, matched on the link's host.
@@ -719,5 +727,4 @@ fetch('/api/content')
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);
-    if (typeof initManager === 'function') initManager(content.manager);
   });
