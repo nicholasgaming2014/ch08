@@ -41,10 +41,10 @@ function renderHome(home) {
   if (count === 0) { grid.replaceChildren(); return; }
 
   const cols = count === 1 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4;
-  const rows = Math.max(count === 1 ? 1 : 2, Math.ceil(count / cols));
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
+  // Figure out how many grid cells the big items will consume
+  // so we can set rows to fill the viewport exactly
   const shuffled = gifs.map((url, i) => ({ url, i }));
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -52,11 +52,25 @@ function renderHome(home) {
   }
   const bigCount = count > 3 ? Math.max(1, Math.floor(count * 0.3)) : 0;
   const bigSet = new Set(shuffled.slice(0, bigCount).map(s => s.i));
+  const spanTypes = new Map();
+  bigSet.forEach(i => spanTypes.set(i, Math.random() < 0.5 ? 'span-col' : 'span-row'));
+
+  // Count total cell-units consumed: span-col = 2 wide, span-row = 2 tall (occupies 2 row-slots in 1 col)
+  let totalCells = 0;
+  for (let i = 0; i < count; i++) {
+    const span = spanTypes.get(i);
+    if (span === 'span-col') totalCells += 2;
+    else if (span === 'span-row') totalCells += 2;
+    else totalCells += 1;
+  }
+  const rows = Math.max(count === 1 ? 1 : 2, Math.ceil(totalCells / cols));
+  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
   grid.replaceChildren(...gifs.map((url, i) => {
     const cell = document.createElement('div');
     cell.className = 'collage-cell';
-    if (bigSet.has(i)) cell.classList.add(Math.random() < 0.5 ? 'span-col' : 'span-row');
+    const span = spanTypes.get(i);
+    if (span) cell.classList.add(span);
     const img = document.createElement('img');
     img.src = url;
     img.alt = '';
