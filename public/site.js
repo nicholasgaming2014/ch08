@@ -38,15 +38,28 @@ function renderHome(home) {
   const gifs = home.collageGifs || [];
   if (gifs.length === 0 && home.image) gifs.push(home.image);
   const count = gifs.length;
-  const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+  if (count === 0) { grid.replaceChildren(); return; }
+
+  const cols = count === 1 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4;
+  const rows = Math.max(count === 1 ? 1 : 2, Math.ceil(count / cols));
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  grid.replaceChildren(...gifs.map(url => {
+  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+  const shuffled = gifs.map((url, i) => ({ url, i }));
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const bigCount = count > 3 ? Math.max(1, Math.floor(count * 0.3)) : 0;
+  const bigSet = new Set(shuffled.slice(0, bigCount).map(s => s.i));
+
+  grid.replaceChildren(...gifs.map((url, i) => {
     const cell = document.createElement('div');
     cell.className = 'collage-cell';
+    if (bigSet.has(i)) cell.classList.add(Math.random() < 0.5 ? 'span-col' : 'span-row');
     const img = document.createElement('img');
     img.src = url;
     img.alt = '';
-    img.loading = 'lazy';
     cell.append(img);
     return cell;
   }));
