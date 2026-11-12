@@ -199,7 +199,6 @@ h2 {
 
 .collage-row {
   display: flex;
-  flex: 1;
   min-height: 0;
 }
 
@@ -212,7 +211,7 @@ h2 {
 .collage-cell img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 

@@ -46,43 +46,39 @@ function renderHome(home) {
     img.src = url;
   }))).then(images => {
     const containerW = grid.clientWidth || window.innerWidth;
+    const viewH = window.innerHeight - 60;
     const targetRows = Math.max(2, Math.round(Math.sqrt(images.length * 0.8)));
-    const targetH = (window.innerHeight - 60) / targetRows;
+    const targetH = viewH / targetRows;
 
-    // ~30% of images get a size boost for visual variety
-    const boosted = new Set();
-    if (images.length > 3) {
-      const order = images.map((_, i) => i).sort(() => Math.random() - 0.5);
-      const n = Math.max(1, Math.floor(images.length * 0.3));
-      for (let i = 0; i < n; i++) boosted.add(order[i]);
-    }
-
-    // Pack images into rows using justified layout
+    // Pack images into rows — each row fills the container width
     const rows = [];
     let row = [];
-    let rowW = 0;
+    let rowRatioSum = 0;
     for (let i = 0; i < images.length; i++) {
-      const scale = boosted.has(i) ? 1.8 : 1;
-      const w = images[i].ratio * targetH * scale;
-      row.push({ ...images[i], weight: w, idx: i });
-      rowW += w;
-      if (rowW >= containerW && row.length > 0) {
-        rows.push(row);
+      row.push(images[i]);
+      rowRatioSum += images[i].ratio;
+      if (rowRatioSum * targetH >= containerW && row.length > 0) {
+        rows.push({ items: row, ratioSum: rowRatioSum });
         row = [];
-        rowW = 0;
+        rowRatioSum = 0;
       }
     }
-    if (row.length > 0) rows.push(row);
+    if (row.length > 0) rows.push({ items: row, ratioSum: rowRatioSum });
+
+    // Each row's natural height = containerW / ratioSum
+    // Scale all rows to fill the viewport height exactly
+    const totalNatH = rows.reduce((s, r) => s + containerW / r.ratioSum, 0);
+    const scale = viewH / totalNatH;
 
     grid.replaceChildren(...rows.map(r => {
-      const totalW = r.reduce((s, img) => s + img.weight, 0);
+      const rowH = (containerW / r.ratioSum) * scale;
       const rowDiv = document.createElement('div');
       rowDiv.className = 'collage-row';
-      r.forEach(item => {
-        const pct = (item.weight / totalW) * 100;
+      rowDiv.style.height = rowH + 'px';
+      r.items.forEach(item => {
         const cell = document.createElement('div');
         cell.className = 'collage-cell';
-        cell.style.flex = `${pct} 0 0%`;
+        cell.style.flex = `${item.ratio} 0 0%`;
         const img = document.createElement('img');
         img.src = item.url;
         img.alt = '';
