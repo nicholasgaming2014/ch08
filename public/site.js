@@ -39,55 +39,17 @@ function renderHome(home) {
   if (gifs.length === 0 && home.image) gifs.push(home.image);
   if (gifs.length === 0) { grid.replaceChildren(); return; }
 
-  Promise.all(gifs.map(url => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve({ url, ratio: img.naturalWidth / img.naturalHeight });
-    img.onerror = () => resolve({ url, ratio: 16 / 9 });
+  // Render GIFs into a 4x4 grid (first 16)
+  const cells = gifs.slice(0, 16);
+  grid.replaceChildren(...cells.map(url => {
+    const cell = document.createElement('div');
+    cell.className = 'collage-cell';
+    const img = document.createElement('img');
     img.src = url;
-  }))).then(images => {
-    const containerW = grid.clientWidth || window.innerWidth;
-    const viewH = window.innerHeight - 60;
-    const targetRows = Math.max(2, Math.round(Math.sqrt(images.length * 0.8)));
-    const targetH = viewH / targetRows;
-
-    // Pack images into rows — each row fills the container width
-    const rows = [];
-    let row = [];
-    let rowRatioSum = 0;
-    for (let i = 0; i < images.length; i++) {
-      row.push(images[i]);
-      rowRatioSum += images[i].ratio;
-      if (rowRatioSum * targetH >= containerW && row.length > 0) {
-        rows.push({ items: row, ratioSum: rowRatioSum });
-        row = [];
-        rowRatioSum = 0;
-      }
-    }
-    if (row.length > 0) rows.push({ items: row, ratioSum: rowRatioSum });
-
-    // Each row's natural height = containerW / ratioSum
-    // Scale all rows to fill the viewport height exactly
-    const totalNatH = rows.reduce((s, r) => s + containerW / r.ratioSum, 0);
-    const scale = viewH / totalNatH;
-
-    grid.replaceChildren(...rows.map(r => {
-      const rowH = (containerW / r.ratioSum) * scale;
-      const rowDiv = document.createElement('div');
-      rowDiv.className = 'collage-row';
-      rowDiv.style.height = rowH + 'px';
-      r.items.forEach(item => {
-        const cell = document.createElement('div');
-        cell.className = 'collage-cell';
-        cell.style.flex = `${item.ratio} 0 0%`;
-        const img = document.createElement('img');
-        img.src = item.url;
-        img.alt = '';
-        cell.append(img);
-        rowDiv.append(cell);
-      });
-      return rowDiv;
-    }));
-  });
+    img.alt = '';
+    cell.append(img);
+    return cell;
+  }));
 }
 
 // ---------- Clips ----------

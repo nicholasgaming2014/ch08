@@ -191,27 +191,24 @@ h2 {
 }
 
 .collage-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
   width: 100%;
   height: 100%;
-}
-
-.collage-row {
-  display: flex;
-  min-height: 0;
 }
 
 .collage-cell {
   position: relative;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 .collage-cell img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
 }
 
