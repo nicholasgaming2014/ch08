@@ -40,9 +40,12 @@ const DEFAULT_CONTENT = {
   clips: [],
   election: {
     title: '',
-    subtitle: '',
+    lead: '',
     infobox: '',
+    electionDate: '',
+    turnout: '',
     mapImage: '',
+    stateColors: {},
     candidates: [],
     sections: [],
   },
@@ -76,6 +79,7 @@ function loadContent() {
       Object.assign(content.election, saved.election);
       if (!Array.isArray(content.election.candidates)) content.election.candidates = [];
       if (!Array.isArray(content.election.sections)) content.election.sections = [];
+      if (!content.election.stateColors || typeof content.election.stateColors !== 'object') content.election.stateColors = {};
     }
   } catch {}
   return content;
@@ -730,7 +734,10 @@ app.put('/api/admin/election', requireAdminApi, upload.fields([
       name: text(c.name, 200),
       party: text(c.party, 120),
       partyColor: text(c.partyColor, 20),
+      homeState: text(c.homeState, 100),
+      runningMate: text(c.runningMate, 200),
       electoralVotes: text(c.electoralVotes, 20),
+      statesCarried: text(c.statesCarried, 100),
       popularVotes: text(c.popularVotes, 30),
       popularPct: text(c.popularPct, 20),
       image: file ? fileUrl(file) : (c.keptImage || ''),
@@ -742,12 +749,19 @@ app.put('/api/admin/election', requireAdminApi, upload.fields([
     text: text(s.text, 10000),
   }));
 
+  let stateColors = {};
+  try { stateColors = JSON.parse(body.stateColors || '{}'); } catch {}
+  if (typeof stateColors !== 'object' || Array.isArray(stateColors)) stateColors = {};
+
   const mapFile = req.files?.mapImage?.[0];
   content.election = {
     title: text(body.title, 300),
-    subtitle: text(body.subtitle, 300),
+    lead: text(body.lead, 10000),
     infobox: text(body.infobox, 500),
+    electionDate: text(body.electionDate, 100),
+    turnout: text(body.turnout, 100),
     mapImage: mapFile ? fileUrl(mapFile) : (body.keptMapImage || ''),
+    stateColors,
     candidates,
     sections,
   };

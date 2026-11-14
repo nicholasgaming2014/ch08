@@ -189,13 +189,40 @@
         <label class="field"><span>page title</span>
           <input type="text" name="title" maxlength="300" placeholder="2024 United States presidential election">
         </label>
-        <label class="field"><span>subtitle</span>
-          <input type="text" name="subtitle" maxlength="300" placeholder="November 5, 2024">
+        <label class="field"><span>lead paragraph (intro text below title)</span>
+          <textarea name="lead" maxlength="10000" rows="4" placeholder="A presidential election was held in the United States on..."></textarea>
         </label>
         <label class="field"><span>infobox title</span>
           <input type="text" name="infobox" maxlength="500" placeholder="2024 United States presidential election">
         </label>
-        <div class="field"><span>electoral map image</span>
+        <div class="field-row">
+          <label class="field"><span>election date</span>
+            <input type="text" name="electionDate" maxlength="100" placeholder="November 5, 2024">
+          </label>
+          <label class="field"><span>turnout</span>
+            <input type="text" name="turnout" maxlength="100" placeholder="66.2%">
+          </label>
+        </div>
+
+        <div class="field"><span>electoral map</span>
+          <p class="hint">click states to color them. select a color first, then click states on the map.</p>
+          <div class="map-color-picker">
+            <label><input type="radio" name="mapColor" value="#244999" checked> <span class="map-swatch" style="background:#244999"></span> Dem</label>
+            <label><input type="radio" name="mapColor" value="#d22532"> <span class="map-swatch" style="background:#d22532"></span> Rep</label>
+            <label><input type="radio" name="mapColor" value="#6bb74a"> <span class="map-swatch" style="background:#6bb74a"></span> Ind</label>
+            <label><input type="radio" name="mapColor" value="#8ab4f8"> <span class="map-swatch" style="background:#8ab4f8"></span> Lean D</label>
+            <label><input type="radio" name="mapColor" value="#cf7c7d"> <span class="map-swatch" style="background:#cf7c7d"></span> Lean R</label>
+            <label><input type="radio" name="mapColor" value="#c5a9cf"> <span class="map-swatch" style="background:#c5a9cf"></span> Toss-up</label>
+            <label><input type="radio" name="mapColor" value="#d0d0d0"> <span class="map-swatch" style="background:#d0d0d0"></span> None</label>
+            <label class="map-custom-label"><input type="radio" name="mapColor" value="custom"> <input type="color" class="map-custom-color" value="#ffcc00"> Custom</label>
+          </div>
+          <div class="map-editor-wrap">
+            <svg class="map-editor-svg" viewBox="80 120 820 560" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <button type="button" class="button secondary clear-map" style="align-self:flex-start">clear all states</button>
+        </div>
+
+        <div class="field"><span>or upload a map image instead</span>
           <img class="election-map-preview" alt="" hidden>
           <input type="file" name="mapImage" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml">
           <label class="check" hidden><input type="checkbox" name="removeMap"> remove map</label>
@@ -289,6 +316,7 @@
   </template>
 
   <script src="/menu.js"></script>
+  <script src="/us-states.js"></script>
   <script src="/fc-schema.js"></script>
   <script src="/admin.js"></script>
 </body>

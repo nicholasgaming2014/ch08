@@ -370,6 +370,24 @@ function renderArt(art) {
 
 // ---------- Election ----------
 
+function buildElectionMap(stateColors) {
+  if (typeof US_STATES === 'undefined' || !stateColors || !Object.keys(stateColors).length) return null;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '80 120 820 560');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.style.width = '100%';
+  svg.style.height = 'auto';
+  US_STATES.forEach(s => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', s.path);
+    path.setAttribute('fill', stateColors[s.id] || '#d0d0d0');
+    path.setAttribute('stroke', '#fff');
+    path.setAttribute('stroke-width', '1');
+    svg.append(path);
+  });
+  return svg;
+}
+
 function renderElection(election) {
   const section = document.getElementById('election');
   const body = section.querySelector('.wiki-body');
@@ -384,12 +402,15 @@ function renderElection(election) {
   emptyNote.hidden = true;
 
   section.querySelector('.wiki-title').textContent = election.title || '';
-  section.querySelector('.wiki-subtitle').textContent = election.subtitle || '';
   section.querySelector('.wiki-infobox-title').textContent = election.infobox || election.title || '';
 
   const mapContainer = section.querySelector('.wiki-map');
-  if (election.mapImage) {
-    mapContainer.innerHTML = '';
+  mapContainer.innerHTML = '';
+  const stateMap = buildElectionMap(election.stateColors);
+  if (stateMap) {
+    mapContainer.append(stateMap);
+    mapContainer.hidden = false;
+  } else if (election.mapImage) {
     const img = document.createElement('img');
     img.src = election.mapImage;
     img.alt = 'Electoral map';
@@ -399,45 +420,117 @@ function renderElection(election) {
     mapContainer.hidden = true;
   }
 
+  const turnoutRow = section.querySelector('.wiki-turnout-row');
+  if (election.electionDate || election.turnout) {
+    let html = '';
+    if (election.electionDate) html += `<div class="wiki-info-row"><span class="wiki-info-label">Date</span><span>${election.electionDate}</span></div>`;
+    if (election.turnout) html += `<div class="wiki-info-row"><span class="wiki-info-label">Turnout</span><span>${election.turnout}</span></div>`;
+    turnoutRow.innerHTML = html;
+    turnoutRow.hidden = false;
+  } else {
+    turnoutRow.hidden = true;
+  }
+
+  const gallery = section.querySelector('.wiki-nominee-gallery');
+  const candidates = election.candidates || [];
+  gallery.innerHTML = '';
+  if (candidates.length) {
+    const cols = document.createElement('div');
+    cols.className = 'wiki-nominee-cols';
+    candidates.forEach(c => {
+      const col = document.createElement('div');
+      col.className = 'wiki-nominee-col';
+      if (c.image) {
+        const img = document.createElement('img');
+        img.src = c.image;
+        img.alt = c.name;
+        img.className = 'wiki-nominee-photo';
+        col.append(img);
+      }
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'wiki-nominee-name';
+      nameDiv.textContent = c.name;
+      col.append(nameDiv);
+      gallery.append(col);
+    });
+  }
+
   const tbody = section.querySelector('.wiki-candidate-rows');
-  tbody.replaceChildren(...(election.candidates || []).map(c => {
+  const fields = [
+    { label: 'Nominee', key: 'name' },
+    { label: 'Party', key: 'party' },
+    { label: 'Home state', key: 'homeState' },
+    { label: 'Running mate', key: 'runningMate' },
+    { label: 'Electoral vote', key: 'electoralVotes' },
+    { label: 'States carried', key: 'statesCarried' },
+    { label: 'Popular vote', key: 'popularVotes' },
+    { label: 'Percentage', key: 'popularPct' },
+  ];
+  const rows = [];
+  fields.forEach(f => {
+    const vals = candidates.map(c => c[f.key] || '');
+    if (vals.every(v => !v)) return;
     const tr = document.createElement('tr');
-    const colorTd = document.createElement('td');
-    colorTd.className = 'wiki-party-color';
-    colorTd.style.backgroundColor = c.partyColor || '#ccc';
-    const nameTd = document.createElement('td');
-    if (c.image) {
-      const img = document.createElement('img');
-      img.src = c.image;
-      img.alt = '';
-      img.className = 'wiki-candidate-img';
-      nameTd.append(img);
-    }
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = c.name;
-    nameTd.append(nameSpan);
-    const partyTd = document.createElement('td');
-    partyTd.textContent = c.party;
-    const evTd = document.createElement('td');
-    evTd.textContent = c.electoralVotes;
-    const pvTd = document.createElement('td');
-    pvTd.textContent = c.popularVotes;
-    const pctTd = document.createElement('td');
-    pctTd.textContent = c.popularPct;
-    tr.append(colorTd, nameTd, partyTd, evTd, pvTd, pctTd);
-    return tr;
-  }));
+    const th = document.createElement('th');
+    th.textContent = f.label;
+    th.setAttribute('scope', 'row');
+    tr.append(th);
+    candidates.forEach((c, i) => {
+      const td = document.createElement('td');
+      td.textContent = vals[i];
+      if (f.key === 'party' && c.partyColor) {
+        td.style.borderBottom = `3px solid ${c.partyColor}`;
+      }
+      tr.append(td);
+    });
+    rows.push(tr);
+  });
+  tbody.replaceChildren(...rows);
+
+  const leadDiv = section.querySelector('.wiki-lead');
+  if (election.lead) {
+    leadDiv.innerHTML = '';
+    election.lead.split('\n\n').forEach(para => {
+      const p = document.createElement('p');
+      p.textContent = para;
+      p.className = 'wiki-lead-para';
+      leadDiv.append(p);
+    });
+    leadDiv.hidden = false;
+  } else {
+    leadDiv.hidden = true;
+  }
+
+  const toc = section.querySelector('.wiki-toc');
+  const tocList = section.querySelector('.wiki-toc-list');
+  const sections = election.sections || [];
+  if (sections.filter(s => s.heading).length > 1) {
+    tocList.innerHTML = '';
+    sections.forEach((s, i) => {
+      if (!s.heading) return;
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = `#wiki-sec-${i}`;
+      a.textContent = s.heading;
+      li.append(a);
+      tocList.append(li);
+    });
+    toc.hidden = false;
+  } else {
+    toc.hidden = true;
+  }
 
   const sectionsDiv = section.querySelector('.wiki-sections');
-  sectionsDiv.replaceChildren(...(election.sections || []).map(s => {
+  sectionsDiv.replaceChildren(...sections.map((s, i) => {
     const div = document.createElement('div');
     div.className = 'wiki-section';
     if (s.heading) {
+      div.id = `wiki-sec-${i}`;
       const h2 = document.createElement('h2');
-      h2.textContent = s.heading;
+      const span = document.createElement('span');
+      span.textContent = s.heading;
+      h2.append(span);
       div.append(h2);
-      const hr = document.createElement('hr');
-      div.append(hr);
     }
     if (s.text) {
       s.text.split('\n\n').forEach(para => {

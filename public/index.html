@@ -107,22 +107,20 @@
       <div class="wiki-page">
         <div class="wiki-body">
           <h1 class="wiki-title"></h1>
-          <p class="wiki-subtitle"></p>
+          <p class="wiki-from">From Wikipedia, the free encyclopedia</p>
           <div class="wiki-infobox">
             <div class="wiki-infobox-title"></div>
             <div class="wiki-map"></div>
+            <div class="wiki-turnout-row" hidden></div>
+            <div class="wiki-nominee-gallery"></div>
             <table class="wiki-candidate-table">
-              <thead>
-                <tr>
-                  <th colspan="2">candidate</th>
-                  <th>party</th>
-                  <th>electoral votes</th>
-                  <th>popular vote</th>
-                  <th>%</th>
-                </tr>
-              </thead>
               <tbody class="wiki-candidate-rows"></tbody>
             </table>
+          </div>
+          <div class="wiki-lead"></div>
+          <div class="wiki-toc" hidden>
+            <div class="wiki-toc-title">Contents</div>
+            <ul class="wiki-toc-list"></ul>
           </div>
           <div class="wiki-sections"></div>
         </div>
@@ -237,6 +235,7 @@
   </template>
 
   <script src="/menu.js"></script>
+  <script src="/us-states.js"></script>
   <script src="/fc-schema.js"></script>
   <script src="/site.js"></script>
 </body>

@@ -607,12 +607,17 @@ function addCandidateRow(list, c = {}) {
     </div>
     <div class="field-row">
       <label class="field"><span>party color</span><input type="color" data-key="partyColor" value="#cccccc"></label>
+      <label class="field"><span>home state</span><input type="text" data-key="homeState" maxlength="100"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>running mate</span><input type="text" data-key="runningMate" maxlength="200"></label>
       <label class="field"><span>electoral votes</span><input type="text" data-key="electoralVotes" maxlength="20"></label>
     </div>
     <div class="field-row">
       <label class="field"><span>popular votes</span><input type="text" data-key="popularVotes" maxlength="30"></label>
       <label class="field"><span>popular %</span><input type="text" data-key="popularPct" maxlength="20"></label>
     </div>
+    <label class="field"><span>states carried</span><input type="text" data-key="statesCarried" maxlength="100" placeholder="31 + ME-02"></label>
     <label class="field"><span>candidate photo</span><input type="file" data-key="photo" accept="image/jpeg,image/png,image/gif,image/webp"></label>
     <div style="display:flex;align-items:center;gap:8px;">
       <img class="candidate-photo-preview" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;display:none;">
@@ -621,9 +626,12 @@ function addCandidateRow(list, c = {}) {
   row.querySelector('[data-key="name"]').value = c.name || '';
   row.querySelector('[data-key="party"]').value = c.party || '';
   row.querySelector('[data-key="partyColor"]').value = c.partyColor || '#cccccc';
+  row.querySelector('[data-key="homeState"]').value = c.homeState || '';
+  row.querySelector('[data-key="runningMate"]').value = c.runningMate || '';
   row.querySelector('[data-key="electoralVotes"]').value = c.electoralVotes || '';
   row.querySelector('[data-key="popularVotes"]').value = c.popularVotes || '';
   row.querySelector('[data-key="popularPct"]').value = c.popularPct || '';
+  row.querySelector('[data-key="statesCarried"]').value = c.statesCarried || '';
   const preview = row.querySelector('.candidate-photo-preview');
   if (c.image) { preview.src = c.image; preview.style.display = 'block'; }
   row._keptImage = c.image || '';
@@ -654,15 +662,57 @@ function addSectionRow(list, s = {}) {
   list.append(row);
 }
 
+let electionStateColors = {};
+
+function initMapEditor() {
+  const svg = electionForm?.querySelector('.map-editor-svg');
+  if (!svg || typeof US_STATES === 'undefined') return;
+  svg.innerHTML = '';
+  US_STATES.forEach(s => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', s.path);
+    path.setAttribute('data-state', s.id);
+    path.setAttribute('fill', electionStateColors[s.id] || '#d0d0d0');
+    path.setAttribute('stroke', '#fff');
+    path.setAttribute('stroke-width', '1.5');
+    path.style.cursor = 'pointer';
+    path.addEventListener('click', () => {
+      const radios = electionForm.querySelectorAll('[name="mapColor"]');
+      let color = '#d0d0d0';
+      for (const r of radios) { if (r.checked) { color = r.value; break; } }
+      if (color === 'custom') color = electionForm.querySelector('.map-custom-color').value;
+      path.setAttribute('fill', color);
+      electionStateColors[s.id] = color;
+    });
+    svg.append(path);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', s.labelX);
+    text.setAttribute('y', s.labelY);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
+    text.setAttribute('font-size', '10');
+    text.setAttribute('fill', '#000');
+    text.setAttribute('pointer-events', 'none');
+    text.setAttribute('font-family', 'Inter, sans-serif');
+    text.setAttribute('font-weight', '600');
+    text.textContent = s.abbr;
+    svg.append(text);
+  });
+}
+
 function fillElection(election) {
   if (!electionForm) return;
   electionForm.title.value = election.title || '';
-  electionForm.subtitle.value = election.subtitle || '';
+  electionForm.lead.value = election.lead || '';
   electionForm.infobox.value = election.infobox || '';
+  electionForm.electionDate.value = election.electionDate || '';
+  electionForm.turnout.value = election.turnout || '';
   electionKeptMap = election.mapImage || '';
   if (electionKeptMap) { mapPreview.src = electionKeptMap; mapPreview.hidden = false; }
   else mapPreview.hidden = true;
   electionForm.querySelector('[name="removeMap"]').parentElement.hidden = !electionKeptMap;
+  electionStateColors = election.stateColors ? { ...election.stateColors } : {};
+  initMapEditor();
   candidateList.replaceChildren();
   (election.candidates || []).forEach(c => addCandidateRow(candidateList, c));
   sectionList.replaceChildren();
@@ -672,19 +722,32 @@ function fillElection(election) {
 if (electionForm) {
   electionForm.querySelector('.add-candidate').addEventListener('click', () => addCandidateRow(candidateList));
   electionForm.querySelector('.add-section').addEventListener('click', () => addSectionRow(sectionList));
+  electionForm.querySelector('.clear-map').addEventListener('click', () => {
+    electionStateColors = {};
+    initMapEditor();
+  });
+  const customColor = electionForm.querySelector('.map-custom-color');
+  customColor.addEventListener('input', () => {
+    const customRadio = electionForm.querySelector('[name="mapColor"][value="custom"]');
+    customRadio.checked = true;
+  });
   electionForm.mapImage.addEventListener('change', () => {
     if (electionForm.mapImage.files[0]) {
       mapPreview.src = URL.createObjectURL(electionForm.mapImage.files[0]);
       mapPreview.hidden = false;
     }
   });
+  initMapEditor();
 
   electionForm.addEventListener('submit', async e => {
     e.preventDefault();
     const data = new FormData();
     data.append('title', electionForm.title.value);
-    data.append('subtitle', electionForm.subtitle.value);
+    data.append('lead', electionForm.lead.value);
     data.append('infobox', electionForm.infobox.value);
+    data.append('electionDate', electionForm.electionDate.value);
+    data.append('turnout', electionForm.turnout.value);
+    data.append('stateColors', JSON.stringify(electionStateColors));
 
     if (electionForm.mapImage.files[0]) data.append('mapImage', electionForm.mapImage.files[0]);
     else if (!electionForm.removeMap?.checked) data.append('keptMapImage', electionKeptMap);
