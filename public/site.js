@@ -1,5 +1,5 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'art', 'clips', 'fc', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'clips', 'election', 'fc', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
@@ -366,6 +366,88 @@ function renderArt(art) {
     return figure;
   }));
   section.querySelector('.empty-note').hidden = art.length > 0;
+}
+
+// ---------- Election ----------
+
+function renderElection(election) {
+  const section = document.getElementById('election');
+  const body = section.querySelector('.wiki-body');
+  const emptyNote = section.querySelector('.empty-note');
+
+  if (!election || (!election.title && !(election.candidates || []).length && !(election.sections || []).length)) {
+    body.hidden = true;
+    emptyNote.hidden = false;
+    return;
+  }
+  body.hidden = false;
+  emptyNote.hidden = true;
+
+  section.querySelector('.wiki-title').textContent = election.title || '';
+  section.querySelector('.wiki-subtitle').textContent = election.subtitle || '';
+  section.querySelector('.wiki-infobox-title').textContent = election.infobox || election.title || '';
+
+  const mapContainer = section.querySelector('.wiki-map');
+  if (election.mapImage) {
+    mapContainer.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = election.mapImage;
+    img.alt = 'Electoral map';
+    mapContainer.append(img);
+    mapContainer.hidden = false;
+  } else {
+    mapContainer.hidden = true;
+  }
+
+  const tbody = section.querySelector('.wiki-candidate-rows');
+  tbody.replaceChildren(...(election.candidates || []).map(c => {
+    const tr = document.createElement('tr');
+    const colorTd = document.createElement('td');
+    colorTd.className = 'wiki-party-color';
+    colorTd.style.backgroundColor = c.partyColor || '#ccc';
+    const nameTd = document.createElement('td');
+    if (c.image) {
+      const img = document.createElement('img');
+      img.src = c.image;
+      img.alt = '';
+      img.className = 'wiki-candidate-img';
+      nameTd.append(img);
+    }
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = c.name;
+    nameTd.append(nameSpan);
+    const partyTd = document.createElement('td');
+    partyTd.textContent = c.party;
+    const evTd = document.createElement('td');
+    evTd.textContent = c.electoralVotes;
+    const pvTd = document.createElement('td');
+    pvTd.textContent = c.popularVotes;
+    const pctTd = document.createElement('td');
+    pctTd.textContent = c.popularPct;
+    tr.append(colorTd, nameTd, partyTd, evTd, pvTd, pctTd);
+    return tr;
+  }));
+
+  const sectionsDiv = section.querySelector('.wiki-sections');
+  sectionsDiv.replaceChildren(...(election.sections || []).map(s => {
+    const div = document.createElement('div');
+    div.className = 'wiki-section';
+    if (s.heading) {
+      const h2 = document.createElement('h2');
+      h2.textContent = s.heading;
+      div.append(h2);
+      const hr = document.createElement('hr');
+      div.append(hr);
+    }
+    if (s.text) {
+      s.text.split('\n\n').forEach(para => {
+        const p = document.createElement('p');
+        p.textContent = para;
+        div.append(p);
+      });
+    }
+    return div;
+  }));
 }
 
 // ---------- fc/fifa stats ----------
@@ -869,6 +951,7 @@ fetch('/api/content')
     renderArt(content.art || []);
     window._clipData = content.clips || [];
     renderClips(window._clipData);
+    renderElection(content.election || {});
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);

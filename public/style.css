@@ -1769,3 +1769,157 @@ h2 {
     position: static;
   }
 }
+
+/* ---------- Election (Wikipedia style) ---------- */
+
+.wiki-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 32px 60px;
+  background: #fff;
+  color: #202122;
+  font-family: 'Linux Libertine', 'Georgia', 'Times', 'Times New Roman', serif;
+  min-height: calc(100vh - 60px);
+  line-height: 1.6;
+}
+
+.wiki-page a { color: #0645ad; }
+
+.wiki-title {
+  font-family: 'Linux Libertine', 'Georgia', 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #000;
+  border-bottom: 1px solid #a2a9b1;
+  padding-bottom: 4px;
+  margin: 0 0 8px;
+}
+
+.wiki-subtitle {
+  font-size: 14px;
+  color: #54595d;
+  margin: 0 0 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+.wiki-infobox {
+  float: right;
+  width: 320px;
+  margin: 0 0 16px 20px;
+  border: 1px solid #a2a9b1;
+  background: #f8f9fa;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+}
+
+.wiki-infobox-title {
+  background: #cee0f2;
+  color: #000;
+  text-align: center;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.wiki-map {
+  text-align: center;
+  padding: 8px;
+  border-bottom: 1px solid #a2a9b1;
+}
+
+.wiki-map img {
+  max-width: 100%;
+  height: auto;
+}
+
+.wiki-candidate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.wiki-candidate-table th {
+  background: #eaecf0;
+  border: 1px solid #a2a9b1;
+  padding: 4px 6px;
+  font-weight: 600;
+  text-align: left;
+  font-size: 11px;
+  color: #202122;
+}
+
+.wiki-candidate-table td {
+  border: 1px solid #a2a9b1;
+  padding: 4px 6px;
+  vertical-align: middle;
+  color: #202122;
+}
+
+.wiki-party-color {
+  width: 4px;
+  padding: 0 !important;
+}
+
+.wiki-candidate-img {
+  width: 40px;
+  height: 50px;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.wiki-sections {
+  clear: both;
+}
+
+.wiki-section {
+  margin: 16px 0;
+}
+
+.wiki-section h2 {
+  font-family: 'Linux Libertine', 'Georgia', 'Times New Roman', serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: #000;
+  margin: 0 0 2px;
+}
+
+.wiki-section hr {
+  border: none;
+  border-top: 1px solid #a2a9b1;
+  margin: 0 0 8px;
+}
+
+.wiki-section p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.wiki-page .empty-note {
+  color: #54595d;
+  font-family: 'Inter', sans-serif;
+}
+
+@media (max-width: 700px) {
+  .wiki-infobox {
+    float: none;
+    width: 100%;
+    margin: 0 0 16px;
+  }
+
+  .wiki-page {
+    padding: 16px;
+  }
+}
+
+/* Election admin */
+.election-map-preview {
+  max-width: 300px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.candidate-photo-preview {
+  border: 1px solid #333;
+}

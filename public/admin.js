@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'art', 'clips', 'fc', 'contact'];
+const TABS = ['home', 'beats', 'art', 'clips', 'election', 'fc', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -588,6 +588,141 @@ function renderClipsAdmin(clips) {
   }
 }
 
+// ---------- Election ----------
+
+const electionForm = document.getElementById('election-form');
+const candidateList = electionForm?.querySelector('.election-candidate-list');
+const sectionList = electionForm?.querySelector('.election-section-list');
+const mapPreview = electionForm?.querySelector('.election-map-preview');
+let electionKeptMap = '';
+
+function addCandidateRow(list, c = {}) {
+  const row = document.createElement('div');
+  row.className = 'admin-card';
+  row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:12px;';
+  row.innerHTML = `
+    <div class="field-row">
+      <label class="field"><span>name</span><input type="text" data-key="name" maxlength="200"></label>
+      <label class="field"><span>party</span><input type="text" data-key="party" maxlength="120"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>party color</span><input type="color" data-key="partyColor" value="#cccccc"></label>
+      <label class="field"><span>electoral votes</span><input type="text" data-key="electoralVotes" maxlength="20"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>popular votes</span><input type="text" data-key="popularVotes" maxlength="30"></label>
+      <label class="field"><span>popular %</span><input type="text" data-key="popularPct" maxlength="20"></label>
+    </div>
+    <label class="field"><span>candidate photo</span><input type="file" data-key="photo" accept="image/jpeg,image/png,image/gif,image/webp"></label>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <img class="candidate-photo-preview" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;display:none;">
+      <button type="button" class="button danger remove-candidate" style="margin-left:auto;">remove</button>
+    </div>`;
+  row.querySelector('[data-key="name"]').value = c.name || '';
+  row.querySelector('[data-key="party"]').value = c.party || '';
+  row.querySelector('[data-key="partyColor"]').value = c.partyColor || '#cccccc';
+  row.querySelector('[data-key="electoralVotes"]').value = c.electoralVotes || '';
+  row.querySelector('[data-key="popularVotes"]').value = c.popularVotes || '';
+  row.querySelector('[data-key="popularPct"]').value = c.popularPct || '';
+  const preview = row.querySelector('.candidate-photo-preview');
+  if (c.image) { preview.src = c.image; preview.style.display = 'block'; }
+  row._keptImage = c.image || '';
+  row._newFile = null;
+  const fileInput = row.querySelector('[data-key="photo"]');
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) {
+      row._newFile = fileInput.files[0];
+      preview.src = URL.createObjectURL(fileInput.files[0]);
+      preview.style.display = 'block';
+    }
+  });
+  row.querySelector('.remove-candidate').addEventListener('click', () => row.remove());
+  list.append(row);
+}
+
+function addSectionRow(list, s = {}) {
+  const row = document.createElement('div');
+  row.className = 'admin-card';
+  row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:12px;';
+  row.innerHTML = `
+    <label class="field"><span>heading</span><input type="text" data-key="heading" maxlength="300"></label>
+    <label class="field"><span>text</span><textarea data-key="text" maxlength="10000" rows="4"></textarea></label>
+    <button type="button" class="button danger remove-section" style="align-self:flex-start;">remove</button>`;
+  row.querySelector('[data-key="heading"]').value = s.heading || '';
+  row.querySelector('[data-key="text"]').value = s.text || '';
+  row.querySelector('.remove-section').addEventListener('click', () => row.remove());
+  list.append(row);
+}
+
+function fillElection(election) {
+  if (!electionForm) return;
+  electionForm.title.value = election.title || '';
+  electionForm.subtitle.value = election.subtitle || '';
+  electionForm.infobox.value = election.infobox || '';
+  electionKeptMap = election.mapImage || '';
+  if (electionKeptMap) { mapPreview.src = electionKeptMap; mapPreview.hidden = false; }
+  else mapPreview.hidden = true;
+  electionForm.querySelector('[name="removeMap"]').parentElement.hidden = !electionKeptMap;
+  candidateList.replaceChildren();
+  (election.candidates || []).forEach(c => addCandidateRow(candidateList, c));
+  sectionList.replaceChildren();
+  (election.sections || []).forEach(s => addSectionRow(sectionList, s));
+}
+
+if (electionForm) {
+  electionForm.querySelector('.add-candidate').addEventListener('click', () => addCandidateRow(candidateList));
+  electionForm.querySelector('.add-section').addEventListener('click', () => addSectionRow(sectionList));
+  electionForm.mapImage.addEventListener('change', () => {
+    if (electionForm.mapImage.files[0]) {
+      mapPreview.src = URL.createObjectURL(electionForm.mapImage.files[0]);
+      mapPreview.hidden = false;
+    }
+  });
+
+  electionForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = new FormData();
+    data.append('title', electionForm.title.value);
+    data.append('subtitle', electionForm.subtitle.value);
+    data.append('infobox', electionForm.infobox.value);
+
+    if (electionForm.mapImage.files[0]) data.append('mapImage', electionForm.mapImage.files[0]);
+    else if (!electionForm.removeMap?.checked) data.append('keptMapImage', electionKeptMap);
+
+    const candidates = [...candidateList.children].map((row, i) => {
+      const c = {};
+      row.querySelectorAll('[data-key]').forEach(el => {
+        if (el.type !== 'file') c[el.dataset.key] = el.value;
+      });
+      c.keptImage = row._keptImage || '';
+      if (row._newFile) {
+        const f = new File([row._newFile], `candidate_${i}`, { type: row._newFile.type });
+        data.append('candidateImage', f);
+      }
+      return c;
+    });
+    data.append('candidates', JSON.stringify(candidates));
+
+    const sections = [...sectionList.children].map(row => ({
+      heading: row.querySelector('[data-key="heading"]').value,
+      text: row.querySelector('[data-key="text"]').value,
+    }));
+    data.append('sections', JSON.stringify(sections));
+
+    setBusy(electionForm, true);
+    setStatus(electionForm, 'saving...');
+    try {
+      content = await send('PUT', '/api/admin/election', data, p => setStatus(electionForm, `uploading... ${Math.round(p * 100)}%`));
+      fillElection(content.election);
+      setStatus(electionForm, 'saved ✓');
+    } catch (err) {
+      setStatus(electionForm, err.message, true);
+    } finally {
+      setBusy(electionForm, false);
+    }
+  });
+}
+
 // ---------- fc/fifa stats ----------
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
@@ -1084,5 +1219,6 @@ fetch('/api/content', { cache: 'no-store' })
     renderBeats(content.beats);
     renderArt(content.art || []);
     renderClipsAdmin(content.clips || []);
+    fillElection(content.election || {});
     renderFcAdmin();
   });

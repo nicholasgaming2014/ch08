@@ -38,6 +38,14 @@ const DEFAULT_CONTENT = {
   // Stat rows for the fc/fifa page, one list per table in FC_SCHEMA.
   fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
   clips: [],
+  election: {
+    title: '',
+    subtitle: '',
+    infobox: '',
+    mapImage: '',
+    candidates: [],
+    sections: [],
+  },
 };
 
 // Beats saved before multiple producers had a single `producer` string.
@@ -64,6 +72,11 @@ function loadContent() {
       if (Array.isArray(saved.fc?.[table])) content.fc[table] = saved.fc[table];
     });
     if (Array.isArray(saved.clips)) content.clips = saved.clips;
+    if (saved.election && typeof saved.election === 'object') {
+      Object.assign(content.election, saved.election);
+      if (!Array.isArray(content.election.candidates)) content.election.candidates = [];
+      if (!Array.isArray(content.election.sections)) content.election.sections = [];
+    }
   } catch {}
   return content;
 }
@@ -102,7 +115,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover', 'images', 'screenshot', 'photo', 'collageGifs'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'images', 'screenshot', 'photo', 'collageGifs', 'mapImage', 'candidateImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const isVideo = file.fieldname === 'video';
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isVideo ? VIDEO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
@@ -689,6 +702,63 @@ app.delete('/api/admin/clips/:id', requireAdminApi, async (req, res) => {
   content.clips = content.clips.filter(c => c !== clip);
   await saveContent();
   await removeUpload(clip.video);
+  res.json(content);
+});
+
+// ---------- Election ----------
+
+app.put('/api/admin/election', requireAdminApi, upload.fields([
+  { name: 'mapImage', maxCount: 1 },
+  { name: 'candidateImage', maxCount: 20 },
+]), async (req, res) => {
+  const body = req.body || {};
+  const oldMap = content.election.mapImage;
+  const oldCandidateImages = (content.election.candidates || []).map(c => c.image).filter(Boolean);
+
+  let candidates = [];
+  try { candidates = JSON.parse(body.candidates || '[]'); } catch {}
+  if (!Array.isArray(candidates)) candidates = [];
+
+  let sections = [];
+  try { sections = JSON.parse(body.sections || '[]'); } catch {}
+  if (!Array.isArray(sections)) sections = [];
+
+  const candidateFiles = (req.files?.candidateImage || []);
+  candidates = candidates.slice(0, 20).map((c, i) => {
+    const file = candidateFiles.find(f => f.originalname === `candidate_${i}`);
+    return {
+      name: text(c.name, 200),
+      party: text(c.party, 120),
+      partyColor: text(c.partyColor, 20),
+      electoralVotes: text(c.electoralVotes, 20),
+      popularVotes: text(c.popularVotes, 30),
+      popularPct: text(c.popularPct, 20),
+      image: file ? fileUrl(file) : (c.keptImage || ''),
+    };
+  });
+
+  sections = sections.slice(0, 50).map(s => ({
+    heading: text(s.heading, 300),
+    text: text(s.text, 10000),
+  }));
+
+  const mapFile = req.files?.mapImage?.[0];
+  content.election = {
+    title: text(body.title, 300),
+    subtitle: text(body.subtitle, 300),
+    infobox: text(body.infobox, 500),
+    mapImage: mapFile ? fileUrl(mapFile) : (body.keptMapImage || ''),
+    candidates,
+    sections,
+  };
+  await saveContent();
+
+  if (oldMap && oldMap !== content.election.mapImage) await removeUpload(oldMap);
+  const newImages = new Set(content.election.candidates.map(c => c.image).filter(Boolean));
+  for (const url of oldCandidateImages) {
+    if (!newImages.has(url)) await removeUpload(url);
+  }
+  await removeRequestFiles(req, [content.election.mapImage, ...newImages]);
   res.json(content);
 });
 
