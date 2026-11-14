@@ -374,7 +374,7 @@ function buildElectionMap(stateColors, candidates) {
   if (typeof US_STATES === 'undefined' || !stateColors || !Object.keys(stateColors).length) return null;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '80 120 840 580');
+  svg.setAttribute('viewBox', '0 0 1020 593');
   svg.setAttribute('xmlns', ns);
   svg.style.width = '100%';
   svg.style.height = 'auto';
@@ -395,11 +395,9 @@ function buildElectionMap(stateColors, candidates) {
       const txt = document.createElementNS(ns, 'text');
       txt.setAttribute('x', s.labelX);
       txt.setAttribute('y', s.labelY);
-      txt.setAttribute('text-anchor', 'middle');
-      txt.setAttribute('dominant-baseline', 'central');
-      txt.setAttribute('font-size', '13');
-      txt.setAttribute('font-weight', '700');
-      txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+      txt.setAttribute('font-size', '28');
+      txt.setAttribute('font-weight', 'bold');
+      txt.setAttribute('font-family', 'Helvetica Neue, Helvetica, Arial, sans-serif');
       txt.setAttribute('fill', '#000');
       txt.setAttribute('pointer-events', 'none');
       txt.textContent = String(s.ev);
@@ -407,67 +405,67 @@ function buildElectionMap(stateColors, candidates) {
     }
   });
 
-  const sideLabels = smallStates
-    .sort((a, b) => a.labelY - b.labelY);
-  let sideY = 180;
-  const sideX = 875;
-  sideLabels.forEach(s => {
+  smallStates.forEach(s => {
     const color = stateColors[s.id] || '#d0d0d0';
     const g = document.createElementNS(ns, 'g');
     const rect = document.createElementNS(ns, 'rect');
-    rect.setAttribute('x', sideX);
-    rect.setAttribute('y', sideY - 8);
-    rect.setAttribute('width', 12);
-    rect.setAttribute('height', 12);
+    rect.setAttribute('x', s.labelX - 16);
+    rect.setAttribute('y', s.labelY - 16);
+    rect.setAttribute('width', 14);
+    rect.setAttribute('height', 14);
     rect.setAttribute('fill', color);
-    rect.setAttribute('stroke', '#999');
-    rect.setAttribute('stroke-width', '0.5');
+    rect.setAttribute('stroke', '#000');
+    rect.setAttribute('stroke-width', '0.8');
     const txt = document.createElementNS(ns, 'text');
-    txt.setAttribute('x', sideX + 16);
-    txt.setAttribute('y', sideY);
-    txt.setAttribute('font-size', '11');
-    txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+    txt.setAttribute('x', s.labelX);
+    txt.setAttribute('y', s.labelY);
+    txt.setAttribute('font-size', '22');
+    txt.setAttribute('font-family', 'Helvetica Neue, Helvetica, Arial, sans-serif');
     txt.setAttribute('fill', '#000');
-    txt.setAttribute('dominant-baseline', 'central');
     txt.textContent = `${s.abbr} ${s.ev}`;
     g.append(rect, txt);
     svg.append(g);
-    sideY += 18;
   });
 
   const cands = (candidates || []).filter(c => c.partyColor);
   if (cands.length) {
-    let legendX = 720;
-    const legendY = 540;
-    const bg = document.createElementNS(ns, 'rect');
-    bg.setAttribute('x', legendX - 4);
-    bg.setAttribute('y', legendY - 12);
-    bg.setAttribute('width', 140);
-    bg.setAttribute('height', 16 * cands.length + 8);
-    bg.setAttribute('fill', '#fff');
-    bg.setAttribute('stroke', '#ccc');
-    bg.setAttribute('stroke-width', '0.5');
-    bg.setAttribute('rx', '2');
-    svg.append(bg);
+    const legendX = 828;
+    let legendY = 406;
     cands.forEach((c, i) => {
-      const y = legendY + i * 16;
+      const y = legendY + i * 33;
       const swatch = document.createElementNS(ns, 'rect');
       swatch.setAttribute('x', legendX);
-      swatch.setAttribute('y', y - 6);
-      swatch.setAttribute('width', 12);
-      swatch.setAttribute('height', 12);
+      swatch.setAttribute('y', y);
+      swatch.setAttribute('width', 19);
+      swatch.setAttribute('height', 19);
       swatch.setAttribute('fill', c.partyColor);
+      swatch.setAttribute('stroke', '#000');
+      swatch.setAttribute('stroke-width', '0.8');
       const label = document.createElementNS(ns, 'text');
-      label.setAttribute('x', legendX + 17);
-      label.setAttribute('y', y);
-      label.setAttribute('font-size', '12');
-      label.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+      label.setAttribute('x', legendX + 27);
+      label.setAttribute('y', y + 15);
+      label.setAttribute('font-size', '28');
+      label.setAttribute('font-weight', 'bold');
+      label.setAttribute('font-family', 'Helvetica Neue, Helvetica, Arial, sans-serif');
       label.setAttribute('fill', '#000');
-      label.setAttribute('dominant-baseline', 'central');
       label.textContent = c.name?.split(' ').pop() || c.party || '';
       svg.append(swatch, label);
     });
   }
+  const lines = document.createElementNS(ns, 'path');
+  lines.setAttribute('d', 'm844 62 13 29m-25-5 8 17m49 50 34 3m-41 22 41 12m-57-6 51 33m-72 13 50 22m-58-2 51 26m-55-15 46 33m-79-43 61 61');
+  lines.setAttribute('stroke', '#000');
+  lines.setAttribute('stroke-width', '1.6');
+  lines.setAttribute('fill', 'none');
+  svg.append(lines);
+
+  const frames = document.createElementNS(ns, 'path');
+  frames.setAttribute('d', 'M215,493v55l36,45 M0,425h147l68,68h85l54,54v46');
+  frames.setAttribute('fill', 'none');
+  frames.setAttribute('stroke', '#a9a9a9');
+  frames.setAttribute('stroke-width', '2');
+  svg.append(frames);
+
   return svg;
 }
 
