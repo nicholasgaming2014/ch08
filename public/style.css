@@ -1782,16 +1782,16 @@ h2 {
   padding: 24px 32px 60px;
   background: #fff;
   color: #202122;
-  font-family: 'Linux Libertine', 'Georgia', 'Times', 'Times New Roman', serif;
+  font-family: Georgia, 'Times New Roman', 'Times', serif;
   min-height: calc(100vh - 60px);
   line-height: 1.6;
-  font-size: 14px;
+  font-size: 14.4px;
 }
 
 .wiki-page a { color: #0645ad; }
 
 .wiki-title {
-  font-family: 'Linux Libertine', 'Georgia', 'Times New Roman', serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 28.8px;
   font-weight: 400;
   color: #000;
@@ -1810,8 +1810,8 @@ h2 {
 }
 
 .wiki-lead-para {
-  margin: 0 0 8px;
-  font-size: 14px;
+  margin: 0 0 10px;
+  font-size: 14.4px;
   line-height: 1.6;
 }
 
@@ -1833,7 +1833,7 @@ h2 {
   padding: 6px 8px;
   font-weight: 700;
   font-size: 14px;
-  font-family: 'Linux Libertine', 'Georgia', 'Times New Roman', serif;
+  font-family: Georgia, 'Times New Roman', serif;
   border-bottom: 1px solid #a2a9b1;
 }
 
@@ -1848,6 +1848,16 @@ h2 {
 .wiki-map svg {
   max-width: 100%;
   height: auto;
+}
+
+.wiki-map-caption {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #54595d;
+  text-align: center;
+  line-height: 1.5;
+  border-bottom: 1px solid #a2a9b1;
+  font-family: sans-serif;
 }
 
 .wiki-turnout-row {
@@ -1970,7 +1980,7 @@ h2 {
 }
 
 .wiki-section h2 {
-  font-family: 'Linux Libertine', 'Georgia', 'Times New Roman', serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 21.6px;
   font-weight: 400;
   color: #000;

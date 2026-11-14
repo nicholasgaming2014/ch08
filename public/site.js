@@ -370,21 +370,104 @@ function renderArt(art) {
 
 // ---------- Election ----------
 
-function buildElectionMap(stateColors) {
+function buildElectionMap(stateColors, candidates) {
   if (typeof US_STATES === 'undefined' || !stateColors || !Object.keys(stateColors).length) return null;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '80 120 820 560');
-  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '80 120 840 580');
+  svg.setAttribute('xmlns', ns);
   svg.style.width = '100%';
   svg.style.height = 'auto';
+
+  const smallStates = [];
   US_STATES.forEach(s => {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const color = stateColors[s.id] || '#d0d0d0';
+    const path = document.createElementNS(ns, 'path');
     path.setAttribute('d', s.path);
-    path.setAttribute('fill', stateColors[s.id] || '#d0d0d0');
+    path.setAttribute('fill', color);
     path.setAttribute('stroke', '#fff');
-    path.setAttribute('stroke-width', '1');
+    path.setAttribute('stroke-width', '1.2');
     svg.append(path);
+
+    if (s.small) {
+      smallStates.push(s);
+    } else {
+      const txt = document.createElementNS(ns, 'text');
+      txt.setAttribute('x', s.labelX);
+      txt.setAttribute('y', s.labelY);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('dominant-baseline', 'central');
+      txt.setAttribute('font-size', '13');
+      txt.setAttribute('font-weight', '700');
+      txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+      txt.setAttribute('fill', '#000');
+      txt.setAttribute('pointer-events', 'none');
+      txt.textContent = String(s.ev);
+      svg.append(txt);
+    }
   });
+
+  const sideLabels = smallStates
+    .sort((a, b) => a.labelY - b.labelY);
+  let sideY = 180;
+  const sideX = 875;
+  sideLabels.forEach(s => {
+    const color = stateColors[s.id] || '#d0d0d0';
+    const g = document.createElementNS(ns, 'g');
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', sideX);
+    rect.setAttribute('y', sideY - 8);
+    rect.setAttribute('width', 12);
+    rect.setAttribute('height', 12);
+    rect.setAttribute('fill', color);
+    rect.setAttribute('stroke', '#999');
+    rect.setAttribute('stroke-width', '0.5');
+    const txt = document.createElementNS(ns, 'text');
+    txt.setAttribute('x', sideX + 16);
+    txt.setAttribute('y', sideY);
+    txt.setAttribute('font-size', '11');
+    txt.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+    txt.setAttribute('fill', '#000');
+    txt.setAttribute('dominant-baseline', 'central');
+    txt.textContent = `${s.abbr} ${s.ev}`;
+    g.append(rect, txt);
+    svg.append(g);
+    sideY += 18;
+  });
+
+  const cands = (candidates || []).filter(c => c.partyColor);
+  if (cands.length) {
+    let legendX = 720;
+    const legendY = 540;
+    const bg = document.createElementNS(ns, 'rect');
+    bg.setAttribute('x', legendX - 4);
+    bg.setAttribute('y', legendY - 12);
+    bg.setAttribute('width', 140);
+    bg.setAttribute('height', 16 * cands.length + 8);
+    bg.setAttribute('fill', '#fff');
+    bg.setAttribute('stroke', '#ccc');
+    bg.setAttribute('stroke-width', '0.5');
+    bg.setAttribute('rx', '2');
+    svg.append(bg);
+    cands.forEach((c, i) => {
+      const y = legendY + i * 16;
+      const swatch = document.createElementNS(ns, 'rect');
+      swatch.setAttribute('x', legendX);
+      swatch.setAttribute('y', y - 6);
+      swatch.setAttribute('width', 12);
+      swatch.setAttribute('height', 12);
+      swatch.setAttribute('fill', c.partyColor);
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', legendX + 17);
+      label.setAttribute('y', y);
+      label.setAttribute('font-size', '12');
+      label.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+      label.setAttribute('fill', '#000');
+      label.setAttribute('dominant-baseline', 'central');
+      label.textContent = c.name?.split(' ').pop() || c.party || '';
+      svg.append(swatch, label);
+    });
+  }
   return svg;
 }
 
@@ -403,22 +486,6 @@ function renderElection(election) {
 
   section.querySelector('.wiki-title').textContent = election.title || '';
   section.querySelector('.wiki-infobox-title').textContent = election.infobox || election.title || '';
-
-  const mapContainer = section.querySelector('.wiki-map');
-  mapContainer.innerHTML = '';
-  const stateMap = buildElectionMap(election.stateColors);
-  if (stateMap) {
-    mapContainer.append(stateMap);
-    mapContainer.hidden = false;
-  } else if (election.mapImage) {
-    const img = document.createElement('img');
-    img.src = election.mapImage;
-    img.alt = 'Electoral map';
-    mapContainer.append(img);
-    mapContainer.hidden = false;
-  } else {
-    mapContainer.hidden = true;
-  }
 
   const turnoutRow = section.querySelector('.wiki-turnout-row');
   if (election.electionDate || election.turnout) {
@@ -487,6 +554,30 @@ function renderElection(election) {
     rows.push(tr);
   });
   tbody.replaceChildren(...rows);
+
+  const mapContainer = section.querySelector('.wiki-map');
+  mapContainer.innerHTML = '';
+  const stateMap = buildElectionMap(election.stateColors, candidates);
+  if (stateMap) {
+    mapContainer.append(stateMap);
+    mapContainer.hidden = false;
+  } else if (election.mapImage) {
+    const img = document.createElement('img');
+    img.src = election.mapImage;
+    img.alt = 'Electoral map';
+    mapContainer.append(img);
+    mapContainer.hidden = false;
+  } else {
+    mapContainer.hidden = true;
+  }
+
+  const mapCaption = section.querySelector('.wiki-map-caption');
+  if (election.mapCaption) {
+    mapCaption.textContent = election.mapCaption;
+    mapCaption.hidden = false;
+  } else {
+    mapCaption.hidden = true;
+  }
 
   const leadDiv = section.querySelector('.wiki-lead');
   if (election.lead) {

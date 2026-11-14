@@ -768,6 +768,7 @@ function fillElection(election) {
   electionForm.infobox.value = election.infobox || '';
   electionForm.electionDate.value = election.electionDate || '';
   electionForm.turnout.value = election.turnout || '';
+  electionForm.mapCaption.value = election.mapCaption || '';
   electionKeptMap = election.mapImage || '';
   if (electionKeptMap) { mapPreview.src = electionKeptMap; mapPreview.hidden = false; }
   else mapPreview.hidden = true;
@@ -809,6 +810,7 @@ if (electionForm) {
     data.append('electionDate', electionForm.electionDate.value);
     data.append('turnout', electionForm.turnout.value);
     data.append('stateColors', JSON.stringify(electionStateColors));
+    data.append('mapCaption', electionForm.mapCaption.value);
 
     if (electionForm.mapImage.files[0]) data.append('mapImage', electionForm.mapImage.files[0]);
     else if (!electionForm.removeMap?.checked) data.append('keptMapImage', electionKeptMap);
