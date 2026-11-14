@@ -29,6 +29,7 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const DEFAULT_CONTENT = {
   home: { headline: '', bigText: '', paragraph: '', links: [], collageGifs: ['/assets/jeff-teague-5150.gif'] },
+  homePresets: [],
   contact: { email: '', paragraph: '', socials: [] },
   beats: [],
   // Producer pictures for the beats page pills, keyed by lowercase producer name.
@@ -67,6 +68,7 @@ function loadContent() {
       content.home.collageGifs = content.home.image ? [content.home.image] : [];
     }
     delete content.home.image;
+    if (Array.isArray(saved.homePresets)) content.homePresets = saved.homePresets;
     Object.assign(content.contact, saved.contact);
     if (Array.isArray(saved.beats)) content.beats = saved.beats.map(withProducerList);
     if (saved.producers && typeof saved.producers === 'object') content.producers = saved.producers;
@@ -391,6 +393,28 @@ app.put('/api/admin/home', requireAdminApi, upload.fields([{ name: 'collageGifs'
   for (const url of oldGifs) {
     if (!currentSet.has(url)) await removeUpload(url);
   }
+  res.json(content);
+});
+
+// ---------- Home presets ----------
+
+app.post('/api/admin/home-presets', requireAdminApi, async (req, res) => {
+  const body = req.body || {};
+  const name = text(body.name, 100);
+  if (!name) return res.status(400).json({ error: 'Preset needs a name.' });
+  const gifs = JSON.parse(body.gifs || '[]').filter(u => typeof u === 'string').slice(0, 20);
+  content.homePresets.push({ name, gifs, createdAt: Date.now() });
+  await saveContent();
+  res.json(content);
+});
+
+app.delete('/api/admin/home-presets/:index', requireAdminApi, async (req, res) => {
+  const idx = parseInt(req.params.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= content.homePresets.length) {
+    return res.status(404).json({ error: 'Preset not found.' });
+  }
+  content.homePresets.splice(idx, 1);
+  await saveContent();
   res.json(content);
 });
 

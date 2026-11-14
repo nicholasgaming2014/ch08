@@ -57,6 +57,14 @@
     <!-- Home -->
     <section id="panel-home" class="admin-panel">
       <form id="home-form" class="admin-card">
+        <div class="field"><span>collage presets</span>
+          <p class="hint">save the current set of gifs as a preset, or load a saved one.</p>
+          <div class="preset-list"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+            <input type="text" class="preset-name-input" placeholder="Preset name…" maxlength="100" style="flex:1;">
+            <button type="button" class="button secondary save-preset">save as preset</button>
+          </div>
+        </div>
         <div class="field"><span>collage gifs (up to 20 — sports clips, moments, etc.)</span>
           <div class="collage-gif-list"></div>
           <input type="file" name="collageGifs" accept="image/gif,image/jpeg,image/png,image/webp" multiple>

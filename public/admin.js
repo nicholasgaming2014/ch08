@@ -260,6 +260,7 @@ function fillHome(home) {
   homeForm.collageGifs.value = '';
   homeKeptGifs = (home.collageGifs || []).slice();
   renderCollageGifList();
+  renderPresetList();
   fillLinks(homeForm.querySelector('.link-editor'), home.links);
 }
 
@@ -304,6 +305,66 @@ homeForm.addEventListener('submit', async e => {
     setStatus(homeForm, err.message, true);
   } finally {
     setBusy(homeForm, false);
+  }
+});
+
+// ---------- Home presets ----------
+
+function renderPresetList() {
+  const list = homeForm.querySelector('.preset-list');
+  const presets = content.homePresets || [];
+  if (!presets.length) {
+    list.innerHTML = '<p style="color:#888;font-size:13px;">no presets saved yet</p>';
+    return;
+  }
+  list.replaceChildren(...presets.map((preset, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #222;';
+    const name = document.createElement('span');
+    name.textContent = preset.name;
+    name.style.cssText = 'flex:1;font-size:14px;';
+    const count = document.createElement('span');
+    count.textContent = `${preset.gifs.length} gif${preset.gifs.length !== 1 ? 's' : ''}`;
+    count.style.cssText = 'color:#888;font-size:12px;';
+    const loadBtn = document.createElement('button');
+    loadBtn.type = 'button';
+    loadBtn.className = 'button secondary';
+    loadBtn.textContent = 'load';
+    loadBtn.style.cssText = 'font-size:12px;padding:4px 10px;';
+    loadBtn.addEventListener('click', () => {
+      homeKeptGifs = preset.gifs.slice();
+      renderCollageGifList();
+    });
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'button danger';
+    delBtn.textContent = 'delete';
+    delBtn.style.cssText = 'font-size:12px;padding:4px 10px;';
+    delBtn.addEventListener('click', async () => {
+      try {
+        content = await send('DELETE', `/api/admin/home-presets/${i}`);
+        renderPresetList();
+      } catch (err) {
+        setStatus(homeForm, err.message, true);
+      }
+    });
+    row.append(name, count, loadBtn, delBtn);
+    return row;
+  }));
+}
+
+homeForm.querySelector('.save-preset')?.addEventListener('click', async () => {
+  const input = homeForm.querySelector('.preset-name-input');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  if (!homeKeptGifs.length) { setStatus(homeForm, 'add some gifs first', true); return; }
+  try {
+    content = await send('POST', '/api/admin/home-presets', { name, gifs: JSON.stringify(homeKeptGifs) });
+    input.value = '';
+    renderPresetList();
+    setStatus(homeForm, 'preset saved ✓');
+  } catch (err) {
+    setStatus(homeForm, err.message, true);
   }
 });
 

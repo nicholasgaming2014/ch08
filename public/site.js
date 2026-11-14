@@ -451,8 +451,9 @@ function renderElection(election) {
       nameDiv.className = 'wiki-nominee-name';
       nameDiv.textContent = c.name;
       col.append(nameDiv);
-      gallery.append(col);
+      cols.append(col);
     });
+    gallery.append(cols);
   }
 
   const tbody = section.querySelector('.wiki-candidate-rows');
