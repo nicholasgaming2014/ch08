@@ -485,6 +485,19 @@ function renderElection(election) {
   section.querySelector('.wiki-title').textContent = election.title || '';
   section.querySelector('.wiki-infobox-title').textContent = election.infobox || election.title || '';
 
+  const flagDiv = section.querySelector('.wiki-infobox-flag');
+  const W = 190, H = 100, sh = H / 13, uw = W * 2 / 5, uh = sh * 7;
+  let flagSvg = '';
+  for (let i = 0; i < 13; i++) flagSvg += `<rect y="${i*sh}" width="${W}" height="${sh}" fill="${i%2?'#fff':'#B22234'}"/>`;
+  flagSvg += `<rect width="${uw}" height="${uh}" fill="#3C3B6E"/>`;
+  for (let r = 0; r < 9; r++) {
+    const n = r % 2 === 0 ? 6 : 5;
+    const sx = r % 2 === 0 ? uw/12 : uw/6;
+    const sy = uh/10;
+    for (let c = 0; c < n; c++) flagSvg += `<circle cx="${sx + c*(uw/6)}" cy="${sy + r*(uh/10)}" r="1.6" fill="#fff"/>`;
+  }
+  flagDiv.innerHTML = `<svg class="wiki-infobox-flag-img" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${flagSvg}</svg>`;
+
   const turnoutRow = section.querySelector('.wiki-turnout-row');
   if (election.electionDate || election.turnout) {
     let html = '';
@@ -500,58 +513,69 @@ function renderElection(election) {
   const candidates = election.candidates || [];
   gallery.innerHTML = '';
   if (candidates.length) {
-    const cols = document.createElement('div');
-    cols.className = 'wiki-nominee-cols';
+    const tbl = document.createElement('table');
+    tbl.className = 'wiki-ib-table';
+
+    const photoRow = document.createElement('tr');
+    const emptyTd = document.createElement('td');
+    photoRow.append(emptyTd);
     candidates.forEach(c => {
-      const col = document.createElement('div');
-      col.className = 'wiki-nominee-col';
+      const td = document.createElement('td');
+      td.style.textAlign = 'center';
+      td.style.padding = '8px 4px 0';
       if (c.image) {
         const img = document.createElement('img');
         img.src = c.image;
         img.alt = c.name;
         img.className = 'wiki-nominee-photo';
-        col.append(img);
+        td.append(img);
       }
-      const nameDiv = document.createElement('div');
-      nameDiv.className = 'wiki-nominee-name';
-      nameDiv.textContent = c.name;
-      col.append(nameDiv);
-      cols.append(col);
+      photoRow.append(td);
     });
-    gallery.append(cols);
+    tbl.append(photoRow);
+
+    const barRow = document.createElement('tr');
+    const barEmpty = document.createElement('td');
+    barRow.append(barEmpty);
+    candidates.forEach(c => {
+      const td = document.createElement('td');
+      td.style.textAlign = 'center';
+      if (c.partyColor) td.style.borderBottom = `6px solid ${c.partyColor}`;
+      barRow.append(td);
+    });
+    tbl.append(barRow);
+
+    const fields = [
+      { label: 'Nominee', key: 'name', bold: true },
+      { label: 'Party', key: 'party' },
+      { label: 'Home state', key: 'homeState' },
+      { label: 'Running mate', key: 'runningMate', bold: true },
+      { label: 'Electoral vote', key: 'electoralVotes' },
+      { label: 'States carried', key: 'statesCarried' },
+      { label: 'Popular vote', key: 'popularVotes' },
+      { label: 'Percentage', key: 'popularPct' },
+    ];
+    fields.forEach(f => {
+      const vals = candidates.map(c => c[f.key] || '');
+      if (vals.every(v => !v)) return;
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.textContent = f.label;
+      th.style.cssText = 'width:75px;text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top';
+      tr.append(th);
+      candidates.forEach((c, i) => {
+        const td = document.createElement('td');
+        td.textContent = vals[i];
+        td.style.cssText = 'width:75px;text-align:center;padding:2px 4px;font-size:12px';
+        if (f.bold) td.style.fontWeight = '700';
+        tr.append(td);
+      });
+      tbl.append(tr);
+    });
+    gallery.append(tbl);
   }
 
-  const tbody = section.querySelector('.wiki-candidate-rows');
-  const fields = [
-    { label: 'Nominee', key: 'name' },
-    { label: 'Party', key: 'party' },
-    { label: 'Home state', key: 'homeState' },
-    { label: 'Running mate', key: 'runningMate' },
-    { label: 'Electoral vote', key: 'electoralVotes' },
-    { label: 'States carried', key: 'statesCarried' },
-    { label: 'Popular vote', key: 'popularVotes' },
-    { label: 'Percentage', key: 'popularPct' },
-  ];
-  const rows = [];
-  fields.forEach(f => {
-    const vals = candidates.map(c => c[f.key] || '');
-    if (vals.every(v => !v)) return;
-    const tr = document.createElement('tr');
-    const th = document.createElement('th');
-    th.textContent = f.label;
-    th.setAttribute('scope', 'row');
-    tr.append(th);
-    candidates.forEach((c, i) => {
-      const td = document.createElement('td');
-      td.textContent = vals[i];
-      if (f.key === 'party' && c.partyColor) {
-        td.style.borderBottom = `3px solid ${c.partyColor}`;
-      }
-      tr.append(td);
-    });
-    rows.push(tr);
-  });
-  tbody.replaceChildren(...rows);
+  section.querySelector('.wiki-candidate-table').hidden = true;
 
   const mapContainer = section.querySelector('.wiki-map');
   mapContainer.innerHTML = '';

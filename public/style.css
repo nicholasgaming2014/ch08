@@ -1815,10 +1815,13 @@ h2 {
   line-height: 1.6;
 }
 
-.wiki-infobox {
+.wiki-infobox-wrap {
   float: right;
-  width: 315px;
-  margin: 8px 0 12px 20px;
+  width: 420px;
+  margin: 0 0 12px 20px;
+}
+
+.wiki-infobox {
   border: 1px solid #a2a9b1;
   background: #f8f9fa;
   font-size: 12.8px;
@@ -1827,14 +1830,13 @@ h2 {
 }
 
 .wiki-infobox-title {
-  background: #b0c4de;
   color: #000;
   text-align: center;
-  padding: 6px 8px;
+  padding: 4px 4px 4px;
   font-weight: 700;
-  font-size: 14px;
-  font-family: Georgia, 'Times New Roman', serif;
-  border-bottom: 1px solid #a2a9b1;
+  font-size: 17.6px;
+  font-family: sans-serif;
+  line-height: 1.3;
 }
 
 .wiki-map {
@@ -1862,7 +1864,6 @@ h2 {
 
 .wiki-turnout-row {
   padding: 4px 8px;
-  border-bottom: 1px solid #a2a9b1;
   font-size: 12.6px;
 }
 
@@ -1881,35 +1882,29 @@ h2 {
   border-bottom: 1px solid #a2a9b1;
 }
 
-.wiki-nominee-cols {
-  display: flex;
-  justify-content: center;
-}
-
-.wiki-nominee-col {
-  flex: 1;
+.wiki-infobox-flag {
   text-align: center;
-  padding: 8px 6px 6px;
-  border-right: 1px solid #a2a9b1;
+  padding: 6px 8px;
+  border-bottom: 1px solid #a2a9b1;
 }
 
-.wiki-nominee-col:last-child {
-  border-right: none;
+.wiki-infobox-flag-img {
+  width: 46px;
+  height: auto;
 }
 
 .wiki-nominee-photo {
-  width: 110px;
-  height: 140px;
+  width: 100px;
+  height: 130px;
   object-fit: cover;
-  display: block;
-  margin: 0 auto 6px;
   border: 1px solid #a2a9b1;
 }
 
-.wiki-nominee-name {
-  font-weight: 700;
-  font-size: 13px;
-  color: #0645ad;
+.wiki-ib-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: sans-serif;
 }
 
 .wiki-candidate-table {
@@ -2001,7 +1996,7 @@ h2 {
 }
 
 @media (max-width: 700px) {
-  .wiki-infobox {
+  .wiki-infobox-wrap {
     float: none;
     width: 100%;
     margin: 0 0 16px;
