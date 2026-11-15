@@ -756,7 +756,9 @@ function addCandidateRow(list, c = {}) {
     </div>`;
   row.querySelector('[data-key="name"]').value = c.name || '';
   row.querySelector('[data-key="party"]').value = c.party || '';
-  row.querySelector('[data-key="partyColor"]').value = c.partyColor || '#cccccc';
+  const partyColorInput = row.querySelector('[data-key="partyColor"]');
+  partyColorInput.value = c.partyColor || '#cccccc';
+  partyColorInput.addEventListener('input', computeElectoralVotes);
   row.querySelector('[data-key="homeState"]').value = c.homeState || '';
   row.querySelector('[data-key="runningMate"]').value = c.runningMate || '';
   row.querySelector('[data-key="electoralVotes"]').value = c.electoralVotes || '';
@@ -775,7 +777,7 @@ function addCandidateRow(list, c = {}) {
       preview.style.display = 'block';
     }
   });
-  row.querySelector('.remove-candidate').addEventListener('click', () => row.remove());
+  row.querySelector('.remove-candidate').addEventListener('click', () => { row.remove(); computeElectoralVotes(); });
   list.append(row);
 }
 
@@ -814,6 +816,7 @@ function initMapEditor() {
       if (color === 'custom') color = electionForm.querySelector('.map-custom-color').value;
       path.setAttribute('fill', color);
       electionStateColors[s.id] = color;
+      computeElectoralVotes();
     });
     svg.append(path);
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -829,6 +832,65 @@ function initMapEditor() {
     text.textContent = s.abbr;
     svg.append(text);
   });
+}
+
+function getActiveCensusAdmin() {
+  if (!currentElectionSlug || !content?.censusData) return null;
+  const yearMatch = currentElectionSlug.match(/\d{4}/);
+  if (!yearMatch) return null;
+  const electionYear = parseInt(yearMatch[0]);
+  const censusYears = Object.keys(content.censusData).map(Number).filter(y => !isNaN(y) && y < electionYear).sort((a, b) => b - a);
+  return censusYears.length ? content.censusData[String(censusYears[0])] : null;
+}
+
+function computeElectoralVotes() {
+  const tally = document.getElementById('ev-tally');
+  if (!tally || typeof US_STATES === 'undefined') return;
+  const candidateRows = [...(candidateList?.children || [])];
+  if (!candidateRows.length || !Object.keys(electionStateColors).length) {
+    tally.hidden = true;
+    return;
+  }
+
+  const activeCensus = getActiveCensusAdmin();
+  const evByState = {};
+  US_STATES.forEach(s => { evByState[s.id] = activeCensus?.[s.id] ?? s.ev; });
+
+  const candidates = candidateRows.map(row => ({
+    color: row.querySelector('[data-key="partyColor"]')?.value || '',
+    name: row.querySelector('[data-key="name"]')?.value || '',
+    evInput: row.querySelector('[data-key="electoralVotes"]'),
+  }));
+
+  const colorToCandidate = {};
+  candidates.forEach((c, i) => {
+    if (c.color && c.color !== '#cccccc') colorToCandidate[c.color.toLowerCase()] = i;
+  });
+
+  const evTotals = candidates.map(() => 0);
+  for (const [stateId, color] of Object.entries(electionStateColors)) {
+    if (!color || color === '#d0d0d0') continue;
+    const idx = colorToCandidate[color.toLowerCase()];
+    if (idx !== undefined && evByState[stateId]) {
+      evTotals[idx] += evByState[stateId];
+    }
+  }
+
+  candidates.forEach((c, i) => {
+    if (c.evInput) c.evInput.value = evTotals[i] || '';
+  });
+
+  const parts = candidates.map((c, i) => {
+    const label = c.name ? c.name.split(' ').pop() : `Candidate ${i + 1}`;
+    return `<span style="color:${c.color};font-weight:600">${label}: ${evTotals[i]}</span>`;
+  }).filter((_, i) => evTotals[i] > 0);
+
+  if (parts.length) {
+    tally.innerHTML = 'EV count: ' + parts.join(' &middot; ');
+    tally.hidden = false;
+  } else {
+    tally.hidden = true;
+  }
 }
 
 function fillElection(election) {
@@ -855,6 +917,7 @@ function fillElection(election) {
   (election.candidates || []).forEach(c => addCandidateRow(candidateList, c));
   sectionList.replaceChildren();
   (election.sections || []).forEach(s => addSectionRow(sectionList, s));
+  computeElectoralVotes();
 }
 
 if (electionForm) {
@@ -863,6 +926,7 @@ if (electionForm) {
   electionForm.querySelector('.clear-map').addEventListener('click', () => {
     electionStateColors = {};
     initMapEditor();
+    computeElectoralVotes();
   });
   const customColor = electionForm.querySelector('.map-custom-color');
   customColor.addEventListener('input', () => {
