@@ -843,6 +843,17 @@ function getActiveCensusAdmin() {
   return censusYears.length ? content.censusData[String(censusYears[0])] : null;
 }
 
+function parseHex(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function colorDistance(a, b) {
+  const [r1, g1, b1] = parseHex(a);
+  const [r2, g2, b2] = parseHex(b);
+  return (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2;
+}
+
 function computeElectoralVotes() {
   const tally = document.getElementById('ev-tally');
   if (!tally || typeof US_STATES === 'undefined') return;
@@ -862,17 +873,19 @@ function computeElectoralVotes() {
     evInput: row.querySelector('[data-key="electoralVotes"]'),
   }));
 
-  const colorToCandidate = {};
-  candidates.forEach((c, i) => {
-    if (c.color && c.color !== '#cccccc') colorToCandidate[c.color.toLowerCase()] = i;
-  });
-
   const evTotals = candidates.map(() => 0);
+  const threshold = 120 * 120;
   for (const [stateId, color] of Object.entries(electionStateColors)) {
     if (!color || color === '#d0d0d0') continue;
-    const idx = colorToCandidate[color.toLowerCase()];
-    if (idx !== undefined && evByState[stateId]) {
-      evTotals[idx] += evByState[stateId];
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    candidates.forEach((c, i) => {
+      if (!c.color || c.color === '#cccccc') return;
+      const dist = colorDistance(color, c.color);
+      if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+    });
+    if (bestIdx >= 0 && bestDist < threshold && evByState[stateId]) {
+      evTotals[bestIdx] += evByState[stateId];
     }
   }
 
