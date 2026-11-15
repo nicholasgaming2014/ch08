@@ -469,6 +469,15 @@ function buildElectionMap(stateColors, candidates) {
   return svg;
 }
 
+function applyHighlightWords(html, highlightWords) {
+  if (!highlightWords) return html;
+  const words = highlightWords.split(',').map(w => w.trim()).filter(Boolean);
+  if (!words.length) return html;
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp('(' + escaped.join('|') + ')', 'gi');
+  return html.replace(re, '<span style="color:#0645ad;cursor:pointer">$1</span>');
+}
+
 function renderElection(election) {
   const section = document.getElementById('election');
   const body = section.querySelector('.wiki-body');
@@ -676,7 +685,8 @@ function renderElection(election) {
     election.lead.split('\n\n').forEach(para => {
       const p = document.createElement('p');
       p.className = 'wiki-lead-para';
-      const escaped = para.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      let escaped = para.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      escaped = applyHighlightWords(escaped, election.highlightWords);
       p.innerHTML = escaped.replace(/\n/g, '<br>');
       leadDiv.append(p);
     });
@@ -719,7 +729,8 @@ function renderElection(election) {
     if (s.text) {
       s.text.split('\n\n').forEach(para => {
         const p = document.createElement('p');
-        p.textContent = para;
+        const esc = para.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        p.innerHTML = applyHighlightWords(esc, election.highlightWords);
         div.append(p);
       });
     }

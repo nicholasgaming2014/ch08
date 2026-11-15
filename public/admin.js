@@ -765,6 +765,7 @@ function fillElection(election) {
   if (!electionForm) return;
   electionForm.title.value = election.title || '';
   electionForm.lead.value = election.lead || '';
+  electionForm.highlightWords.value = election.highlightWords || '';
   electionForm.infobox.value = election.infobox || '';
   electionForm.electionDate.value = election.electionDate || '';
   electionForm.turnout.value = election.turnout || '';
@@ -811,6 +812,7 @@ if (electionForm) {
     const data = new FormData();
     data.append('title', electionForm.title.value);
     data.append('lead', electionForm.lead.value);
+    data.append('highlightWords', electionForm.highlightWords.value);
     data.append('infobox', electionForm.infobox.value);
     data.append('electionDate', electionForm.electionDate.value);
     data.append('turnout', electionForm.turnout.value);

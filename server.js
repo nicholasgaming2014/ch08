@@ -42,6 +42,7 @@ const DEFAULT_CONTENT = {
   election: {
     title: '',
     lead: '',
+    highlightWords: '',
     infobox: '',
     electionDate: '',
     turnout: '',
@@ -783,6 +784,7 @@ app.put('/api/admin/election', requireAdminApi, upload.fields([
   content.election = {
     title: text(body.title, 300),
     lead: text(body.lead, 10000),
+    highlightWords: text(body.highlightWords, 2000),
     infobox: text(body.infobox, 500),
     electionDate: text(body.electionDate, 100),
     turnout: text(body.turnout, 100),
