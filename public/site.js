@@ -575,7 +575,7 @@ function renderElection(election, activeCensus) {
 
   const candidateCount = (election.candidates || []).length;
   const infoboxWrap = section.querySelector('.wiki-infobox-wrap');
-  infoboxWrap.style.width = candidateCount > 3 ? (270 + candidateCount * 70) + 'px' : candidateCount === 3 ? '420px' : '';
+  infoboxWrap.style.width = candidateCount === 3 ? '420px' : '';
 
   const flagDiv = section.querySelector('.wiki-infobox-flag');
   const W = 190, H = 100, sh = H / 13, uw = W * 2 / 5, uh = sh * 7;
@@ -614,70 +614,6 @@ function renderElection(election, activeCensus) {
   const candidates = election.candidates || [];
   gallery.innerHTML = '';
   if (candidates.length) {
-    const tbl = document.createElement('table');
-    tbl.className = 'wiki-ib-table';
-    const colGroup = document.createElement('colgroup');
-    const labelCol = document.createElement('col');
-    labelCol.style.width = '90px';
-    colGroup.append(labelCol);
-    const candWidth = ((100 - 27) / candidates.length).toFixed(2) + '%';
-    candidates.forEach(() => {
-      const col = document.createElement('col');
-      col.style.width = candWidth;
-      colGroup.append(col);
-    });
-    tbl.append(colGroup);
-
-    if (election.turnout) {
-      const tRow = document.createElement('tr');
-      const tTh = document.createElement('th');
-      tTh.textContent = 'Turnout';
-      tTh.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap';
-      tRow.append(tTh);
-      const tTd = document.createElement('td');
-      tTd.colSpan = candidates.length;
-      tTd.style.cssText = 'text-align:center;padding:2px 4px;font-size:12px';
-      let turnoutHtml = election.turnout.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      if (election.turnoutChange) {
-        const val = parseFloat(election.turnoutChange);
-        if (!isNaN(val)) {
-          const svg = val >= 0
-            ? '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 300 300" style="vertical-align:baseline"><polygon points="0 300 300 300 150 0" fill="#0C3"/></svg>'
-            : '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 300 300" style="vertical-align:baseline"><polygon points="0 0 150 300 300 0" fill="#F00"/></svg>';
-          const abs = Math.abs(val);
-          turnoutHtml += ` ${svg} ${abs} <span style="color:#0645ad;cursor:pointer">pp</span>`;
-        }
-      }
-      tTd.innerHTML = turnoutHtml;
-      tRow.append(tTd);
-      tbl.append(tRow);
-    }
-
-    const photoRow = document.createElement('tr');
-    const emptyTd = document.createElement('td');
-    photoRow.append(emptyTd);
-    candidates.forEach(c => {
-      const td = document.createElement('td');
-      td.style.textAlign = 'center';
-      td.style.padding = '1px 0 0';
-      td.style.verticalAlign = 'bottom';
-      if (c.image) {
-        const img = document.createElement('img');
-        img.src = c.image;
-        img.alt = c.name;
-        img.className = 'wiki-nominee-photo';
-        td.append(img);
-      }
-      if (c.partyColor) {
-        const bar = document.createElement('div');
-        bar.style.cssText = `height:6px;background:${c.partyColor};margin-top:0;`;
-        bar.className = 'wiki-party-bar';
-        td.append(bar);
-      }
-      photoRow.append(td);
-    });
-    tbl.append(photoRow);
-
     const fields = [
       { label: 'Nominee', key: 'name', bold: true, link: true },
       { label: 'Party', key: 'party', link: true },
@@ -688,43 +624,128 @@ function renderElection(election, activeCensus) {
       { label: 'Popular vote', key: 'popularVotes', numeric: true },
       { label: 'Percentage', key: 'popularPct', numeric: true },
     ];
-    fields.forEach(f => {
-      const vals = candidates.map(c => c[f.key] || '');
-      if (vals.every(v => !v)) return;
-      let highIdx = -1;
-      if (f.numeric && vals.filter(v => v).length > 1) {
-        const nums = vals.map(v => parseFloat(String(v).replace(/[,%]/g, '')));
-        const max = Math.max(...nums.filter(n => !isNaN(n)));
-        if (!isNaN(max)) highIdx = nums.indexOf(max);
-      }
-      const tr = document.createElement('tr');
-      const th = document.createElement('th');
-      th.textContent = f.label;
-      th.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap';
-      tr.append(th);
-      candidates.forEach((c, i) => {
-        const td = document.createElement('td');
-        td.style.cssText = 'text-align:center;padding:2px 4px;font-size:12px';
-        if (f.link) {
-          const span = document.createElement('span');
-          span.textContent = vals[i];
-          span.style.cssText = 'color:#0645ad;cursor:pointer;';
-          if (f.bold) span.style.fontWeight = '700';
-          td.append(span);
-        } else if (f.statesHighlight && vals[i]) {
-          const escaped = vals[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          td.innerHTML = escaped.replace(/\b([A-Z]{2}(?:-\d{2})?)\b/g, '<span style="color:#0645ad;cursor:pointer">$1</span>');
-          if (f.bold) td.style.fontWeight = '700';
-        } else {
-          td.textContent = vals[i];
-          if (f.bold) td.style.fontWeight = '700';
-        }
-        if (highIdx === i) td.style.fontWeight = '700';
-        tr.append(td);
+
+    function buildCandidateTable(cands, allCandidates, showTurnout) {
+      const tbl = document.createElement('table');
+      tbl.className = 'wiki-ib-table';
+      const colGroup = document.createElement('colgroup');
+      const labelCol = document.createElement('col');
+      labelCol.style.width = '90px';
+      colGroup.append(labelCol);
+      const candWidth = ((100 - 27) / cands.length).toFixed(2) + '%';
+      cands.forEach(() => {
+        const col = document.createElement('col');
+        col.style.width = candWidth;
+        colGroup.append(col);
       });
-      tbl.append(tr);
-    });
-    gallery.append(tbl);
+      tbl.append(colGroup);
+
+      if (showTurnout && election.turnout) {
+        const tRow = document.createElement('tr');
+        const tTh = document.createElement('th');
+        tTh.textContent = 'Turnout';
+        tTh.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap';
+        tRow.append(tTh);
+        const tTd = document.createElement('td');
+        tTd.colSpan = cands.length;
+        tTd.style.cssText = 'text-align:center;padding:2px 4px;font-size:12px';
+        let turnoutHtml = election.turnout.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        if (election.turnoutChange) {
+          const val = parseFloat(election.turnoutChange);
+          if (!isNaN(val)) {
+            const svg = val >= 0
+              ? '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 300 300" style="vertical-align:baseline"><polygon points="0 300 300 300 150 0" fill="#0C3"/></svg>'
+              : '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 300 300" style="vertical-align:baseline"><polygon points="0 0 150 300 300 0" fill="#F00"/></svg>';
+            const abs = Math.abs(val);
+            turnoutHtml += ` ${svg} ${abs} <span style="color:#0645ad;cursor:pointer">pp</span>`;
+          }
+        }
+        tTd.innerHTML = turnoutHtml;
+        tRow.append(tTd);
+        tbl.append(tRow);
+      }
+
+      const photoRow = document.createElement('tr');
+      const emptyTd = document.createElement('td');
+      photoRow.append(emptyTd);
+      cands.forEach(c => {
+        const td = document.createElement('td');
+        td.style.textAlign = 'center';
+        td.style.padding = '1px 0 0';
+        td.style.verticalAlign = 'bottom';
+        if (c.image) {
+          const img = document.createElement('img');
+          img.src = c.image;
+          img.alt = c.name;
+          img.className = 'wiki-nominee-photo';
+          td.append(img);
+        }
+        if (c.partyColor) {
+          const bar = document.createElement('div');
+          bar.style.cssText = `height:6px;background:${c.partyColor};margin-top:0;`;
+          bar.className = 'wiki-party-bar';
+          td.append(bar);
+        }
+        photoRow.append(td);
+      });
+      tbl.append(photoRow);
+
+      fields.forEach(f => {
+        const vals = cands.map(c => c[f.key] || '');
+        if (vals.every(v => !v)) return;
+        const allVals = allCandidates.map(c => c[f.key] || '');
+        let highIdx = -1;
+        if (f.numeric && allVals.filter(v => v).length > 1) {
+          const allNums = allCandidates.map(c => parseFloat(String(c[f.key] || '').replace(/[,%]/g, '')));
+          const max = Math.max(...allNums.filter(n => !isNaN(n)));
+          if (!isNaN(max)) {
+            const globalWinner = allCandidates.findIndex(c => parseFloat(String(c[f.key] || '').replace(/[,%]/g, '')) === max);
+            highIdx = cands.indexOf(allCandidates[globalWinner]);
+          }
+        }
+        const tr = document.createElement('tr');
+        const th = document.createElement('th');
+        th.textContent = f.label;
+        th.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap';
+        tr.append(th);
+        cands.forEach((c, i) => {
+          const td = document.createElement('td');
+          td.style.cssText = 'text-align:center;padding:2px 4px;font-size:12px';
+          if (f.link) {
+            const span = document.createElement('span');
+            span.textContent = vals[i];
+            span.style.cssText = 'color:#0645ad;cursor:pointer;';
+            if (f.bold) span.style.fontWeight = '700';
+            td.append(span);
+          } else if (f.statesHighlight && vals[i]) {
+            const escaped = vals[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            td.innerHTML = escaped.replace(/\b([A-Z]{2}(?:-\d{2})?)\b/g, '<span style="color:#0645ad;cursor:pointer">$1</span>');
+            if (f.bold) td.style.fontWeight = '700';
+          } else {
+            td.textContent = vals[i];
+            if (f.bold) td.style.fontWeight = '700';
+          }
+          if (highIdx === i) td.style.fontWeight = '700';
+          tr.append(td);
+        });
+        tbl.append(tr);
+      });
+      return tbl;
+    }
+
+    if (candidates.length > 3) {
+      const sorted = [...candidates].sort((a, b) => {
+        const evA = parseFloat(String(a.electoralVotes || '0').replace(/[,%]/g, ''));
+        const evB = parseFloat(String(b.electoralVotes || '0').replace(/[,%]/g, ''));
+        return (isNaN(evB) ? 0 : evB) - (isNaN(evA) ? 0 : evA);
+      });
+      const topRow = sorted.slice(0, 2);
+      const bottomRow = sorted.slice(2);
+      gallery.append(buildCandidateTable(topRow, candidates, true));
+      gallery.append(buildCandidateTable(bottomRow, candidates, false));
+    } else {
+      gallery.append(buildCandidateTable(candidates, candidates, true));
+    }
   }
 
   section.querySelector('.wiki-candidate-table').hidden = true;
