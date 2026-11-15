@@ -669,7 +669,7 @@ function renderElection(election) {
       { label: 'Home state', key: 'homeState', link: true },
       { label: 'Running mate', key: 'runningMate', bold: true, link: true },
       { label: 'Electoral vote', key: 'electoralVotes', numeric: true },
-      { label: 'States carried', key: 'statesCarried' },
+      { label: 'States carried', key: 'statesCarried', statesHighlight: true, numeric: true },
       { label: 'Popular vote', key: 'popularVotes', numeric: true },
       { label: 'Percentage', key: 'popularPct', numeric: true },
     ];
@@ -696,6 +696,10 @@ function renderElection(election) {
           span.style.cssText = 'color:#0645ad;cursor:pointer;';
           if (f.bold) span.style.fontWeight = '700';
           td.append(span);
+        } else if (f.statesHighlight && vals[i]) {
+          const escaped = vals[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          td.innerHTML = escaped.replace(/\b([A-Z]{2}(?:-\d{2})?)\b/g, '<span style="color:#0645ad;cursor:pointer">$1</span>');
+          if (f.bold) td.style.fontWeight = '700';
         } else {
           td.textContent = vals[i];
           if (f.bold) td.style.fontWeight = '700';
