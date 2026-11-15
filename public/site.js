@@ -573,6 +573,10 @@ function renderElection(election, activeCensus) {
   section.querySelector('.wiki-title').textContent = election.title || '';
   section.querySelector('.wiki-infobox-title').textContent = election.infobox || election.title || '';
 
+  const candidateCount = (election.candidates || []).length;
+  const infoboxWrap = section.querySelector('.wiki-infobox-wrap');
+  infoboxWrap.style.width = candidateCount > 3 ? (270 + candidateCount * 70) + 'px' : candidateCount === 3 ? '420px' : '';
+
   const flagDiv = section.querySelector('.wiki-infobox-flag');
   const W = 190, H = 100, sh = H / 13, uw = W * 2 / 5, uh = sh * 7;
   let flagSvg = '';
