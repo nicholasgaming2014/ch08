@@ -1784,8 +1784,8 @@ h2 {
   color: #202122;
   font-family: sans-serif;
   min-height: calc(100vh - 60px);
-  line-height: 1.6;
-  font-size: 14.4px;
+  line-height: 1.625;
+  font-size: 16px;
 }
 
 .wiki-page a { color: #0645ad; }
@@ -1810,9 +1810,9 @@ h2 {
 }
 
 .wiki-lead-para {
-  margin: 7px 0 14px;
-  font-size: 14.08px;
-  line-height: 1.5;
+  margin: 8px 0 16px;
+  font-size: 16px;
+  line-height: 1.625;
 }
 
 .wiki-infobox-wrap {
@@ -1961,16 +1961,16 @@ h2 {
 
 .wiki-nominee-photo {
   width: 100%;
-  max-width: 140px;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
   border: 1px solid #a2a9b1;
+  display: block;
 }
 
 .wiki-ib-table {
   width: 100%;
   table-layout: fixed;
-  border-collapse: collapse;
+  border-spacing: 3px;
   font-size: 12px;
   font-family: sans-serif;
 }
@@ -2039,7 +2039,7 @@ h2 {
 }
 
 .wiki-section {
-  margin: 20px 0 8px;
+  margin: 24px 0 8px;
 }
 
 .wiki-section h2 {
@@ -2054,9 +2054,9 @@ h2 {
 }
 
 .wiki-section p {
-  margin: 7px 0 14px;
-  font-size: 14.08px;
-  line-height: 1.5;
+  margin: 8px 0 16px;
+  font-size: 16px;
+  line-height: 1.625;
 }
 
 .wiki-page .empty-note {
@@ -2076,7 +2076,7 @@ h2 {
   }
 
   .wiki-nominee-photo {
-    max-width: 120px;
+    max-width: none;
   }
 }
 

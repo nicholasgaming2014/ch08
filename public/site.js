@@ -565,7 +565,8 @@ function renderElection(election) {
     candidates.forEach(c => {
       const td = document.createElement('td');
       td.style.textAlign = 'center';
-      td.style.padding = '8px 4px 4px';
+      td.style.padding = '1px 0 0';
+      td.style.verticalAlign = 'bottom';
       if (c.image) {
         const img = document.createElement('img');
         img.src = c.image;
@@ -573,27 +574,15 @@ function renderElection(election) {
         img.className = 'wiki-nominee-photo';
         td.append(img);
       }
-      photoRow.append(td);
-    });
-    tbl.append(photoRow);
-
-    const barRow = document.createElement('tr');
-    const barEmpty = document.createElement('td');
-    barRow.append(barEmpty);
-    candidates.forEach((c, i) => {
-      const td = document.createElement('td');
-      const pl = i === 0 ? '0' : '1px';
-      const pr = i === candidates.length - 1 ? '0' : '1px';
-      td.style.cssText = `padding: 0 ${pr} 4px ${pl};`;
       if (c.partyColor) {
         const bar = document.createElement('div');
-        bar.style.cssText = `height:6px;background:${c.partyColor};`;
+        bar.style.cssText = `height:6px;background:${c.partyColor};margin-top:0;`;
         bar.className = 'wiki-party-bar';
         td.append(bar);
       }
-      barRow.append(td);
+      photoRow.append(td);
     });
-    tbl.append(barRow);
+    tbl.append(photoRow);
 
     const fields = [
       { label: 'Nominee', key: 'name', bold: true, link: true },
