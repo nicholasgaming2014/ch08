@@ -1817,7 +1817,7 @@ h2 {
 
 .wiki-infobox-wrap {
   float: right;
-  width: 420px;
+  width: 340px;
   margin: 0 0 12px 20px;
 }
 
@@ -1862,7 +1862,17 @@ h2 {
   font-family: sans-serif;
 }
 
+.wiki-ec-info {
+  text-align: center;
+  padding: 6px 8px;
+  font-size: 12.6px;
+  font-family: sans-serif;
+  line-height: 1.6;
+}
+
 .wiki-turnout-row {
+  display: flex;
+  gap: 12px;
   padding: 4px 8px;
   font-size: 12.6px;
 }
@@ -1882,10 +1892,66 @@ h2 {
   border-bottom: 1px solid #a2a9b1;
 }
 
+.wiki-president-info {
+  border-top: 1px solid #a2a9b1;
+  padding: 6px 10px;
+  font-family: sans-serif;
+  font-size: 12.6px;
+}
+
+.wiki-pres-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.wiki-pres-col {
+  flex: 1;
+}
+
+.wiki-pres-right {
+  text-align: right;
+}
+
+.wiki-pres-label {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.wiki-pres-name {
+  color: #0645ad;
+  cursor: pointer;
+}
+
+.wiki-pres-party {
+  color: #0645ad;
+  cursor: pointer;
+}
+
 .wiki-infobox-flag {
   text-align: center;
   padding: 6px 8px;
   border-bottom: 1px solid #a2a9b1;
+}
+
+.wiki-election-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid #a2a9b1;
+  font-size: 12.6px;
+  font-family: sans-serif;
+}
+
+.wiki-nav-prev,
+.wiki-nav-next {
+  color: #0645ad;
+  cursor: pointer;
+}
+
+.wiki-nav-date {
+  font-weight: 700;
+  text-align: center;
 }
 
 .wiki-infobox-flag-img {
@@ -1894,14 +1960,15 @@ h2 {
 }
 
 .wiki-nominee-photo {
-  width: 100px;
-  height: 130px;
+  width: 140px;
+  height: 175px;
   object-fit: cover;
   border: 1px solid #a2a9b1;
 }
 
 .wiki-ib-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
   font-family: sans-serif;
@@ -2007,8 +2074,12 @@ h2 {
   }
 
   .wiki-nominee-photo {
-    width: 80px;
-    height: 100px;
+    width: 120px;
+    height: 150px;
+  }
+
+  .wiki-party-bar {
+    width: 120px !important;
   }
 }
 

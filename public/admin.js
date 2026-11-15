@@ -768,7 +768,12 @@ function fillElection(election) {
   electionForm.infobox.value = election.infobox || '';
   electionForm.electionDate.value = election.electionDate || '';
   electionForm.turnout.value = election.turnout || '';
+  electionForm.turnoutChange.value = election.turnoutChange || '';
   electionForm.mapCaption.value = election.mapCaption || '';
+  electionForm.presidentBefore.value = election.presidentBefore || '';
+  electionForm.presidentBeforeParty.value = election.presidentBeforeParty || '';
+  electionForm.electedPresident.value = election.electedPresident || '';
+  electionForm.electedPresidentParty.value = election.electedPresidentParty || '';
   electionKeptMap = election.mapImage || '';
   if (electionKeptMap) { mapPreview.src = electionKeptMap; mapPreview.hidden = false; }
   else mapPreview.hidden = true;
@@ -809,8 +814,13 @@ if (electionForm) {
     data.append('infobox', electionForm.infobox.value);
     data.append('electionDate', electionForm.electionDate.value);
     data.append('turnout', electionForm.turnout.value);
+    data.append('turnoutChange', electionForm.turnoutChange.value);
     data.append('stateColors', JSON.stringify(electionStateColors));
     data.append('mapCaption', electionForm.mapCaption.value);
+    data.append('presidentBefore', electionForm.presidentBefore.value);
+    data.append('presidentBeforeParty', electionForm.presidentBeforeParty.value);
+    data.append('electedPresident', electionForm.electedPresident.value);
+    data.append('electedPresidentParty', electionForm.electedPresidentParty.value);
 
     if (electionForm.mapImage.files[0]) data.append('mapImage', electionForm.mapImage.files[0]);
     else if (!electionForm.removeMap?.checked) data.append('keptMapImage', electionKeptMap);

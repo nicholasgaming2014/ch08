@@ -210,6 +210,9 @@
           <label class="field"><span>turnout</span>
             <input type="text" name="turnout" maxlength="100" placeholder="66.2%">
           </label>
+          <label class="field"><span>turnout change (pp)</span>
+            <input type="text" name="turnoutChange" maxlength="20" placeholder="6.5 or -2.1">
+          </label>
         </div>
 
         <div class="field"><span>electoral map</span>
@@ -238,6 +241,23 @@
           <img class="election-map-preview" alt="" hidden>
           <input type="file" name="mapImage" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml">
           <label class="check" hidden><input type="checkbox" name="removeMap"> remove map</label>
+        </div>
+
+        <div class="field-row">
+          <label class="field"><span>president before election</span>
+            <input type="text" name="presidentBefore" maxlength="200" placeholder="Donald Trump">
+          </label>
+          <label class="field"><span>party</span>
+            <input type="text" name="presidentBeforeParty" maxlength="100" placeholder="Republican">
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>elected president</span>
+            <input type="text" name="electedPresident" maxlength="200" placeholder="Joe Biden">
+          </label>
+          <label class="field"><span>party</span>
+            <input type="text" name="electedPresidentParty" maxlength="100" placeholder="Democratic">
+          </label>
         </div>
 
         <div class="field"><span>candidates</span>

@@ -498,16 +498,23 @@ function renderElection(election) {
   }
   flagDiv.innerHTML = `<svg class="wiki-infobox-flag-img" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${flagSvg}</svg>`;
 
-  const turnoutRow = section.querySelector('.wiki-turnout-row');
-  if (election.electionDate || election.turnout) {
-    let html = '';
-    if (election.electionDate) html += `<div class="wiki-info-row"><span class="wiki-info-label">Date</span><span>${election.electionDate}</span></div>`;
-    if (election.turnout) html += `<div class="wiki-info-row"><span class="wiki-info-label">Turnout</span><span>${election.turnout}</span></div>`;
-    turnoutRow.innerHTML = html;
-    turnoutRow.hidden = false;
+  const navRow = section.querySelector('.wiki-election-nav');
+  if (election.electionDate) {
+    const yearMatch = (election.electionDate || '').match(/\d{4}/);
+    const year = yearMatch ? parseInt(yearMatch[0]) : null;
+    const prev = year ? year - 4 : '';
+    const next = year ? year + 4 : '';
+    navRow.innerHTML = `<span class="wiki-nav-prev">← ${prev}</span><span class="wiki-nav-date">${election.electionDate}</span><span class="wiki-nav-next">${next} →</span>`;
+    navRow.hidden = false;
   } else {
-    turnoutRow.hidden = true;
+    navRow.hidden = true;
   }
+
+  const ecInfo = section.querySelector('.wiki-ec-info');
+  ecInfo.innerHTML = '<div>538 members of the <span style="color:#0645ad;cursor:pointer">Electoral College</span></div><div>270 electoral votes needed to win</div>';
+  ecInfo.hidden = false;
+
+  section.querySelector('.wiki-turnout-row').hidden = true;
 
   const gallery = section.querySelector('.wiki-nominee-gallery');
   const candidates = election.candidates || [];
@@ -515,6 +522,42 @@ function renderElection(election) {
   if (candidates.length) {
     const tbl = document.createElement('table');
     tbl.className = 'wiki-ib-table';
+    const colGroup = document.createElement('colgroup');
+    const labelCol = document.createElement('col');
+    labelCol.style.width = '90px';
+    colGroup.append(labelCol);
+    const candWidth = ((100 - 27) / candidates.length).toFixed(2) + '%';
+    candidates.forEach(() => {
+      const col = document.createElement('col');
+      col.style.width = candWidth;
+      colGroup.append(col);
+    });
+    tbl.append(colGroup);
+
+    if (election.turnout) {
+      const tRow = document.createElement('tr');
+      const tTh = document.createElement('th');
+      tTh.textContent = 'Turnout';
+      tTh.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap';
+      tRow.append(tTh);
+      const tTd = document.createElement('td');
+      tTd.colSpan = candidates.length;
+      tTd.style.cssText = 'text-align:center;padding:2px 4px;font-size:12px';
+      let turnoutHtml = election.turnout.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (election.turnoutChange) {
+        const val = parseFloat(election.turnoutChange);
+        if (!isNaN(val)) {
+          const svg = val >= 0
+            ? '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 300 300" style="vertical-align:baseline"><polygon points="0 300 300 300 150 0" fill="#0C3"/></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 300 300" style="vertical-align:baseline"><polygon points="0 0 150 300 300 0" fill="#F00"/></svg>';
+          const abs = Math.abs(val);
+          turnoutHtml += ` ${svg} ${abs} <span style="color:#0645ad;cursor:pointer">pp</span>`;
+        }
+      }
+      tTd.innerHTML = turnoutHtml;
+      tRow.append(tTd);
+      tbl.append(tRow);
+    }
 
     const photoRow = document.createElement('tr');
     const emptyTd = document.createElement('td');
@@ -522,7 +565,7 @@ function renderElection(election) {
     candidates.forEach(c => {
       const td = document.createElement('td');
       td.style.textAlign = 'center';
-      td.style.padding = '8px 4px 0';
+      td.style.padding = '8px 4px 4px';
       if (c.image) {
         const img = document.createElement('img');
         img.src = c.image;
@@ -537,37 +580,59 @@ function renderElection(election) {
     const barRow = document.createElement('tr');
     const barEmpty = document.createElement('td');
     barRow.append(barEmpty);
-    candidates.forEach(c => {
+    candidates.forEach((c, i) => {
       const td = document.createElement('td');
-      td.style.textAlign = 'center';
-      if (c.partyColor) td.style.borderBottom = `6px solid ${c.partyColor}`;
+      const pl = i === 0 ? '0' : '1px';
+      const pr = i === candidates.length - 1 ? '0' : '1px';
+      td.style.cssText = `padding: 0 ${pr} 4px ${pl};`;
+      if (c.partyColor) {
+        const bar = document.createElement('div');
+        bar.style.cssText = `height:6px;background:${c.partyColor};`;
+        bar.className = 'wiki-party-bar';
+        td.append(bar);
+      }
       barRow.append(td);
     });
     tbl.append(barRow);
 
     const fields = [
-      { label: 'Nominee', key: 'name', bold: true },
-      { label: 'Party', key: 'party' },
-      { label: 'Home state', key: 'homeState' },
-      { label: 'Running mate', key: 'runningMate', bold: true },
-      { label: 'Electoral vote', key: 'electoralVotes' },
+      { label: 'Nominee', key: 'name', bold: true, link: true },
+      { label: 'Party', key: 'party', link: true },
+      { label: 'Home state', key: 'homeState', link: true },
+      { label: 'Running mate', key: 'runningMate', bold: true, link: true },
+      { label: 'Electoral vote', key: 'electoralVotes', numeric: true },
       { label: 'States carried', key: 'statesCarried' },
-      { label: 'Popular vote', key: 'popularVotes' },
-      { label: 'Percentage', key: 'popularPct' },
+      { label: 'Popular vote', key: 'popularVotes', numeric: true },
+      { label: 'Percentage', key: 'popularPct', numeric: true },
     ];
     fields.forEach(f => {
       const vals = candidates.map(c => c[f.key] || '');
       if (vals.every(v => !v)) return;
+      let highIdx = -1;
+      if (f.numeric && vals.filter(v => v).length > 1) {
+        const nums = vals.map(v => parseFloat(String(v).replace(/[,%]/g, '')));
+        const max = Math.max(...nums.filter(n => !isNaN(n)));
+        if (!isNaN(max)) highIdx = nums.indexOf(max);
+      }
       const tr = document.createElement('tr');
       const th = document.createElement('th');
       th.textContent = f.label;
-      th.style.cssText = 'width:75px;text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top';
+      th.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap';
       tr.append(th);
       candidates.forEach((c, i) => {
         const td = document.createElement('td');
-        td.textContent = vals[i];
-        td.style.cssText = 'width:75px;text-align:center;padding:2px 4px;font-size:12px';
-        if (f.bold) td.style.fontWeight = '700';
+        td.style.cssText = 'text-align:center;padding:2px 4px;font-size:12px';
+        if (f.link) {
+          const span = document.createElement('span');
+          span.textContent = vals[i];
+          span.style.cssText = 'color:#0645ad;cursor:pointer;';
+          if (f.bold) span.style.fontWeight = '700';
+          td.append(span);
+        } else {
+          td.textContent = vals[i];
+          if (f.bold) td.style.fontWeight = '700';
+        }
+        if (highIdx === i) td.style.fontWeight = '700';
         tr.append(td);
       });
       tbl.append(tr);
@@ -601,13 +666,29 @@ function renderElection(election) {
     mapCaption.hidden = true;
   }
 
+  const presInfo = section.querySelector('.wiki-president-info');
+  if (election.presidentBefore || election.electedPresident) {
+    presInfo.innerHTML = `<div class="wiki-pres-row">
+      <div class="wiki-pres-col"><div class="wiki-pres-label">President before election</div>
+        <div class="wiki-pres-name">${election.presidentBefore || ''}</div>
+        <div class="wiki-pres-party">${election.presidentBeforeParty || ''}</div></div>
+      <div class="wiki-pres-col wiki-pres-right"><div class="wiki-pres-label">Elected President</div>
+        <div class="wiki-pres-name">${election.electedPresident || ''}</div>
+        <div class="wiki-pres-party">${election.electedPresidentParty || ''}</div></div>
+    </div>`;
+    presInfo.hidden = false;
+  } else {
+    presInfo.hidden = true;
+  }
+
   const leadDiv = section.querySelector('.wiki-lead');
   if (election.lead) {
     leadDiv.innerHTML = '';
     election.lead.split('\n\n').forEach(para => {
       const p = document.createElement('p');
-      p.textContent = para;
       p.className = 'wiki-lead-para';
+      const escaped = para.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      p.innerHTML = escaped.replace(/\n/g, '<br>');
       leadDiv.append(p);
     });
     leadDiv.hidden = false;
