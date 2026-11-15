@@ -754,11 +754,13 @@ function addCandidateRow(list, c = {}) {
       <img class="candidate-photo-preview" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;display:none;">
       <button type="button" class="button danger remove-candidate" style="margin-left:auto;">remove</button>
     </div>`;
-  row.querySelector('[data-key="name"]').value = c.name || '';
+  const nameInput = row.querySelector('[data-key="name"]');
+  nameInput.value = c.name || '';
+  nameInput.addEventListener('input', buildMapColorPicker);
   row.querySelector('[data-key="party"]').value = c.party || '';
   const partyColorInput = row.querySelector('[data-key="partyColor"]');
   partyColorInput.value = c.partyColor || '#cccccc';
-  partyColorInput.addEventListener('input', computeElectoralVotes);
+  partyColorInput.addEventListener('input', () => { buildMapColorPicker(); computeElectoralVotes(); });
   row.querySelector('[data-key="homeState"]').value = c.homeState || '';
   row.querySelector('[data-key="runningMate"]').value = c.runningMate || '';
   row.querySelector('[data-key="electoralVotes"]').value = c.electoralVotes || '';
@@ -777,7 +779,7 @@ function addCandidateRow(list, c = {}) {
       preview.style.display = 'block';
     }
   });
-  row.querySelector('.remove-candidate').addEventListener('click', () => { row.remove(); computeElectoralVotes(); });
+  row.querySelector('.remove-candidate').addEventListener('click', () => { row.remove(); buildMapColorPicker(); computeElectoralVotes(); });
   list.append(row);
 }
 
@@ -796,6 +798,39 @@ function addSectionRow(list, s = {}) {
 }
 
 let electionStateColors = {};
+
+function buildMapColorPicker() {
+  const picker = document.getElementById('map-color-picker');
+  if (!picker) return;
+  const prev = picker.querySelector('[name="mapColor"]:checked')?.value || '';
+  picker.innerHTML = '';
+
+  const candidateRows = [...(candidateList?.children || [])];
+  candidateRows.forEach((row, i) => {
+    const color = row.querySelector('[data-key="partyColor"]')?.value || '#cccccc';
+    const name = row.querySelector('[data-key="name"]')?.value || `Candidate ${i + 1}`;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="radio" name="mapColor" value="${color}"> <span class="map-swatch" style="background:${color}"></span> ${name.split(' ').pop()}`;
+    picker.append(label);
+  });
+
+  const noneLabel = document.createElement('label');
+  noneLabel.innerHTML = '<input type="radio" name="mapColor" value="#d0d0d0"> <span class="map-swatch" style="background:#d0d0d0"></span> None';
+  picker.append(noneLabel);
+
+  const customLabel = document.createElement('label');
+  customLabel.className = 'map-custom-label';
+  customLabel.innerHTML = '<input type="radio" name="mapColor" value="custom"> <input type="color" class="map-custom-color" value="#ffcc00"> Custom';
+  customLabel.querySelector('.map-custom-color').addEventListener('input', () => {
+    customLabel.querySelector('[name="mapColor"]').checked = true;
+  });
+  picker.append(customLabel);
+
+  // Restore previous selection or default to first
+  const match = picker.querySelector(`[name="mapColor"][value="${prev}"]`);
+  if (match) match.checked = true;
+  else if (picker.querySelector('[name="mapColor"]')) picker.querySelector('[name="mapColor"]').checked = true;
+}
 
 function initMapEditor() {
   const svg = electionForm?.querySelector('.map-editor-svg');
@@ -930,6 +965,7 @@ function fillElection(election) {
   (election.candidates || []).forEach(c => addCandidateRow(candidateList, c));
   sectionList.replaceChildren();
   (election.sections || []).forEach(s => addSectionRow(sectionList, s));
+  buildMapColorPicker();
   computeElectoralVotes();
 }
 
@@ -1046,7 +1082,7 @@ function randomizeElection() {
 }
 
 if (electionForm) {
-  electionForm.querySelector('.add-candidate').addEventListener('click', () => addCandidateRow(candidateList));
+  electionForm.querySelector('.add-candidate').addEventListener('click', () => { addCandidateRow(candidateList); buildMapColorPicker(); });
   electionForm.querySelector('.add-section').addEventListener('click', () => addSectionRow(sectionList));
   electionForm.querySelector('.clear-map').addEventListener('click', () => {
     electionStateColors = {};
@@ -1054,11 +1090,6 @@ if (electionForm) {
     computeElectoralVotes();
   });
   document.getElementById('randomize-btn')?.addEventListener('click', randomizeElection);
-  const customColor = electionForm.querySelector('.map-custom-color');
-  customColor.addEventListener('input', () => {
-    const customRadio = electionForm.querySelector('[name="mapColor"][value="custom"]');
-    customRadio.checked = true;
-  });
   electionForm.mapImage.addEventListener('change', () => {
     if (electionForm.mapImage.files[0]) {
       mapPreview.src = URL.createObjectURL(electionForm.mapImage.files[0]);
