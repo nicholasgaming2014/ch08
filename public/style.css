@@ -1782,7 +1782,7 @@ h2 {
   padding: 24px 32px 60px;
   background: #fff;
   color: #202122;
-  font-family: Georgia, 'Times New Roman', 'Times', serif;
+  font-family: sans-serif;
   min-height: calc(100vh - 60px);
   line-height: 1.6;
   font-size: 14.4px;
@@ -1791,7 +1791,7 @@ h2 {
 .wiki-page a { color: #0645ad; }
 
 .wiki-title {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Linux Libertine', Georgia, Times, serif;
   font-size: 28.8px;
   font-weight: 400;
   color: #000;
@@ -1810,9 +1810,9 @@ h2 {
 }
 
 .wiki-lead-para {
-  margin: 0 0 10px;
-  font-size: 14.4px;
-  line-height: 1.6;
+  margin: 7px 0 14px;
+  font-size: 14.08px;
+  line-height: 1.5;
 }
 
 .wiki-infobox-wrap {
@@ -1960,8 +1960,9 @@ h2 {
 }
 
 .wiki-nominee-photo {
-  width: 140px;
-  height: 175px;
+  width: 100%;
+  max-width: 140px;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
   border: 1px solid #a2a9b1;
 }
@@ -2042,19 +2043,20 @@ h2 {
 }
 
 .wiki-section h2 {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 21.6px;
+  font-family: 'Linux Libertine', Georgia, Times, serif;
+  font-size: 24px;
   font-weight: 400;
   color: #000;
   margin: 0;
   padding-bottom: 2px;
   border-bottom: 1px solid #a2a9b1;
+  line-height: 1.375;
 }
 
 .wiki-section p {
-  margin: 8px 0;
-  font-size: 14px;
-  line-height: 1.6;
+  margin: 7px 0 14px;
+  font-size: 14.08px;
+  line-height: 1.5;
 }
 
 .wiki-page .empty-note {
@@ -2074,12 +2076,7 @@ h2 {
   }
 
   .wiki-nominee-photo {
-    width: 120px;
-    height: 150px;
-  }
-
-  .wiki-party-bar {
-    width: 120px !important;
+    max-width: 120px;
   }
 }
 
