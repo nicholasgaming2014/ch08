@@ -583,7 +583,7 @@ function renderElection(election) {
     const year = yearMatch ? parseInt(yearMatch[0]) : null;
     const prev = year ? year - 4 : '';
     const next = year ? year + 4 : '';
-    navRow.innerHTML = `<span class="wiki-nav-prev">← ${prev}</span><span class="wiki-nav-date">${election.electionDate}</span><span class="wiki-nav-next">${next} →</span>`;
+    navRow.innerHTML = `<a href="#election-${prev}" class="wiki-nav-prev" style="color:#0645ad;cursor:pointer;text-decoration:none">← ${prev}</a><span class="wiki-nav-date">${election.electionDate}</span><a href="#election-${next}" class="wiki-nav-next" style="color:#0645ad;cursor:pointer;text-decoration:none">${next} →</a>`;
     navRow.hidden = false;
   } else {
     navRow.hidden = true;
