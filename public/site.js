@@ -732,7 +732,9 @@ function renderElection(election) {
 
   const mapCaption = section.querySelector('.wiki-map-caption');
   if (election.mapCaption) {
-    mapCaption.textContent = election.mapCaption;
+    const captionEsc = election.mapCaption.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const colorMap = { Blue: '#244999', Red: '#d22532', red: '#d22532', blue: '#244999', Yellow: '#c8a800', yellow: '#c8a800', Green: '#6bb74a', green: '#6bb74a' };
+    mapCaption.innerHTML = captionEsc.replace(/\b(Blue|Red|Yellow|Green|blue|red|yellow|green)\b/g, (m) => `<span style="color:${colorMap[m]}">${m}</span>`);
     mapCaption.hidden = false;
   } else {
     mapCaption.hidden = true;
