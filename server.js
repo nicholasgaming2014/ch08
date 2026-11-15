@@ -39,21 +39,29 @@ const DEFAULT_CONTENT = {
   // Stat rows for the fc/fifa page, one list per table in FC_SCHEMA.
   fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
   clips: [],
-  election: {
-    title: '',
-    lead: '',
-    highlightWords: '',
-    infobox: '',
-    electionDate: '',
-    turnout: '',
-    turnoutChange: '',
-    mapImage: '',
-    mapCaption: '',
-    stateColors: {},
-    candidates: [],
-    sections: [],
-  },
+  elections: {},
 };
+
+function defaultElection() {
+  return {
+    title: '', lead: '', highlightWords: '', infobox: '', electionDate: '',
+    turnout: '', turnoutChange: '', mapImage: '', mapCaption: '',
+    presidentBefore: '', presidentBeforeParty: '',
+    electedPresident: '', electedPresidentParty: '',
+    stateColors: {}, candidates: [], sections: [],
+  };
+}
+
+function loadElection(saved) {
+  const e = defaultElection();
+  if (saved && typeof saved === 'object') {
+    Object.assign(e, saved);
+    if (!Array.isArray(e.candidates)) e.candidates = [];
+    if (!Array.isArray(e.sections)) e.sections = [];
+    if (!e.stateColors || typeof e.stateColors !== 'object') e.stateColors = {};
+  }
+  return e;
+}
 
 // Beats saved before multiple producers had a single `producer` string.
 function withProducerList(beat) {
@@ -80,11 +88,14 @@ function loadContent() {
       if (Array.isArray(saved.fc?.[table])) content.fc[table] = saved.fc[table];
     });
     if (Array.isArray(saved.clips)) content.clips = saved.clips;
-    if (saved.election && typeof saved.election === 'object') {
-      Object.assign(content.election, saved.election);
-      if (!Array.isArray(content.election.candidates)) content.election.candidates = [];
-      if (!Array.isArray(content.election.sections)) content.election.sections = [];
-      if (!content.election.stateColors || typeof content.election.stateColors !== 'object') content.election.stateColors = {};
+    // Migrate old single election → elections map
+    if (saved.elections && typeof saved.elections === 'object') {
+      for (const [slug, e] of Object.entries(saved.elections)) {
+        content.elections[slug] = loadElection(e);
+      }
+    } else if (saved.election && typeof saved.election === 'object' && saved.election.title) {
+      const slug = (saved.election.title.match(/\d{4}/) || ['default'])[0];
+      content.elections[slug] = loadElection(saved.election);
     }
   } catch {}
   return content;
@@ -738,13 +749,16 @@ app.delete('/api/admin/clips/:id', requireAdminApi, async (req, res) => {
 
 // ---------- Election ----------
 
-app.put('/api/admin/election', requireAdminApi, upload.fields([
+app.put('/api/admin/elections/:slug', requireAdminApi, upload.fields([
   { name: 'mapImage', maxCount: 1 },
   { name: 'candidateImage', maxCount: 20 },
 ]), async (req, res) => {
+  const slug = req.params.slug.replace(/[^a-z0-9_-]/gi, '').slice(0, 40);
+  if (!slug) return res.status(400).json({ error: 'invalid slug' });
   const body = req.body || {};
-  const oldMap = content.election.mapImage;
-  const oldCandidateImages = (content.election.candidates || []).map(c => c.image).filter(Boolean);
+  const existing = content.elections[slug] || defaultElection();
+  const oldMap = existing.mapImage;
+  const oldCandidateImages = (existing.candidates || []).map(c => c.image).filter(Boolean);
 
   let candidates = [];
   try { candidates = JSON.parse(body.candidates || '[]'); } catch {}
@@ -781,7 +795,7 @@ app.put('/api/admin/election', requireAdminApi, upload.fields([
   if (typeof stateColors !== 'object' || Array.isArray(stateColors)) stateColors = {};
 
   const mapFile = req.files?.mapImage?.[0];
-  content.election = {
+  content.elections[slug] = {
     title: text(body.title, 300),
     lead: text(body.lead, 10000),
     highlightWords: text(body.highlightWords, 2000),
@@ -801,12 +815,25 @@ app.put('/api/admin/election', requireAdminApi, upload.fields([
   };
   await saveContent();
 
-  if (oldMap && oldMap !== content.election.mapImage) await removeUpload(oldMap);
-  const newImages = new Set(content.election.candidates.map(c => c.image).filter(Boolean));
+  if (oldMap && oldMap !== content.elections[slug].mapImage) await removeUpload(oldMap);
+  const newImages = new Set(content.elections[slug].candidates.map(c => c.image).filter(Boolean));
   for (const url of oldCandidateImages) {
     if (!newImages.has(url)) await removeUpload(url);
   }
-  await removeRequestFiles(req, [content.election.mapImage, ...newImages]);
+  await removeRequestFiles(req, [content.elections[slug].mapImage, ...newImages]);
+  res.json(content);
+});
+
+app.delete('/api/admin/elections/:slug', requireAdminApi, async (req, res) => {
+  const slug = req.params.slug.replace(/[^a-z0-9_-]/gi, '').slice(0, 40);
+  const election = content.elections[slug];
+  if (!election) return res.status(404).json({ error: 'not found' });
+  if (election.mapImage) await removeUpload(election.mapImage);
+  for (const c of election.candidates || []) {
+    if (c.image) await removeUpload(c.image);
+  }
+  delete content.elections[slug];
+  await saveContent();
   res.json(content);
 });
 

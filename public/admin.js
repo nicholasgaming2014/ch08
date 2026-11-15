@@ -656,6 +656,76 @@ const candidateList = electionForm?.querySelector('.election-candidate-list');
 const sectionList = electionForm?.querySelector('.election-section-list');
 const mapPreview = electionForm?.querySelector('.election-map-preview');
 let electionKeptMap = '';
+let currentElectionSlug = '';
+
+const slugSelect = document.getElementById('election-slug-select');
+const newSlugInput = document.getElementById('new-election-slug');
+const createBtn = document.getElementById('create-election-btn');
+const deleteBtn = document.getElementById('delete-election-btn');
+const viewLink = document.getElementById('election-view-link');
+
+function populateElectionSelect(elections) {
+  if (!slugSelect) return;
+  const prev = currentElectionSlug;
+  slugSelect.innerHTML = '<option value="">— select an election year —</option>';
+  Object.keys(elections).sort((a, b) => b.localeCompare(a)).forEach(slug => {
+    const opt = document.createElement('option');
+    opt.value = slug;
+    opt.textContent = elections[slug].title || slug;
+    slugSelect.append(opt);
+  });
+  if (prev && elections[prev]) {
+    slugSelect.value = prev;
+    selectElection(prev);
+  } else {
+    selectElection('');
+  }
+}
+
+function selectElection(slug) {
+  currentElectionSlug = slug;
+  if (slug && content?.elections?.[slug]) {
+    electionForm.hidden = false;
+    fillElection(content.elections[slug]);
+    if (viewLink) viewLink.href = `/#election-${slug}`;
+  } else {
+    electionForm.hidden = true;
+    currentElectionSlug = '';
+  }
+}
+
+if (slugSelect) {
+  slugSelect.addEventListener('change', () => selectElection(slugSelect.value));
+}
+
+if (createBtn) {
+  createBtn.addEventListener('click', async () => {
+    const slug = newSlugInput.value.trim().replace(/[^a-z0-9_-]/gi, '').slice(0, 40);
+    if (!slug) return;
+    if (content.elections[slug]) {
+      slugSelect.value = slug;
+      selectElection(slug);
+      return;
+    }
+    content.elections[slug] = { title: slug + ' United States presidential election' };
+    populateElectionSelect(content.elections);
+    slugSelect.value = slug;
+    selectElection(slug);
+    newSlugInput.value = '';
+  });
+}
+
+if (deleteBtn) {
+  deleteBtn.addEventListener('click', async () => {
+    if (!currentElectionSlug) return;
+    if (!confirm(`Delete election "${currentElectionSlug}"? This cannot be undone.`)) return;
+    try {
+      content = await send('DELETE', `/api/admin/elections/${currentElectionSlug}`);
+      currentElectionSlug = '';
+      populateElectionSelect(content.elections || {});
+    } catch (err) { alert(err.message); }
+  });
+}
 
 function addCandidateRow(list, c = {}) {
   const row = document.createElement('div');
@@ -809,6 +879,7 @@ if (electionForm) {
 
   electionForm.addEventListener('submit', async e => {
     e.preventDefault();
+    if (!currentElectionSlug) { setStatus(electionForm, 'select an election year first', true); return; }
     const data = new FormData();
     data.append('title', electionForm.title.value);
     data.append('lead', electionForm.lead.value);
@@ -850,8 +921,9 @@ if (electionForm) {
     setBusy(electionForm, true);
     setStatus(electionForm, 'saving...');
     try {
-      content = await send('PUT', '/api/admin/election', data, p => setStatus(electionForm, `uploading... ${Math.round(p * 100)}%`));
-      fillElection(content.election);
+      content = await send('PUT', `/api/admin/elections/${currentElectionSlug}`, data, p => setStatus(electionForm, `uploading... ${Math.round(p * 100)}%`));
+      fillElection(content.elections[currentElectionSlug] || {});
+      populateElectionSelect(content.elections || {});
       setStatus(electionForm, 'saved ✓');
     } catch (err) {
       setStatus(electionForm, err.message, true);
@@ -1357,6 +1429,6 @@ fetch('/api/content', { cache: 'no-store' })
     renderBeats(content.beats);
     renderArt(content.art || []);
     renderClipsAdmin(content.clips || []);
-    fillElection(content.election || {});
+    populateElectionSelect(content.elections || {});
     renderFcAdmin();
   });

@@ -192,7 +192,18 @@
 
     <!-- Election -->
     <section id="panel-election" class="admin-panel" hidden>
-      <form id="election-form" class="admin-card">
+      <div class="admin-card" style="margin-bottom:16px">
+        <h2>election years</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="election-slug-select" style="flex:1;min-width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+            <option value="">— select an election year —</option>
+          </select>
+          <input type="text" id="new-election-slug" maxlength="40" placeholder="new year (e.g. 2024)" style="width:160px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+          <button type="button" id="create-election-btn" class="button secondary" style="white-space:nowrap">+ create</button>
+          <button type="button" id="delete-election-btn" class="button secondary" style="white-space:nowrap;color:#d33">delete</button>
+        </div>
+      </div>
+      <form id="election-form" class="admin-card" hidden>
         <h2>election page</h2>
         <label class="field"><span>page title</span>
           <input type="text" name="title" maxlength="300" placeholder="2024 United States presidential election">
@@ -275,7 +286,7 @@
 
         <div class="button-row">
           <button type="submit" class="button">save election</button>
-          <a href="/#election" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
+          <a id="election-view-link" href="/#election" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
           <span class="status" role="status"></span>
         </div>
       </form>

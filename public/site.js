@@ -4,10 +4,17 @@ const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
 function showPage() {
-  const id = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  const hash = location.hash.slice(1);
+  let id = PAGES.includes(hash) ? hash : 'home';
+  // Handle #election-YYYY routes
+  if (hash.startsWith('election-')) id = 'election';
   pages.forEach(p => p.hidden = p.id !== id);
-  pageLinks.forEach(l => l.classList.toggle('active', l.hash === '#' + id));
+  pageLinks.forEach(l => {
+    const linkId = l.hash.slice(1);
+    l.classList.toggle('active', linkId === id || (id === 'election' && linkId === 'election'));
+  });
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
+  if (id === 'election' && window._electionsData) renderElectionPage(window._electionsData, hash);
 }
 
 window.addEventListener('hashchange', showPage);
@@ -476,6 +483,69 @@ function applyHighlightWords(html, highlightWords) {
   const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const re = new RegExp('(' + escaped.join('|') + ')', 'gi');
   return html.replace(re, '<span style="color:#0645ad;cursor:pointer">$1</span>');
+}
+
+function renderElectionIndex(elections) {
+  const section = document.getElementById('election');
+  const body = section.querySelector('.wiki-body');
+  const emptyNote = section.querySelector('.empty-note');
+  const slugs = Object.keys(elections).sort((a, b) => b.localeCompare(a));
+  if (slugs.length === 0) {
+    body.hidden = true;
+    emptyNote.hidden = false;
+    return;
+  }
+  body.hidden = false;
+  emptyNote.hidden = true;
+  const title = section.querySelector('.wiki-title');
+  title.textContent = 'United States presidential elections';
+  // Hide infobox
+  section.querySelector('.wiki-infobox-wrap').hidden = true;
+  section.querySelector('.wiki-lead').hidden = true;
+  section.querySelector('.wiki-toc').hidden = true;
+  const nav = section.querySelector('.wiki-election-nav');
+  if (nav) nav.hidden = true;
+  const ecInfo = section.querySelector('.wiki-ec-info');
+  if (ecInfo) ecInfo.hidden = true;
+  const presInfo = section.querySelector('.wiki-president-info');
+  if (presInfo) presInfo.hidden = true;
+  // Render list of elections
+  const sectionsDiv = section.querySelector('.wiki-sections');
+  sectionsDiv.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'wiki-section';
+  slugs.forEach(slug => {
+    const e = elections[slug];
+    const p = document.createElement('p');
+    const a = document.createElement('a');
+    a.href = `#election-${slug}`;
+    a.textContent = e.title || slug;
+    a.style.color = '#0645ad';
+    a.style.cursor = 'pointer';
+    a.style.fontSize = '16px';
+    p.append(a);
+    if (e.electionDate) {
+      const span = document.createElement('span');
+      span.textContent = ` — ${e.electionDate}`;
+      span.style.color = '#54595d';
+      p.append(span);
+    }
+    list.append(p);
+  });
+  sectionsDiv.append(list);
+}
+
+function renderElectionPage(elections, hash) {
+  if (hash.startsWith('election-')) {
+    const slug = hash.slice('election-'.length);
+    const election = elections[slug];
+    if (election) {
+      document.getElementById('election').querySelector('.wiki-infobox-wrap').hidden = false;
+      renderElection(election);
+      return;
+    }
+  }
+  renderElectionIndex(elections);
 }
 
 function renderElection(election) {
@@ -1239,7 +1309,8 @@ fetch('/api/content')
     renderArt(content.art || []);
     window._clipData = content.clips || [];
     renderClips(window._clipData);
-    renderElection(content.election || {});
+    window._electionsData = content.elections || {};
+    renderElectionPage(window._electionsData, location.hash.slice(1));
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);
