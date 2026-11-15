@@ -933,6 +933,118 @@ function fillElection(election) {
   computeElectoralVotes();
 }
 
+// Partisan lean per state: negative = Dem-leaning, positive = Rep-leaning (approximate PVI-style values)
+const STATE_LEAN = {AL:15,AK:9,AZ:1,AR:16,CA:-15,CO:-5,CT:-7,DE:-7,FL:3,GA:1,HI:-19,ID:19,IL:-8,IN:8,IA:6,KS:10,KY:15,LA:12,ME:-3,MD:-14,MA:-16,MI:0,MN:-1,MS:8,MO:9,MT:8,NE:10,NV:-1,NH:-1,NJ:-6,NM:-5,NY:-12,NC:2,ND:17,OH:6,OK:20,OR:-6,PA:0,RI:-10,SC:8,SD:14,TN:14,TX:5,UT:12,VT:-16,VA:-3,WA:-8,WV:20,WI:0,WY:25,DC:-40};
+
+function randomizeElection() {
+  const candidateRows = [...(candidateList?.children || [])];
+  if (candidateRows.length < 2) { alert('Add at least 2 candidates with party colors first.'); return; }
+  const mode = document.getElementById('randomize-mode').value;
+  const activeCensus = getActiveCensusAdmin();
+
+  const candidates = candidateRows.map(row => ({
+    color: row.querySelector('[data-key="partyColor"]')?.value || '#cccccc',
+    name: row.querySelector('[data-key="name"]')?.value || '',
+    evInput: row.querySelector('[data-key="electoralVotes"]'),
+    pvInput: row.querySelector('[data-key="popularVotes"]'),
+    pctInput: row.querySelector('[data-key="popularPct"]'),
+    scInput: row.querySelector('[data-key="statesCarried"]'),
+  }));
+
+  const evByState = {};
+  US_STATES.forEach(s => { evByState[s.id] = activeCensus?.[s.id] ?? s.ev; });
+  const stateIds = US_STATES.map(s => s.id);
+
+  if (mode === 'realistic') {
+    // Pick a national swing: first candidate is the "left" one, second is "right"
+    // Additional candidates are third parties with lower support
+    const swing = (Math.random() - 0.5) * 20; // national environment -10 to +10
+    const thirdPartyStrength = candidates.length > 2 ? 0.03 + Math.random() * 0.12 : 0;
+
+    stateIds.forEach(id => {
+      const lean = STATE_LEAN[id] || 0;
+      const adjusted = lean + swing + (Math.random() - 0.5) * 8;
+      if (candidates.length <= 2) {
+        candidates[adjusted < 0 ? 0 : 1]._states = (candidates[adjusted < 0 ? 0 : 1]._states || []);
+        candidates[adjusted < 0 ? 0 : 1]._states.push(id);
+        electionStateColors[id] = candidates[adjusted < 0 ? 0 : 1].color;
+      } else {
+        // Third+ parties win their home states or random upsets
+        let winner = adjusted < 0 ? 0 : 1;
+        for (let i = 2; i < candidates.length; i++) {
+          if (Math.random() < (thirdPartyStrength * (1 + Math.random())) && Math.abs(adjusted) < 8) {
+            winner = i;
+            break;
+          }
+        }
+        candidates[winner]._states = (candidates[winner]._states || []);
+        candidates[winner]._states.push(id);
+        electionStateColors[id] = candidates[winner].color;
+      }
+    });
+
+    // Generate realistic popular vote
+    const totalVoters = 130000000 + Math.floor(Math.random() * 40000000);
+    let remaining = 1;
+    const shares = [];
+    // Main two candidates split most of the vote
+    const mainShare = 0.90 - thirdPartyStrength * (candidates.length - 2);
+    const frontRunner = swing < 0 ? 0 : 1;
+    const margin = 0.01 + Math.random() * 0.08;
+    shares[frontRunner] = (mainShare / 2) + margin / 2;
+    shares[frontRunner === 0 ? 1 : 0] = (mainShare / 2) - margin / 2;
+    remaining -= shares[0] + shares[1];
+    for (let i = 2; i < candidates.length; i++) {
+      const share = i === candidates.length - 1 ? remaining : remaining * (0.3 + Math.random() * 0.5);
+      shares[i] = share;
+      remaining -= share;
+    }
+
+    candidates.forEach((c, i) => {
+      const pv = Math.round(totalVoters * (shares[i] || 0));
+      const pct = ((shares[i] || 0) * 100).toFixed(2) + '%';
+      if (c.pvInput) c.pvInput.value = pv.toLocaleString('en-US');
+      if (c.pctInput) c.pctInput.value = pct;
+    });
+  } else {
+    // Completely random: each state assigned to a random candidate with equal probability
+    stateIds.forEach(id => {
+      const winner = Math.floor(Math.random() * candidates.length);
+      candidates[winner]._states = (candidates[winner]._states || []);
+      candidates[winner]._states.push(id);
+      electionStateColors[id] = candidates[winner].color;
+    });
+
+    // Random popular vote
+    const totalVoters = 100000000 + Math.floor(Math.random() * 70000000);
+    const raw = candidates.map(() => Math.random());
+    const sum = raw.reduce((a, b) => a + b, 0);
+    candidates.forEach((c, i) => {
+      const share = raw[i] / sum;
+      const pv = Math.round(totalVoters * share);
+      const pct = (share * 100).toFixed(2) + '%';
+      if (c.pvInput) c.pvInput.value = pv.toLocaleString('en-US');
+      if (c.pctInput) c.pctInput.value = pct;
+    });
+  }
+
+  // Fill states carried for each candidate
+  candidates.forEach(c => {
+    const states = c._states || [];
+    const abbrs = states.filter(id => id !== 'DC').sort();
+    const hasDC = states.includes('DC');
+    const parts = [];
+    if (abbrs.length) parts.push(String(abbrs.length));
+    if (hasDC) parts.push('DC');
+    // Check for split-EV states (ME, NE) - just list the abbreviation
+    if (c.scInput) c.scInput.value = parts.join(' + ');
+    delete c._states;
+  });
+
+  initMapEditor();
+  computeElectoralVotes();
+}
+
 if (electionForm) {
   electionForm.querySelector('.add-candidate').addEventListener('click', () => addCandidateRow(candidateList));
   electionForm.querySelector('.add-section').addEventListener('click', () => addSectionRow(sectionList));
@@ -941,6 +1053,7 @@ if (electionForm) {
     initMapEditor();
     computeElectoralVotes();
   });
+  document.getElementById('randomize-btn')?.addEventListener('click', randomizeElection);
   const customColor = electionForm.querySelector('.map-custom-color');
   customColor.addEventListener('input', () => {
     const customRadio = electionForm.querySelector('[name="mapColor"][value="custom"]');
