@@ -40,7 +40,10 @@ const DEFAULT_CONTENT = {
   fc: Object.fromEntries(Object.keys(FC_SCHEMA).map(table => [table, []])),
   clips: [],
   elections: {},
+  censusData: {},
 };
+
+const CENSUS_2020 = {AL:9,AK:3,AZ:11,AR:6,CA:54,CO:10,CT:7,DE:3,FL:30,GA:16,HI:4,ID:4,IL:19,IN:11,IA:6,KS:6,KY:8,LA:8,ME:4,MD:10,MA:11,MI:15,MN:10,MS:6,MO:10,MT:4,NE:5,NV:6,NH:4,NJ:14,NM:5,NY:28,NC:16,ND:3,OH:17,OK:7,OR:8,PA:19,RI:4,SC:9,SD:3,TN:11,TX:40,UT:6,VT:3,VA:13,WA:12,WV:4,WI:10,WY:3,DC:3};
 
 function defaultElection() {
   return {
@@ -97,7 +100,16 @@ function loadContent() {
       const slug = (saved.election.title.match(/\d{4}/) || ['default'])[0];
       content.elections[slug] = loadElection(saved.election);
     }
+    if (saved.censusData && typeof saved.censusData === 'object') {
+      for (const [year, data] of Object.entries(saved.censusData)) {
+        if (data && typeof data === 'object') content.censusData[year] = data;
+      }
+    }
   } catch {}
+  // Seed 2020 census if no census data exists
+  if (Object.keys(content.censusData).length === 0) {
+    content.censusData['2020'] = { ...CENSUS_2020 };
+  }
   return content;
 }
 
@@ -833,6 +845,30 @@ app.delete('/api/admin/elections/:slug', requireAdminApi, async (req, res) => {
     if (c.image) await removeUpload(c.image);
   }
   delete content.elections[slug];
+  await saveContent();
+  res.json(content);
+});
+
+app.put('/api/admin/census/:year', requireAdminApi, express.json(), async (req, res) => {
+  const year = req.params.year.replace(/\D/g, '').slice(0, 4);
+  if (!year || year.length !== 4) return res.status(400).json({ error: 'invalid year' });
+  const data = req.body;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return res.status(400).json({ error: 'invalid data' });
+  const cleaned = {};
+  for (const [state, ev] of Object.entries(data)) {
+    const s = String(state).replace(/[^A-Z]/gi, '').toUpperCase().slice(0, 2);
+    const n = parseInt(ev);
+    if (s && !isNaN(n) && n >= 0) cleaned[s] = n;
+  }
+  content.censusData[year] = cleaned;
+  await saveContent();
+  res.json(content);
+});
+
+app.delete('/api/admin/census/:year', requireAdminApi, async (req, res) => {
+  const year = req.params.year.replace(/\D/g, '').slice(0, 4);
+  if (!content.censusData[year]) return res.status(404).json({ error: 'not found' });
+  delete content.censusData[year];
   await saveContent();
   res.json(content);
 });

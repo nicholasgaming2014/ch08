@@ -14,7 +14,7 @@ function showPage() {
     l.classList.toggle('active', linkId === id || (id === 'election' && linkId === 'election'));
   });
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
-  if (id === 'election' && window._electionsData) renderElectionPage(window._electionsData, hash);
+  if (id === 'election' && window._electionsData) renderElectionPage(window._electionsData, hash, window._censusData);
 }
 
 window.addEventListener('hashchange', showPage);
@@ -377,7 +377,7 @@ function renderArt(art) {
 
 // ---------- Election ----------
 
-function buildElectionMap(stateColors, candidates) {
+function buildElectionMap(stateColors, candidates, censusEvs) {
   if (typeof US_STATES === 'undefined' || !stateColors || !Object.keys(stateColors).length) return null;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
@@ -407,13 +407,14 @@ function buildElectionMap(stateColors, candidates) {
       txt.setAttribute('font-family', 'Helvetica Neue, Helvetica, Arial, sans-serif');
       txt.setAttribute('fill', '#000');
       txt.setAttribute('pointer-events', 'none');
-      txt.textContent = String(s.ev);
+      txt.textContent = String(censusEvs?.[s.id] ?? s.ev);
       svg.append(txt);
     }
   });
 
   smallStates.forEach(s => {
     const color = stateColors[s.id] || '#d0d0d0';
+    const ev = censusEvs?.[s.id] ?? s.ev;
     const g = document.createElementNS(ns, 'g');
     const rect = document.createElementNS(ns, 'rect');
     rect.setAttribute('x', s.labelX - 16);
@@ -429,7 +430,7 @@ function buildElectionMap(stateColors, candidates) {
     txt.setAttribute('font-size', '22');
     txt.setAttribute('font-family', 'Helvetica Neue, Helvetica, Arial, sans-serif');
     txt.setAttribute('fill', '#000');
-    txt.textContent = `${s.abbr} ${s.ev}`;
+    txt.textContent = `${s.abbr} ${ev}`;
     g.append(rect, txt);
     svg.append(g);
   });
@@ -535,20 +536,28 @@ function renderElectionIndex(elections) {
   sectionsDiv.append(list);
 }
 
-function renderElectionPage(elections, hash) {
+function getActiveCensus(electionYear, censusData) {
+  if (!censusData || !electionYear) return null;
+  const censusYears = Object.keys(censusData).map(Number).filter(y => !isNaN(y) && y < electionYear).sort((a, b) => b - a);
+  return censusYears.length ? censusData[String(censusYears[0])] : null;
+}
+
+function renderElectionPage(elections, hash, censusData) {
   if (hash.startsWith('election-')) {
     const slug = hash.slice('election-'.length);
     const election = elections[slug];
     if (election) {
       document.getElementById('election').querySelector('.wiki-infobox-wrap').hidden = false;
-      renderElection(election);
+      const yearMatch = slug.match(/\d{4}/);
+      const activeCensus = yearMatch ? getActiveCensus(parseInt(yearMatch[0]), censusData) : null;
+      renderElection(election, activeCensus);
       return;
     }
   }
   renderElectionIndex(elections);
 }
 
-function renderElection(election) {
+function renderElection(election, activeCensus) {
   const section = document.getElementById('election');
   const body = section.querySelector('.wiki-body');
   const emptyNote = section.querySelector('.empty-note');
@@ -590,7 +599,9 @@ function renderElection(election) {
   }
 
   const ecInfo = section.querySelector('.wiki-ec-info');
-  ecInfo.innerHTML = '<div>538 members of the <span style="color:#0645ad;cursor:pointer">Electoral College</span></div><div>270 electoral votes needed to win</div>';
+  const ecTotal = activeCensus ? Object.values(activeCensus).reduce((s, v) => s + v, 0) : 538;
+  const ecMajority = Math.floor(ecTotal / 2) + 1;
+  ecInfo.innerHTML = `<div>${ecTotal} members of the <span style="color:#0645ad;cursor:pointer">Electoral College</span></div><div>${ecMajority} electoral votes needed to win</div>`;
   ecInfo.hidden = false;
 
   section.querySelector('.wiki-turnout-row').hidden = true;
@@ -716,7 +727,7 @@ function renderElection(election) {
 
   const mapContainer = section.querySelector('.wiki-map');
   mapContainer.innerHTML = '';
-  const stateMap = buildElectionMap(election.stateColors, candidates);
+  const stateMap = buildElectionMap(election.stateColors, candidates, activeCensus);
   if (stateMap) {
     mapContainer.append(stateMap);
     mapContainer.hidden = false;
@@ -1316,6 +1327,7 @@ fetch('/api/content')
     window._clipData = content.clips || [];
     renderClips(window._clipData);
     window._electionsData = content.elections || {};
+    window._censusData = content.censusData || {};
     renderElectionPage(window._electionsData, location.hash.slice(1));
     if (content.fc) fcData = content.fc;
     renderFc();

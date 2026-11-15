@@ -50,6 +50,7 @@
       <a href="#art" class="menu-link">art</a>
       <a href="#clips" class="menu-link">clips</a>
       <a href="#election" class="menu-link">election</a>
+      <a href="#census" class="menu-link">census</a>
       <a href="#fc" class="menu-link">fc/fifa</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
@@ -290,6 +291,33 @@
           <span class="status" role="status"></span>
         </div>
       </form>
+    </section>
+
+    <!-- Census -->
+    <section id="panel-census" class="admin-panel" hidden>
+      <div class="admin-card" style="margin-bottom:16px">
+        <h2>electoral vote reapportionment</h2>
+        <p class="hint">manage census-based electoral vote allocations. each census applies to elections after that year (e.g. 2020 census → 2024, 2028 elections). total must equal 538.</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <select id="census-year-select" style="flex:1;min-width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+            <option value="">— select a census year —</option>
+          </select>
+          <input type="text" id="new-census-year" maxlength="4" placeholder="new year (e.g. 2030)" style="width:160px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+          <button type="button" id="create-census-btn" class="button secondary" style="white-space:nowrap">+ create</button>
+          <button type="button" id="delete-census-btn" class="button secondary" style="white-space:nowrap;color:#d33">delete</button>
+        </div>
+      </div>
+      <div id="census-editor" class="admin-card" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 id="census-editor-title">2020 Census</h2>
+          <div><span id="census-total" style="font-size:16px;font-weight:600">538</span> / 538 total</div>
+        </div>
+        <div id="census-state-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px"></div>
+        <div class="button-row" style="margin-top:16px">
+          <button type="button" id="save-census-btn" class="button">save census</button>
+          <span id="census-status" class="status" role="status"></span>
+        </div>
+      </div>
     </section>
 
     <!-- fc/fifa -->

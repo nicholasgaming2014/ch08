@@ -4,7 +4,7 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'art', 'clips', 'election', 'fc', 'contact'];
+const TABS = ['home', 'beats', 'art', 'clips', 'election', 'census', 'fc', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
@@ -933,6 +933,145 @@ if (electionForm) {
   });
 }
 
+// ---------- census ----------
+
+const STATE_NAMES = {AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',DC:'District of Columbia'};
+const STATE_ORDER = Object.keys(STATE_NAMES).sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b]));
+
+const censusYearSelect = document.getElementById('census-year-select');
+const newCensusYear = document.getElementById('new-census-year');
+const createCensusBtn = document.getElementById('create-census-btn');
+const deleteCensusBtn = document.getElementById('delete-census-btn');
+const censusEditor = document.getElementById('census-editor');
+const censusEditorTitle = document.getElementById('census-editor-title');
+const censusStateGrid = document.getElementById('census-state-grid');
+const censusTotal = document.getElementById('census-total');
+const saveCensusBtn = document.getElementById('save-census-btn');
+const censusStatus = document.getElementById('census-status');
+let currentCensusYear = '';
+
+function populateCensusSelect(censusData) {
+  if (!censusYearSelect) return;
+  const prev = currentCensusYear;
+  censusYearSelect.innerHTML = '<option value="">— select a census year —</option>';
+  Object.keys(censusData).sort((a, b) => b.localeCompare(a)).forEach(year => {
+    const opt = document.createElement('option');
+    opt.value = year;
+    opt.textContent = year + ' Census';
+    censusYearSelect.append(opt);
+  });
+  if (prev && censusData[prev]) {
+    censusYearSelect.value = prev;
+    selectCensus(prev);
+  } else {
+    selectCensus('');
+  }
+}
+
+function updateCensusTotal() {
+  let total = 0;
+  censusStateGrid.querySelectorAll('input[type="number"]').forEach(inp => {
+    total += parseInt(inp.value) || 0;
+  });
+  censusTotal.textContent = total;
+  censusTotal.style.color = total === 538 ? '' : '#d33';
+}
+
+function selectCensus(year) {
+  currentCensusYear = year;
+  if (!year || !content?.censusData?.[year]) {
+    censusEditor.hidden = true;
+    currentCensusYear = '';
+    return;
+  }
+  censusEditor.hidden = false;
+  censusEditorTitle.textContent = year + ' Census';
+  const data = content.censusData[year];
+  censusStateGrid.innerHTML = '';
+  STATE_ORDER.forEach(st => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:4px';
+    const label = document.createElement('label');
+    label.style.cssText = 'font-size:12px;min-width:28px;font-weight:600';
+    label.textContent = st;
+    label.title = STATE_NAMES[st];
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = '100';
+    input.value = data[st] || 0;
+    input.dataset.state = st;
+    input.style.cssText = 'width:52px;padding:4px 6px;font-size:13px;border:1px solid #a2a9b1;border-radius:3px;text-align:center';
+    input.addEventListener('input', updateCensusTotal);
+    div.append(label, input);
+    censusStateGrid.append(div);
+  });
+  updateCensusTotal();
+}
+
+if (censusYearSelect) {
+  censusYearSelect.addEventListener('change', () => selectCensus(censusYearSelect.value));
+}
+
+if (createCensusBtn) {
+  createCensusBtn.addEventListener('click', () => {
+    const year = newCensusYear.value.trim().replace(/\D/g, '').slice(0, 4);
+    if (!year || year.length !== 4) return;
+    if (content.censusData[year]) {
+      censusYearSelect.value = year;
+      selectCensus(year);
+      return;
+    }
+    // Copy from most recent existing census, or use empty
+    const years = Object.keys(content.censusData).sort();
+    const base = years.length ? content.censusData[years[years.length - 1]] : {};
+    content.censusData[year] = { ...base };
+    populateCensusSelect(content.censusData);
+    censusYearSelect.value = year;
+    selectCensus(year);
+    newCensusYear.value = '';
+  });
+}
+
+if (deleteCensusBtn) {
+  deleteCensusBtn.addEventListener('click', async () => {
+    if (!currentCensusYear) return;
+    if (!confirm(`Delete ${currentCensusYear} census? This cannot be undone.`)) return;
+    try {
+      content = await send('DELETE', `/api/admin/census/${currentCensusYear}`);
+      currentCensusYear = '';
+      populateCensusSelect(content.censusData || {});
+    } catch (err) { alert(err.message); }
+  });
+}
+
+if (saveCensusBtn) {
+  saveCensusBtn.addEventListener('click', async () => {
+    if (!currentCensusYear) return;
+    const data = {};
+    censusStateGrid.querySelectorAll('input[type="number"]').forEach(inp => {
+      data[inp.dataset.state] = parseInt(inp.value) || 0;
+    });
+    const total = Object.values(data).reduce((s, v) => s + v, 0);
+    if (total !== 538) {
+      censusStatus.textContent = `total is ${total}, must be 538`;
+      censusStatus.classList.add('error');
+      return;
+    }
+    censusStatus.textContent = 'saving...';
+    censusStatus.classList.remove('error');
+    try {
+      content = await send('PUT', `/api/admin/census/${currentCensusYear}`, data);
+      populateCensusSelect(content.censusData || {});
+      censusStatus.textContent = 'saved ✓';
+      censusStatus.classList.remove('error');
+    } catch (err) {
+      censusStatus.textContent = err.message;
+      censusStatus.classList.add('error');
+    }
+  });
+}
+
 // ---------- fc/fifa stats ----------
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
@@ -1430,5 +1569,6 @@ fetch('/api/content', { cache: 'no-store' })
     renderArt(content.art || []);
     renderClipsAdmin(content.clips || []);
     populateElectionSelect(content.elections || {});
+    populateCensusSelect(content.censusData || {});
     renderFcAdmin();
   });
