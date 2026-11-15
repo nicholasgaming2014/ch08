@@ -748,8 +748,14 @@ function renderElection(election, activeCensus) {
   const mapCaption = section.querySelector('.wiki-map-caption');
   if (election.mapCaption) {
     const captionEsc = election.mapCaption.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const colorMap = { Blue: '#244999', Red: '#d22532', red: '#d22532', blue: '#244999', Yellow: '#c8a800', yellow: '#c8a800', Green: '#6bb74a', green: '#6bb74a' };
-    mapCaption.innerHTML = captionEsc.replace(/\b(Blue|Red|Yellow|Green|blue|red|yellow|green)\b/g, (m) => `<span style="color:${colorMap[m]}">${m}</span>`);
+    const colorMap = {};
+    (candidates || []).forEach(c => {
+      if (c.partyColorName && c.partyColor) colorMap[c.partyColorName.toLowerCase()] = c.partyColor;
+    });
+    Object.assign(colorMap, { blue: '#244999', red: '#d22532', yellow: '#c8a800', green: '#6bb74a' });
+    const colorNames = Object.keys(colorMap).sort((a, b) => b.length - a.length);
+    const colorRe = new RegExp('\\b(' + colorNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'gi');
+    mapCaption.innerHTML = captionEsc.replace(colorRe, (m) => `<span style="color:${colorMap[m.toLowerCase()]}">${m}</span>`);
     mapCaption.hidden = false;
   } else {
     mapCaption.hidden = true;

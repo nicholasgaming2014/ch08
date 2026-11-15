@@ -738,6 +738,7 @@ function addCandidateRow(list, c = {}) {
     </div>
     <div class="field-row">
       <label class="field"><span>party color</span><input type="color" data-key="partyColor" value="#cccccc"></label>
+      <label class="field"><span>color name</span><input type="text" data-key="partyColorName" maxlength="40" placeholder="e.g. light blue"></label>
       <label class="field"><span>home state</span><input type="text" data-key="homeState" maxlength="100"></label>
     </div>
     <div class="field-row">
@@ -761,6 +762,7 @@ function addCandidateRow(list, c = {}) {
   const partyColorInput = row.querySelector('[data-key="partyColor"]');
   partyColorInput.value = c.partyColor || '#cccccc';
   partyColorInput.addEventListener('input', () => { buildMapColorPicker(); computeElectoralVotes(); });
+  row.querySelector('[data-key="partyColorName"]').value = c.partyColorName || '';
   row.querySelector('[data-key="homeState"]').value = c.homeState || '';
   row.querySelector('[data-key="runningMate"]').value = c.runningMate || '';
   row.querySelector('[data-key="electoralVotes"]').value = c.electoralVotes || '';
