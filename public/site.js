@@ -507,8 +507,10 @@ function applyHighlightWords(html, highlightWords, links) {
 }
 
 document.addEventListener('click', e => {
-  const span = e.target.closest('span[style*="0645ad"]');
+  const span = e.target.closest('span');
   if (!span) return;
+  const color = getComputedStyle(span).color;
+  if (color !== 'rgb(6, 69, 173)') return;
   const links = window._highlightLinks || {};
   const text = span.textContent.trim();
   const lowerMap = {};
