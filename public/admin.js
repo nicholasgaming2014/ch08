@@ -1525,6 +1525,60 @@ if (wikiForm) {
   });
 }
 
+// ---------- Highlight Links ----------
+
+const hlLinksList = document.getElementById('highlight-links-list');
+const addHlLinkBtn = document.getElementById('add-highlight-link');
+const saveHlLinksBtn = document.getElementById('save-highlight-links');
+const hlLinksStatus = document.getElementById('highlight-links-status');
+
+function addHighlightLinkRow(word = '', url = '') {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  row.innerHTML = `
+    <input type="text" data-key="word" maxlength="200" placeholder="highlight word (e.g. Democratic Party)" style="flex:1;padding:6px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <span style="color:#72777d">→</span>
+    <input type="text" data-key="url" maxlength="500" placeholder="link (e.g. #wiki-democratic-party or https://...)" style="flex:1;padding:6px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <button type="button" class="button danger" style="font-size:11px;padding:4px 8px">×</button>`;
+  row.querySelector('[data-key="word"]').value = word;
+  row.querySelector('[data-key="url"]').value = url;
+  row.querySelector('.button.danger').addEventListener('click', () => row.remove());
+  hlLinksList.append(row);
+}
+
+function populateHighlightLinks(links) {
+  if (!hlLinksList) return;
+  hlLinksList.innerHTML = '';
+  for (const [word, url] of Object.entries(links || {})) {
+    addHighlightLinkRow(word, url);
+  }
+}
+
+if (addHlLinkBtn) {
+  addHlLinkBtn.addEventListener('click', () => addHighlightLinkRow());
+}
+
+if (saveHlLinksBtn) {
+  saveHlLinksBtn.addEventListener('click', async () => {
+    const links = {};
+    hlLinksList.querySelectorAll(':scope > div').forEach(row => {
+      const word = row.querySelector('[data-key="word"]').value.trim();
+      const url = row.querySelector('[data-key="url"]').value.trim();
+      if (word && url) links[word] = url;
+    });
+    hlLinksStatus.textContent = 'saving...';
+    hlLinksStatus.style.color = '';
+    try {
+      content = await send('PUT', '/api/admin/highlight-links', links);
+      populateHighlightLinks(content.highlightLinks || {});
+      hlLinksStatus.textContent = 'saved ✓';
+    } catch (err) {
+      hlLinksStatus.textContent = err.message;
+      hlLinksStatus.style.color = '#d33';
+    }
+  });
+}
+
 // ---------- fc/fifa stats ----------
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
@@ -2024,5 +2078,6 @@ fetch('/api/content', { cache: 'no-store' })
     populateElectionSelect(content.elections || {});
     populateCensusSelect(content.censusData || {});
     populateWikiSelect(content.wikiPages || {});
+    populateHighlightLinks(content.highlightLinks || {});
     renderFcAdmin();
   });

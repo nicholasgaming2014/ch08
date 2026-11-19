@@ -42,6 +42,7 @@ const DEFAULT_CONTENT = {
   elections: {},
   censusData: {},
   wikiPages: {},
+  highlightLinks: {},
 };
 
 const CENSUS_2020 = {AL:9,AK:3,AZ:11,AR:6,CA:54,CO:10,CT:7,DE:3,FL:30,GA:16,HI:4,ID:4,IL:19,IN:11,IA:6,KS:6,KY:8,LA:8,ME:4,MD:10,MA:11,MI:15,MN:10,MS:6,MO:10,MT:4,NE:5,NV:6,NH:4,NJ:14,NM:5,NY:28,NC:16,ND:3,OH:17,OK:7,OR:8,PA:19,RI:4,SC:9,SD:3,TN:11,TX:40,UT:6,VT:3,VA:13,WA:12,WV:4,WI:10,WY:3,DC:3};
@@ -110,6 +111,9 @@ function loadContent() {
       for (const [slug, page] of Object.entries(saved.wikiPages)) {
         if (page && typeof page === 'object') content.wikiPages[slug] = page;
       }
+    }
+    if (saved.highlightLinks && typeof saved.highlightLinks === 'object') {
+      content.highlightLinks = saved.highlightLinks;
     }
   } catch {}
   // Seed 2020 census if no census data exists
@@ -938,6 +942,24 @@ app.delete('/api/admin/wiki/:slug', requireAdminApi, async (req, res) => {
   if (!page) return res.status(404).json({ error: 'not found' });
   if (page.photo) await removeUpload(page.photo);
   delete content.wikiPages[slug];
+  await saveContent();
+  res.json(content);
+});
+
+// ---------- Highlight Links ----------
+
+app.put('/api/admin/highlight-links', requireAdminApi, express.json(), async (req, res) => {
+  const links = req.body;
+  if (!links || typeof links !== 'object' || Array.isArray(links)) {
+    return res.status(400).json({ error: 'expected object' });
+  }
+  const clean = {};
+  for (const [word, url] of Object.entries(links)) {
+    const w = String(word).trim().slice(0, 200);
+    const u = String(url).trim().slice(0, 500);
+    if (w && u) clean[w] = u;
+  }
+  content.highlightLinks = clean;
   await saveContent();
   res.json(content);
 });

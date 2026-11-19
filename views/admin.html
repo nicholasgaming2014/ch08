@@ -196,6 +196,7 @@
         <a href="#wiki-pages" class="subtab active" data-subtab="wiki-pages">wiki pages</a>
         <a href="#wiki-elections" class="subtab" data-subtab="wiki-elections">elections</a>
         <a href="#wiki-census" class="subtab" data-subtab="wiki-census">census</a>
+        <a href="#wiki-links" class="subtab" data-subtab="wiki-links">highlight links</a>
       </nav>
 
       <!-- Wiki Pages sub-panel -->
@@ -403,6 +404,20 @@
           <span id="census-status" class="status" role="status"></span>
         </div>
       </div>
+      </div>
+
+      <!-- Highlight Links sub-panel -->
+      <div id="subtab-wiki-links" class="subtab-panel" hidden>
+        <div class="admin-card">
+          <h2>highlight links</h2>
+          <p class="hint">map blue highlight words to link destinations. when a highlight word matches, it becomes a clickable link. use hash routes like <code>#wiki-joe-biden</code> or <code>#election-2024</code> for internal pages, or full URLs for external links.</p>
+          <div id="highlight-links-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px"></div>
+          <button type="button" id="add-highlight-link" class="button secondary" style="margin-top:8px;align-self:flex-start">+ add link</button>
+          <div class="button-row" style="margin-top:16px">
+            <button type="button" id="save-highlight-links" class="button">save highlight links</button>
+            <span id="highlight-links-status" class="status" role="status"></span>
+          </div>
+        </div>
       </div>
     </section>
 

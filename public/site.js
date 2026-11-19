@@ -478,13 +478,25 @@ function buildElectionMap(stateColors, candidates, censusEvs) {
   return svg;
 }
 
-function applyHighlightWords(html, highlightWords) {
+function applyHighlightWords(html, highlightWords, links) {
   if (!highlightWords) return html;
   const words = highlightWords.split(',').map(w => w.trim()).filter(Boolean);
   if (!words.length) return html;
+  const linkMap = links || (window._highlightLinks ? window._highlightLinks : {});
+  const lowerMap = {};
+  for (const [k, v] of Object.entries(linkMap)) lowerMap[k.toLowerCase()] = v;
   const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const re = new RegExp('(' + escaped.join('|') + ')', 'gi');
-  return html.replace(re, '<span style="color:#0645ad;cursor:pointer">$1</span>');
+  return html.replace(re, (match) => {
+    const url = lowerMap[match.toLowerCase()];
+    if (url) {
+      const isExternal = url.startsWith('http://') || url.startsWith('https://');
+      const target = isExternal ? ' target="_blank" rel="noopener"' : '';
+      const href = url.startsWith('#') ? '/' + url : url;
+      return `<a href="${href}" style="color:#0645ad"${target}>${match}</a>`;
+    }
+    return `<span style="color:#0645ad;cursor:pointer">${match}</span>`;
+  });
 }
 
 function renderElectionIndex(elections) {
@@ -1565,6 +1577,7 @@ fetch('/api/content')
     window._electionsData = content.elections || {};
     window._censusData = content.censusData || {};
     window._wikiPages = content.wikiPages || {};
+    window._highlightLinks = content.highlightLinks || {};
     renderElectionPage(window._electionsData, location.hash.slice(1));
     renderWikiPage(window._wikiPages, location.hash.slice(1));
     if (content.fc) fcData = content.fc;
