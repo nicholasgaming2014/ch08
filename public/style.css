@@ -1802,6 +1802,11 @@ h2 {
   background: #fff;
 }
 
+#election,
+#wiki {
+  background: #fff;
+}
+
 .wiki-page {
   max-width: 960px;
   margin: 0 auto;
@@ -1811,7 +1816,7 @@ h2 {
   font-family: sans-serif;
   min-height: calc(100vh - 60px);
   line-height: 1.625;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .wiki-page a { color: #0645ad; }
@@ -1837,13 +1842,13 @@ h2 {
 
 .wiki-lead-para {
   margin: 8px 0 16px;
-  font-size: 16px;
-  line-height: 1.625;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .wiki-infobox-wrap {
   float: right;
-  width: 340px;
+  width: 22em;
   margin: 0 0 12px 20px;
 }
 
@@ -2002,15 +2007,19 @@ h2 {
 }
 
 .wiki-person-infobox {
+  width: 100%;
   border-collapse: collapse;
   border: 1px solid #a2a9b1;
   background: #f8f9fa;
-  font-size: 12.6px;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .wiki-person-infobox th,
 .wiki-person-infobox td {
+  border: none;
   border-bottom: 1px solid #e0e0e0;
+  padding: 4px 8px;
 }
 
 .wiki-candidate-table {
@@ -2093,8 +2102,8 @@ h2 {
 
 .wiki-section p {
   margin: 8px 0 16px;
-  font-size: 16px;
-  line-height: 1.625;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .wiki-page .empty-note {

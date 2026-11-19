@@ -1467,7 +1467,7 @@ function renderWikiPage(pages, hash) {
   const nameRow = document.createElement('tr');
   const nameTh = document.createElement('th');
   nameTh.colSpan = 2;
-  nameTh.style.cssText = 'text-align:center;font-size:17px;font-weight:700;padding:8px 6px;border-bottom:1px solid #a2a9b1;';
+  nameTh.style.cssText = 'text-align:center;font-size:125%;font-weight:700;padding:6px 4px;border-bottom:none;background:#f8f9fa;';
   nameTh.textContent = page.name;
   nameRow.append(nameTh);
   ib.append(nameRow);
@@ -1477,15 +1477,15 @@ function renderWikiPage(pages, hash) {
     const photoRow = document.createElement('tr');
     const photoTd = document.createElement('td');
     photoTd.colSpan = 2;
-    photoTd.style.cssText = 'text-align:center;padding:8px 6px;';
+    photoTd.style.cssText = 'text-align:center;padding:4px;border-bottom:none;';
     const img = document.createElement('img');
     img.src = page.photo;
     img.alt = page.name;
-    img.style.cssText = 'max-width:220px;width:100%;';
+    img.style.cssText = 'width:250px;max-width:100%;';
     photoTd.append(img);
     if (page.photoCaption) {
       const cap = document.createElement('div');
-      cap.style.cssText = 'font-size:11px;color:#54595d;margin-top:4px;';
+      cap.style.cssText = 'font-size:12px;color:#54595d;margin-top:2px;';
       cap.textContent = page.photoCaption;
       photoTd.append(cap);
     }
@@ -1499,10 +1499,10 @@ function renderWikiPage(pages, hash) {
       const titleRow = document.createElement('tr');
       const titleTd = document.createElement('td');
       titleTd.colSpan = 2;
-      titleTd.style.cssText = 'text-align:center;padding:6px;background:#cadceb;font-weight:700;font-size:13px;border-top:1px solid #a2a9b1;';
+      titleTd.style.cssText = 'text-align:center;padding:4px 4px;background:#b0c4de;font-weight:700;font-size:14px;border-bottom:none;';
       const titleLink = document.createElement('span');
       titleLink.textContent = office.title;
-      titleLink.style.cssText = 'color:#0645ad;cursor:pointer;';
+      titleLink.style.cssText = 'color:#0645ad;';
       titleTd.append(titleLink);
       titleRow.append(titleTd);
       ib.append(titleRow);
@@ -1511,11 +1511,16 @@ function renderWikiPage(pages, hash) {
       const subRow = document.createElement('tr');
       const subTd = document.createElement('td');
       subTd.colSpan = 2;
-      subTd.style.cssText = 'text-align:center;padding:2px 6px;font-size:12px;font-style:italic;color:#54595d;';
-      subTd.textContent = office.subtitle || '';
+      subTd.style.cssText = 'text-align:center;padding:2px 8px;font-size:13px;border-bottom:none;';
+      if (office.subtitle) {
+        const subSpan = document.createElement('div');
+        subSpan.style.cssText = 'font-style:italic;color:#54595d;';
+        subSpan.textContent = office.subtitle;
+        subTd.append(subSpan);
+      }
       if (office.dates) {
         const dateDiv = document.createElement('div');
-        dateDiv.style.cssText = 'font-style:normal;font-size:12px;color:#222;';
+        dateDiv.style.cssText = 'font-size:13px;color:#202122;';
         dateDiv.textContent = office.dates;
         subTd.append(dateDiv);
       }
@@ -1526,13 +1531,13 @@ function renderWikiPage(pages, hash) {
       if (!f.label && !f.value) return;
       const fRow = document.createElement('tr');
       const fTh = document.createElement('th');
-      fTh.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap;width:40%;';
+      fTh.style.cssText = 'text-align:left;padding:4px 8px;font-size:14px;font-weight:700;vertical-align:top;width:40%;border-bottom:none;';
       fTh.textContent = f.label;
       const fTd = document.createElement('td');
-      fTd.style.cssText = 'padding:2px 6px;font-size:12px;';
+      fTd.style.cssText = 'padding:4px 8px;font-size:14px;border-bottom:none;';
       const valSpan = document.createElement('span');
       valSpan.textContent = f.value;
-      valSpan.style.cssText = 'color:#0645ad;cursor:pointer;';
+      valSpan.style.cssText = 'color:#0645ad;';
       fTd.append(valSpan);
       fRow.append(fTh, fTd);
       ib.append(fRow);
@@ -1552,7 +1557,7 @@ function renderWikiPage(pages, hash) {
     const detailHeader = document.createElement('tr');
     const detailTd = document.createElement('td');
     detailTd.colSpan = 2;
-    detailTd.style.cssText = 'text-align:center;padding:6px;background:#cadceb;font-weight:700;font-size:13px;border-top:1px solid #a2a9b1;';
+    detailTd.style.cssText = 'text-align:center;padding:4px 4px;background:#b0c4de;font-weight:700;font-size:14px;border-bottom:none;';
     detailTd.textContent = 'Personal details';
     detailHeader.append(detailTd);
     ib.append(detailHeader);
@@ -1561,10 +1566,10 @@ function renderWikiPage(pages, hash) {
     if (!d.value) return;
     const row = document.createElement('tr');
     const th = document.createElement('th');
-    th.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap;width:40%;';
+    th.style.cssText = 'text-align:left;padding:4px 8px;font-size:14px;font-weight:700;vertical-align:top;width:40%;border-bottom:none;';
     th.textContent = d.label;
     const td = document.createElement('td');
-    td.style.cssText = 'padding:2px 6px;font-size:12px;';
+    td.style.cssText = 'padding:4px 8px;font-size:14px;border-bottom:none;';
     td.textContent = d.value;
     row.append(th, td);
     ib.append(row);
@@ -1580,7 +1585,7 @@ function renderWikiPage(pages, hash) {
     // Bold the first occurrence of the person's name
     const nameEsc = page.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     leadHtml = leadHtml.replace(new RegExp(nameEsc), `<b>${page.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</b>`);
-    leadEl.innerHTML = `<p>${leadHtml}</p>`;
+    leadEl.innerHTML = `<p style="font-size:14px;line-height:1.6">${leadHtml}</p>`;
     leadEl.hidden = false;
   } else {
     leadEl.hidden = true;
