@@ -883,6 +883,32 @@ h2 {
   gap: 20px;
 }
 
+.admin-subtabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 16px;
+}
+
+.admin-subtabs .subtab {
+  font-size: 14px;
+  padding: 8px 12px;
+  color: #888;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.admin-subtabs .subtab.active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+.admin-subtabs .subtab:hover {
+  color: #ccc;
+}
+
 .admin-panel[hidden] {
   display: none;
 }
@@ -1973,6 +1999,18 @@ h2 {
   border-spacing: 3px;
   font-size: 12px;
   font-family: sans-serif;
+}
+
+.wiki-person-infobox {
+  border-collapse: collapse;
+  border: 1px solid #a2a9b1;
+  background: #f8f9fa;
+  font-size: 12.6px;
+}
+
+.wiki-person-infobox th,
+.wiki-person-infobox td {
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .wiki-candidate-table {

@@ -49,8 +49,7 @@
       <a href="#beats" class="menu-link">beats</a>
       <a href="#art" class="menu-link">art</a>
       <a href="#clips" class="menu-link">clips</a>
-      <a href="#election" class="menu-link">election</a>
-      <a href="#census" class="menu-link">census</a>
+      <a href="#wikipedia" class="menu-link">wikipedia</a>
       <a href="#fc" class="menu-link">fc/fifa</a>
       <a href="#contact" class="menu-link">contact</a>
     </nav>
@@ -191,8 +190,95 @@
       <div class="admin-clip-list"></div>
     </section>
 
-    <!-- Election -->
-    <section id="panel-election" class="admin-panel" hidden>
+    <!-- Wikipedia -->
+    <section id="panel-wikipedia" class="admin-panel" hidden>
+      <nav class="admin-subtabs" aria-label="Wikipedia sections">
+        <a href="#wiki-pages" class="subtab active" data-subtab="wiki-pages">wiki pages</a>
+        <a href="#wiki-elections" class="subtab" data-subtab="wiki-elections">elections</a>
+        <a href="#wiki-census" class="subtab" data-subtab="wiki-census">census</a>
+      </nav>
+
+      <!-- Wiki Pages sub-panel -->
+      <div id="subtab-wiki-pages" class="subtab-panel">
+        <div class="admin-card" style="margin-bottom:16px">
+          <h2>wiki pages</h2>
+          <p class="hint">create Wikipedia-style biography pages for people.</p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+            <select id="wiki-slug-select" style="flex:1;min-width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+              <option value="">— select a wiki page —</option>
+            </select>
+            <input type="text" id="new-wiki-slug" maxlength="80" placeholder="new slug (e.g. joe-biden)" style="width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+            <button type="button" id="create-wiki-btn" class="button secondary" style="white-space:nowrap">+ create</button>
+            <button type="button" id="delete-wiki-btn" class="button secondary" style="white-space:nowrap;color:#d33">delete</button>
+          </div>
+        </div>
+        <form id="wiki-form" class="admin-card" hidden>
+          <h2>wiki page editor</h2>
+          <label class="field"><span>person's name</span>
+            <input type="text" name="name" maxlength="300" placeholder="Joe Biden">
+          </label>
+          <label class="field"><span>lead paragraph</span>
+            <textarea name="lead" maxlength="20000" rows="5" placeholder="Joseph Robinette Biden Jr. is an American retired politician who was the 46th president..."></textarea>
+          </label>
+          <label class="field"><span>blue highlight words (comma-separated)</span>
+            <input type="text" name="highlightWords" maxlength="2000" placeholder="president of the United States, Democratic Party, United States Senate">
+          </label>
+
+          <h3 style="margin-top:16px">infobox</h3>
+          <label class="field"><span>photo</span>
+            <img class="wiki-photo-preview" alt="" style="width:120px;display:none;margin-bottom:8px;">
+            <input type="file" name="photo" accept="image/jpeg,image/png,image/gif,image/webp">
+            <label class="check" hidden><input type="checkbox" name="removePhoto"> remove photo</label>
+          </label>
+          <label class="field"><span>photo caption</span>
+            <input type="text" name="photoCaption" maxlength="500" placeholder="Official portrait, 2021">
+          </label>
+
+          <h3 style="margin-top:16px">offices held</h3>
+          <p class="hint">add positions this person held — these appear as blue-header rows in the infobox.</p>
+          <div id="wiki-office-list"></div>
+          <button type="button" class="button secondary" id="add-wiki-office" style="align-self:flex-start">+ add office</button>
+
+          <h3 style="margin-top:16px">personal details</h3>
+          <div class="field-row">
+            <label class="field"><span>born (date)</span>
+              <input type="text" name="bornDate" maxlength="100" placeholder="November 20, 1942">
+            </label>
+            <label class="field"><span>born (place)</span>
+              <input type="text" name="bornPlace" maxlength="300" placeholder="Scranton, Pennsylvania, U.S.">
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>political party</span>
+              <input type="text" name="politicalParty" maxlength="200" placeholder="Democratic">
+            </label>
+            <label class="field"><span>spouse(s)</span>
+              <input type="text" name="spouses" maxlength="500" placeholder="Neilia Hunter (m. 1966; died 1972), Jill Jacobs (m. 1977)">
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>children</span>
+              <input type="text" name="children" maxlength="500" placeholder="Beau, Hunter, Naomi, Ashley">
+            </label>
+            <label class="field"><span>education</span>
+              <input type="text" name="education" maxlength="1000" placeholder="University of Delaware (BA), Syracuse University (JD)">
+            </label>
+          </div>
+
+          <h3 style="margin-top:16px">content sections</h3>
+          <div id="wiki-section-list"></div>
+          <button type="button" class="button secondary" id="add-wiki-section" style="align-self:flex-start">+ add section</button>
+
+          <div class="button-row">
+            <button type="submit" class="button">save wiki page</button>
+            <a id="wiki-view-link" href="/#wiki" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
+            <span class="status" role="status"></span>
+          </div>
+        </form>
+      </div>
+
+      <!-- Elections sub-panel -->
+      <div id="subtab-wiki-elections" class="subtab-panel" hidden>
       <div class="admin-card" style="margin-bottom:16px">
         <h2>election years</h2>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -290,10 +376,10 @@
           <span class="status" role="status"></span>
         </div>
       </form>
-    </section>
+      </div>
 
-    <!-- Census -->
-    <section id="panel-census" class="admin-panel" hidden>
+      <!-- Census sub-panel -->
+      <div id="subtab-wiki-census" class="subtab-panel" hidden>
       <div class="admin-card" style="margin-bottom:16px">
         <h2>electoral vote reapportionment</h2>
         <p class="hint">manage census-based electoral vote allocations. each census applies to elections after that year (e.g. 2020 census → 2024, 2028 elections). total must equal 538.</p>
@@ -316,6 +402,7 @@
           <button type="button" id="save-census-btn" class="button">save census</button>
           <span id="census-status" class="status" role="status"></span>
         </div>
+      </div>
       </div>
     </section>
 

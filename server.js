@@ -41,6 +41,7 @@ const DEFAULT_CONTENT = {
   clips: [],
   elections: {},
   censusData: {},
+  wikiPages: {},
 };
 
 const CENSUS_2020 = {AL:9,AK:3,AZ:11,AR:6,CA:54,CO:10,CT:7,DE:3,FL:30,GA:16,HI:4,ID:4,IL:19,IN:11,IA:6,KS:6,KY:8,LA:8,ME:4,MD:10,MA:11,MI:15,MN:10,MS:6,MO:10,MT:4,NE:5,NV:6,NH:4,NJ:14,NM:5,NY:28,NC:16,ND:3,OH:17,OK:7,OR:8,PA:19,RI:4,SC:9,SD:3,TN:11,TX:40,UT:6,VT:3,VA:13,WA:12,WV:4,WI:10,WY:3,DC:3};
@@ -103,6 +104,11 @@ function loadContent() {
     if (saved.censusData && typeof saved.censusData === 'object') {
       for (const [year, data] of Object.entries(saved.censusData)) {
         if (data && typeof data === 'object') content.censusData[year] = data;
+      }
+    }
+    if (saved.wikiPages && typeof saved.wikiPages === 'object') {
+      for (const [slug, page] of Object.entries(saved.wikiPages)) {
+        if (page && typeof page === 'object') content.wikiPages[slug] = page;
       }
     }
   } catch {}
@@ -869,6 +875,69 @@ app.delete('/api/admin/census/:year', requireAdminApi, async (req, res) => {
   const year = req.params.year.replace(/\D/g, '').slice(0, 4);
   if (!content.censusData[year]) return res.status(404).json({ error: 'not found' });
   delete content.censusData[year];
+  await saveContent();
+  res.json(content);
+});
+
+// ---------- Wiki Pages ----------
+
+app.put('/api/admin/wiki/:slug', requireAdminApi, upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'officeImage', maxCount: 10 },
+]), async (req, res) => {
+  const slug = req.params.slug.replace(/[^a-z0-9_-]/gi, '').toLowerCase().slice(0, 80);
+  if (!slug) return res.status(400).json({ error: 'invalid slug' });
+  const body = req.body || {};
+  const existing = content.wikiPages[slug] || {};
+  const oldPhoto = existing.photo;
+
+  const offices = JSON.parse(body.offices || '[]').slice(0, 20).map(o => ({
+    title: text(o.title, 300),
+    subtitle: text(o.subtitle, 200),
+    dates: text(o.dates, 200),
+    fields: (o.fields || []).slice(0, 20).map(f => ({
+      label: text(f.label, 100),
+      value: text(f.value, 300),
+    })),
+  }));
+
+  const sections = JSON.parse(body.sections || '[]').slice(0, 30).map(s => ({
+    heading: text(s.heading, 300),
+    text: text(s.text, 50000),
+  }));
+
+  let photo = existing.photo || '';
+  if (req.files?.photo?.[0]) photo = fileUrl(req.files.photo[0]);
+  else if (body.keptPhoto) photo = body.keptPhoto;
+  else if (body.removePhoto === 'true') photo = '';
+
+  content.wikiPages[slug] = {
+    name: text(body.name, 300),
+    photoCaption: text(body.photoCaption, 500),
+    photo,
+    lead: text(body.lead, 20000),
+    highlightWords: text(body.highlightWords, 2000),
+    bornDate: text(body.bornDate, 100),
+    bornPlace: text(body.bornPlace, 300),
+    politicalParty: text(body.politicalParty, 200),
+    spouses: text(body.spouses, 500),
+    children: text(body.children, 500),
+    education: text(body.education, 1000),
+    offices,
+    sections,
+  };
+  await saveContent();
+  if (oldPhoto && oldPhoto !== photo) await removeUpload(oldPhoto);
+  await removeRequestFiles(req, [photo]);
+  res.json(content);
+});
+
+app.delete('/api/admin/wiki/:slug', requireAdminApi, async (req, res) => {
+  const slug = req.params.slug.replace(/[^a-z0-9_-]/gi, '').toLowerCase().slice(0, 80);
+  const page = content.wikiPages[slug];
+  if (!page) return res.status(404).json({ error: 'not found' });
+  if (page.photo) await removeUpload(page.photo);
+  delete content.wikiPages[slug];
   await saveContent();
   res.json(content);
 });

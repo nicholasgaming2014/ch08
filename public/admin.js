@@ -4,17 +4,29 @@ let content = null;
 
 // ---------- Tabs ----------
 
-const TABS = ['home', 'beats', 'art', 'clips', 'election', 'census', 'fc', 'contact'];
+const TABS = ['home', 'beats', 'art', 'clips', 'wikipedia', 'fc', 'contact'];
 const tabLinks = document.querySelectorAll('.admin-tabs .menu-link');
 
 function showTab() {
-  const id = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  let id = location.hash.slice(1);
+  if (id === 'election' || id === 'census') id = 'wikipedia';
+  if (!TABS.includes(id)) id = 'home';
   TABS.forEach(tab => document.getElementById('panel-' + tab).hidden = tab !== id);
   tabLinks.forEach(l => l.classList.toggle('active', l.hash === '#' + id));
 }
 
 window.addEventListener('hashchange', showTab);
 showTab();
+
+// Subtab switching within wikipedia panel
+document.querySelectorAll('.admin-subtabs .subtab').forEach(tab => {
+  tab.addEventListener('click', e => {
+    e.preventDefault();
+    const target = tab.dataset.subtab;
+    document.querySelectorAll('.admin-subtabs .subtab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.subtab-panel').forEach(p => p.hidden = p.id !== 'subtab-' + target);
+  });
+});
 
 // ---------- Helpers ----------
 
@@ -1295,6 +1307,224 @@ if (saveCensusBtn) {
   });
 }
 
+// ---------- Wiki Pages ----------
+
+const wikiSlugSelect = document.getElementById('wiki-slug-select');
+const newWikiSlug = document.getElementById('new-wiki-slug');
+const createWikiBtn = document.getElementById('create-wiki-btn');
+const deleteWikiBtn = document.getElementById('delete-wiki-btn');
+const wikiForm = document.getElementById('wiki-form');
+const wikiOfficeList = document.getElementById('wiki-office-list');
+const wikiSectionList = document.getElementById('wiki-section-list');
+let currentWikiSlug = '';
+
+function populateWikiSelect(pages) {
+  if (!wikiSlugSelect) return;
+  const slugs = Object.keys(pages || {}).sort();
+  wikiSlugSelect.innerHTML = '<option value="">— select a wiki page —</option>';
+  slugs.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = pages[s].name || s;
+    wikiSlugSelect.append(opt);
+  });
+  if (currentWikiSlug && pages[currentWikiSlug]) {
+    wikiSlugSelect.value = currentWikiSlug;
+  }
+}
+
+function addWikiOfficeRow(office = {}) {
+  const row = document.createElement('div');
+  row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px;';
+  row.innerHTML = `
+    <div class="field-row">
+      <label class="field"><span>office title</span><input type="text" data-key="title" maxlength="300" placeholder="46th President of the United States"></label>
+      <label class="field"><span>subtitle</span><input type="text" data-key="subtitle" maxlength="200" placeholder="In office"></label>
+    </div>
+    <label class="field"><span>dates</span><input type="text" data-key="dates" maxlength="200" placeholder="January 20, 2021 – January 20, 2025"></label>
+    <div class="field"><span>fields (key-value pairs below the office)</span>
+      <div class="wiki-office-fields"></div>
+      <button type="button" class="button secondary add-office-field" style="align-self:flex-start;font-size:12px">+ add field</button>
+    </div>
+    <button type="button" class="button danger remove-office" style="align-self:flex-end;font-size:12px">remove office</button>`;
+  row.querySelector('[data-key="title"]').value = office.title || '';
+  row.querySelector('[data-key="subtitle"]').value = office.subtitle || '';
+  row.querySelector('[data-key="dates"]').value = office.dates || '';
+  const fieldsList = row.querySelector('.wiki-office-fields');
+  (office.fields || []).forEach(f => addWikiOfficeField(fieldsList, f));
+  row.querySelector('.add-office-field').addEventListener('click', () => addWikiOfficeField(fieldsList));
+  row.querySelector('.remove-office').addEventListener('click', () => row.remove());
+  wikiOfficeList.append(row);
+}
+
+function addWikiOfficeField(container, field = {}) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px;';
+  row.innerHTML = `
+    <input type="text" data-key="label" maxlength="100" placeholder="Label (e.g. Vice President)" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <input type="text" data-key="value" maxlength="300" placeholder="Value (e.g. Kamala Harris)" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <button type="button" class="button danger" style="font-size:11px;padding:4px 8px">×</button>`;
+  row.querySelector('[data-key="label"]').value = field.label || '';
+  row.querySelector('[data-key="value"]').value = field.value || '';
+  row.querySelector('.button.danger').addEventListener('click', () => row.remove());
+  container.append(row);
+}
+
+function addWikiSectionRow(section = {}) {
+  const row = document.createElement('div');
+  row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px;';
+  row.innerHTML = `
+    <label class="field"><span>heading</span><input type="text" data-key="heading" maxlength="300"></label>
+    <label class="field"><span>text</span><textarea data-key="text" rows="4" maxlength="50000"></textarea></label>
+    <button type="button" class="button danger remove-section" style="align-self:flex-end;font-size:12px">remove section</button>`;
+  row.querySelector('[data-key="heading"]').value = section.heading || '';
+  row.querySelector('[data-key="text"]').value = section.text || '';
+  row.querySelector('.remove-section').addEventListener('click', () => row.remove());
+  wikiSectionList.append(row);
+}
+
+function fillWikiPage(page) {
+  if (!wikiForm) return;
+  wikiForm.name.value = page.name || '';
+  wikiForm.lead.value = page.lead || '';
+  wikiForm.highlightWords.value = page.highlightWords || '';
+  wikiForm.photoCaption.value = page.photoCaption || '';
+  wikiForm.bornDate.value = page.bornDate || '';
+  wikiForm.bornPlace.value = page.bornPlace || '';
+  wikiForm.politicalParty.value = page.politicalParty || '';
+  wikiForm.spouses.value = page.spouses || '';
+  wikiForm.children.value = page.children || '';
+  wikiForm.education.value = page.education || '';
+  const preview = wikiForm.querySelector('.wiki-photo-preview');
+  const removeCheck = wikiForm.querySelector('[name="removePhoto"]');
+  if (page.photo) {
+    preview.src = page.photo;
+    preview.style.display = 'block';
+    removeCheck.parentElement.hidden = false;
+  } else {
+    preview.style.display = 'none';
+    removeCheck.parentElement.hidden = true;
+  }
+  removeCheck.checked = false;
+  wikiForm._keptPhoto = page.photo || '';
+  wikiOfficeList.innerHTML = '';
+  (page.offices || []).forEach(o => addWikiOfficeRow(o));
+  wikiSectionList.innerHTML = '';
+  (page.sections || []).forEach(s => addWikiSectionRow(s));
+  const viewLink = document.getElementById('wiki-view-link');
+  if (viewLink) viewLink.href = `/#wiki-${currentWikiSlug}`;
+  wikiForm.hidden = false;
+}
+
+function selectWikiPage(slug) {
+  currentWikiSlug = slug;
+  if (!slug || !content.wikiPages?.[slug]) {
+    wikiForm.hidden = true;
+    return;
+  }
+  fillWikiPage(content.wikiPages[slug]);
+}
+
+if (wikiSlugSelect) {
+  wikiSlugSelect.addEventListener('change', () => selectWikiPage(wikiSlugSelect.value));
+}
+
+if (createWikiBtn) {
+  createWikiBtn.addEventListener('click', () => {
+    const slug = newWikiSlug.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 80);
+    if (!slug) return;
+    if (!content.wikiPages) content.wikiPages = {};
+    if (content.wikiPages[slug]) { wikiSlugSelect.value = slug; selectWikiPage(slug); return; }
+    content.wikiPages[slug] = { name: '', lead: '', offices: [], sections: [] };
+    populateWikiSelect(content.wikiPages);
+    wikiSlugSelect.value = slug;
+    selectWikiPage(slug);
+    newWikiSlug.value = '';
+  });
+}
+
+if (deleteWikiBtn) {
+  deleteWikiBtn.addEventListener('click', async () => {
+    if (!currentWikiSlug) return;
+    if (!confirm(`Delete wiki page "${currentWikiSlug}"? This cannot be undone.`)) return;
+    try {
+      content = await send('DELETE', `/api/admin/wiki/${currentWikiSlug}`);
+      currentWikiSlug = '';
+      populateWikiSelect(content.wikiPages || {});
+      wikiForm.hidden = true;
+    } catch (err) { alert(err.message); }
+  });
+}
+
+if (document.getElementById('add-wiki-office')) {
+  document.getElementById('add-wiki-office').addEventListener('click', () => addWikiOfficeRow());
+}
+
+if (document.getElementById('add-wiki-section')) {
+  document.getElementById('add-wiki-section').addEventListener('click', () => addWikiSectionRow());
+}
+
+if (wikiForm) {
+  wikiForm.querySelector('[name="photo"]').addEventListener('change', function() {
+    if (this.files[0]) {
+      const preview = wikiForm.querySelector('.wiki-photo-preview');
+      preview.src = URL.createObjectURL(this.files[0]);
+      preview.style.display = 'block';
+    }
+  });
+
+  wikiForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!currentWikiSlug) { setStatus(wikiForm, 'select a page first', true); return; }
+    const data = new FormData();
+    data.append('name', wikiForm.name.value);
+    data.append('lead', wikiForm.lead.value);
+    data.append('highlightWords', wikiForm.highlightWords.value);
+    data.append('photoCaption', wikiForm.photoCaption.value);
+    data.append('bornDate', wikiForm.bornDate.value);
+    data.append('bornPlace', wikiForm.bornPlace.value);
+    data.append('politicalParty', wikiForm.politicalParty.value);
+    data.append('spouses', wikiForm.spouses.value);
+    data.append('children', wikiForm.children.value);
+    data.append('education', wikiForm.education.value);
+
+    if (wikiForm.querySelector('[name="photo"]').files[0]) {
+      data.append('photo', wikiForm.querySelector('[name="photo"]').files[0]);
+    } else if (!wikiForm.querySelector('[name="removePhoto"]').checked) {
+      data.append('keptPhoto', wikiForm._keptPhoto || '');
+    } else {
+      data.append('removePhoto', 'true');
+    }
+
+    const offices = [...wikiOfficeList.children].map(row => ({
+      title: row.querySelector('[data-key="title"]')?.value || '',
+      subtitle: row.querySelector('[data-key="subtitle"]')?.value || '',
+      dates: row.querySelector('[data-key="dates"]')?.value || '',
+      fields: [...row.querySelectorAll('.wiki-office-fields > div')].map(f => ({
+        label: f.querySelector('[data-key="label"]')?.value || '',
+        value: f.querySelector('[data-key="value"]')?.value || '',
+      })),
+    }));
+    data.append('offices', JSON.stringify(offices));
+
+    const sections = [...wikiSectionList.children].map(row => ({
+      heading: row.querySelector('[data-key="heading"]')?.value || '',
+      text: row.querySelector('[data-key="text"]')?.value || '',
+    }));
+    data.append('sections', JSON.stringify(sections));
+
+    setStatus(wikiForm, 'saving...');
+    try {
+      content = await send('PUT', `/api/admin/wiki/${currentWikiSlug}`, data);
+      fillWikiPage(content.wikiPages[currentWikiSlug] || {});
+      populateWikiSelect(content.wikiPages || {});
+      setStatus(wikiForm, 'saved ✓');
+    } catch (err) {
+      setStatus(wikiForm, err.message, true);
+    }
+  });
+}
+
 // ---------- fc/fifa stats ----------
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
@@ -1793,5 +2023,6 @@ fetch('/api/content', { cache: 'no-store' })
     renderClipsAdmin(content.clips || []);
     populateElectionSelect(content.elections || {});
     populateCensusSelect(content.censusData || {});
+    populateWikiSelect(content.wikiPages || {});
     renderFcAdmin();
   });

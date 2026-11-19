@@ -1,13 +1,13 @@
 // Public site: page switching, content from /api/content, and the beat player.
-const PAGES = ['home', 'beats', 'art', 'clips', 'election', 'fc', 'contact'];
+const PAGES = ['home', 'beats', 'art', 'clips', 'election', 'wiki', 'fc', 'contact'];
 const pages = document.querySelectorAll('.page');
 const pageLinks = document.querySelectorAll('.menu-link[href^="/#"]');
 
 function showPage() {
   const hash = location.hash.slice(1);
   let id = PAGES.includes(hash) ? hash : 'home';
-  // Handle #election-YYYY routes
   if (hash.startsWith('election-')) id = 'election';
+  if (hash.startsWith('wiki-')) id = 'wiki';
   pages.forEach(p => p.hidden = p.id !== id);
   pageLinks.forEach(l => {
     const linkId = l.hash.slice(1);
@@ -15,6 +15,7 @@ function showPage() {
   });
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
   if (id === 'election' && window._electionsData) renderElectionPage(window._electionsData, hash, window._censusData);
+  if (id === 'wiki' && window._wikiPages) renderWikiPage(window._wikiPages, hash);
 }
 
 window.addEventListener('hashchange', showPage);
@@ -1349,6 +1350,210 @@ function renderBeats(beats, pictures = {}) {
 
 window.addEventListener('resize', () => players.forEach(p => p.draw()));
 
+// ---------- Wiki Pages ----------
+
+function renderWikiPage(pages, hash) {
+  const section = document.getElementById('wiki');
+  if (!section) return;
+  if (!hash.startsWith('wiki-')) return;
+  const slug = hash.slice('wiki-'.length);
+  const page = pages[slug];
+  if (!page || !page.name) {
+    section.querySelector('.wiki-body').innerHTML = '<p>Page not found.</p>';
+    return;
+  }
+
+  const title = section.querySelector('.wiki-title');
+  title.textContent = page.name;
+
+  const infoboxWrap = section.querySelector('.wiki-infobox-wrap');
+  infoboxWrap.hidden = false;
+  infoboxWrap.style.width = '';
+
+  const ib = section.querySelector('.wiki-person-infobox');
+  ib.innerHTML = '';
+
+  // Name header
+  const nameRow = document.createElement('tr');
+  const nameTh = document.createElement('th');
+  nameTh.colSpan = 2;
+  nameTh.style.cssText = 'text-align:center;font-size:17px;font-weight:700;padding:8px 6px;border-bottom:1px solid #a2a9b1;';
+  nameTh.textContent = page.name;
+  nameRow.append(nameTh);
+  ib.append(nameRow);
+
+  // Photo
+  if (page.photo) {
+    const photoRow = document.createElement('tr');
+    const photoTd = document.createElement('td');
+    photoTd.colSpan = 2;
+    photoTd.style.cssText = 'text-align:center;padding:8px 6px;';
+    const img = document.createElement('img');
+    img.src = page.photo;
+    img.alt = page.name;
+    img.style.cssText = 'max-width:220px;width:100%;';
+    photoTd.append(img);
+    if (page.photoCaption) {
+      const cap = document.createElement('div');
+      cap.style.cssText = 'font-size:11px;color:#54595d;margin-top:4px;';
+      cap.textContent = page.photoCaption;
+      photoTd.append(cap);
+    }
+    photoRow.append(photoTd);
+    ib.append(photoRow);
+  }
+
+  // Offices
+  (page.offices || []).forEach(office => {
+    if (office.title) {
+      const titleRow = document.createElement('tr');
+      const titleTd = document.createElement('td');
+      titleTd.colSpan = 2;
+      titleTd.style.cssText = 'text-align:center;padding:6px;background:#cadceb;font-weight:700;font-size:13px;border-top:1px solid #a2a9b1;';
+      const titleLink = document.createElement('span');
+      titleLink.textContent = office.title;
+      titleLink.style.cssText = 'color:#0645ad;cursor:pointer;';
+      titleTd.append(titleLink);
+      titleRow.append(titleTd);
+      ib.append(titleRow);
+    }
+    if (office.subtitle || office.dates) {
+      const subRow = document.createElement('tr');
+      const subTd = document.createElement('td');
+      subTd.colSpan = 2;
+      subTd.style.cssText = 'text-align:center;padding:2px 6px;font-size:12px;font-style:italic;color:#54595d;';
+      subTd.textContent = office.subtitle || '';
+      if (office.dates) {
+        const dateDiv = document.createElement('div');
+        dateDiv.style.cssText = 'font-style:normal;font-size:12px;color:#222;';
+        dateDiv.textContent = office.dates;
+        subTd.append(dateDiv);
+      }
+      subRow.append(subTd);
+      ib.append(subRow);
+    }
+    (office.fields || []).forEach(f => {
+      if (!f.label && !f.value) return;
+      const fRow = document.createElement('tr');
+      const fTh = document.createElement('th');
+      fTh.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap;width:40%;';
+      fTh.textContent = f.label;
+      const fTd = document.createElement('td');
+      fTd.style.cssText = 'padding:2px 6px;font-size:12px;';
+      const valSpan = document.createElement('span');
+      valSpan.textContent = f.value;
+      valSpan.style.cssText = 'color:#0645ad;cursor:pointer;';
+      fTd.append(valSpan);
+      fRow.append(fTh, fTd);
+      ib.append(fRow);
+    });
+  });
+
+  // Personal details
+  const details = [
+    { label: 'Born', value: [page.bornDate, page.bornPlace].filter(Boolean).join(', ') },
+    { label: 'Political party', value: page.politicalParty },
+    { label: 'Spouse(s)', value: page.spouses },
+    { label: 'Children', value: page.children },
+    { label: 'Education', value: page.education },
+  ];
+  const hasDetails = details.some(d => d.value);
+  if (hasDetails) {
+    const detailHeader = document.createElement('tr');
+    const detailTd = document.createElement('td');
+    detailTd.colSpan = 2;
+    detailTd.style.cssText = 'text-align:center;padding:6px;background:#cadceb;font-weight:700;font-size:13px;border-top:1px solid #a2a9b1;';
+    detailTd.textContent = 'Personal details';
+    detailHeader.append(detailTd);
+    ib.append(detailHeader);
+  }
+  details.forEach(d => {
+    if (!d.value) return;
+    const row = document.createElement('tr');
+    const th = document.createElement('th');
+    th.style.cssText = 'text-align:left;padding:2px 6px;font-size:12px;font-weight:700;vertical-align:top;white-space:nowrap;width:40%;';
+    th.textContent = d.label;
+    const td = document.createElement('td');
+    td.style.cssText = 'padding:2px 6px;font-size:12px;';
+    td.textContent = d.value;
+    row.append(th, td);
+    ib.append(row);
+  });
+
+  // Lead paragraph
+  const leadEl = section.querySelector('.wiki-lead');
+  if (page.lead) {
+    let leadHtml = page.lead.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (page.highlightWords) {
+      leadHtml = applyHighlightWords(leadHtml, page.highlightWords);
+    }
+    // Bold the first occurrence of the person's name
+    const nameEsc = page.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    leadHtml = leadHtml.replace(new RegExp(nameEsc), `<b>${page.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</b>`);
+    leadEl.innerHTML = `<p>${leadHtml}</p>`;
+    leadEl.hidden = false;
+  } else {
+    leadEl.hidden = true;
+  }
+
+  // TOC
+  const tocEl = section.querySelector('.wiki-toc');
+  const sections = page.sections || [];
+  if (sections.length > 1) {
+    tocEl.innerHTML = '<div class="wiki-toc-title">Contents</div>';
+    const ol = document.createElement('ol');
+    ol.className = 'wiki-toc-list';
+    sections.forEach((s, i) => {
+      if (!s.heading) return;
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = `#wiki-sec-${i}`;
+      a.textContent = s.heading;
+      a.style.cssText = 'color:#0645ad;text-decoration:none;';
+      li.append(a);
+      ol.append(li);
+    });
+    tocEl.append(ol);
+    tocEl.hidden = false;
+  } else {
+    tocEl.hidden = true;
+  }
+
+  // Content sections
+  const sectionsDiv = section.querySelector('.wiki-sections');
+  sectionsDiv.innerHTML = '';
+  sections.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'wiki-section';
+    div.id = `wiki-sec-${i}`;
+    if (s.heading) {
+      const h = document.createElement('h2');
+      h.className = 'wiki-section-heading';
+      h.textContent = s.heading;
+      div.append(h);
+    }
+    if (s.text) {
+      let textHtml = s.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+      textHtml = textHtml.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+      const p = document.createElement('div');
+      p.innerHTML = `<p>${textHtml}</p>`;
+      div.append(p);
+    }
+    sectionsDiv.append(div);
+  });
+
+  // Hide election-specific elements
+  section.querySelector('.wiki-nominee-gallery').innerHTML = '';
+  section.querySelector('.wiki-election-nav').hidden = true;
+  section.querySelector('.wiki-ec-info').hidden = true;
+  section.querySelector('.wiki-map').hidden = true;
+  section.querySelector('.wiki-map-caption').hidden = true;
+  section.querySelector('.wiki-president-info').hidden = true;
+  section.querySelector('.wiki-turnout-row').hidden = true;
+  section.querySelector('.wiki-candidate-table').hidden = true;
+}
+
 fetch('/api/content')
   .then(res => res.json())
   .then(content => {
@@ -1359,7 +1564,9 @@ fetch('/api/content')
     renderClips(window._clipData);
     window._electionsData = content.elections || {};
     window._censusData = content.censusData || {};
+    window._wikiPages = content.wikiPages || {};
     renderElectionPage(window._electionsData, location.hash.slice(1));
+    renderWikiPage(window._wikiPages, location.hash.slice(1));
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);
