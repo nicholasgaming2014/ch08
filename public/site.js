@@ -8,14 +8,21 @@ function showPage() {
   let id = PAGES.includes(hash) ? hash : 'home';
   if (hash.startsWith('election-')) id = 'election';
   if (hash.startsWith('wiki-')) id = 'wiki';
+  if (id === 'election' && !hash.startsWith('election-')) id = 'wiki';
   pages.forEach(p => p.hidden = p.id !== id);
   pageLinks.forEach(l => {
     const linkId = l.hash.slice(1);
-    l.classList.toggle('active', linkId === id || (id === 'election' && linkId === 'election'));
+    l.classList.toggle('active', linkId === id || (id === 'election' && linkId === 'wiki') || (id === 'wiki' && linkId === 'wiki'));
   });
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
   if (id === 'election' && window._electionsData) renderElectionPage(window._electionsData, hash, window._censusData);
-  if (id === 'wiki' && window._wikiPages) renderWikiPage(window._wikiPages, hash);
+  if (id === 'wiki') {
+    if (hash.startsWith('wiki-')) {
+      if (window._wikiPages) renderWikiPage(window._wikiPages, hash);
+    } else {
+      renderWikiIndex(window._wikiPages || {}, window._electionsData || {});
+    }
+  }
 }
 
 window.addEventListener('hashchange', showPage);
@@ -1364,6 +1371,77 @@ window.addEventListener('resize', () => players.forEach(p => p.draw()));
 
 // ---------- Wiki Pages ----------
 
+function renderWikiIndex(pages, elections) {
+  const section = document.getElementById('wiki');
+  if (!section) return;
+  const body = section.querySelector('.wiki-body');
+  const title = section.querySelector('.wiki-title');
+  title.textContent = 'Wikipedia';
+  section.querySelector('.wiki-from').textContent = 'From Wikipedia, the free encyclopedia';
+  section.querySelector('.wiki-infobox-wrap').hidden = true;
+  section.querySelector('.wiki-lead').hidden = true;
+  section.querySelector('.wiki-toc').hidden = true;
+  const sectionsDiv = section.querySelector('.wiki-sections');
+  sectionsDiv.innerHTML = '';
+
+  const pageSlugs = Object.keys(pages || {}).sort();
+  const electionSlugs = Object.keys(elections || {}).sort((a, b) => b.localeCompare(a));
+
+  if (pageSlugs.length) {
+    const h = document.createElement('h2');
+    h.id = 'wiki-index-pages';
+    h.className = 'wiki-section-heading';
+    h.textContent = 'Pages';
+    sectionsDiv.append(h);
+    const list = document.createElement('div');
+    list.className = 'wiki-section';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    pageSlugs.forEach(slug => {
+      const page = pages[slug];
+      const p = document.createElement('p');
+      const a = document.createElement('a');
+      a.href = `#wiki-${slug}`;
+      a.textContent = page.name || slug;
+      a.style.color = '#0645ad';
+      p.append(a);
+      list.append(p);
+    });
+    sectionsDiv.append(list);
+  }
+
+  if (electionSlugs.length) {
+    const h = document.createElement('h2');
+    h.id = 'wiki-index-elections';
+    h.className = 'wiki-section-heading';
+    h.textContent = 'Elections';
+    sectionsDiv.append(h);
+    const list = document.createElement('div');
+    list.className = 'wiki-section';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    electionSlugs.forEach(slug => {
+      const e = elections[slug];
+      const p = document.createElement('p');
+      const a = document.createElement('a');
+      a.href = `#election-${slug}`;
+      a.textContent = e.title || `${slug} United States presidential election`;
+      a.style.color = '#0645ad';
+      p.append(a);
+      if (e.electionDate) {
+        const span = document.createElement('span');
+        span.textContent = ` — ${e.electionDate}`;
+        span.style.color = '#54595d';
+        p.append(span);
+      }
+      list.append(p);
+    });
+    sectionsDiv.append(list);
+  }
+
+  if (!pageSlugs.length && !electionSlugs.length) {
+    sectionsDiv.innerHTML = '<p class="empty-note">no wiki pages yet</p>';
+  }
+}
+
 function renderWikiPage(pages, hash) {
   const section = document.getElementById('wiki');
   if (!section) return;
@@ -1579,7 +1657,9 @@ fetch('/api/content')
     window._wikiPages = content.wikiPages || {};
     window._highlightLinks = content.highlightLinks || {};
     renderElectionPage(window._electionsData, location.hash.slice(1));
-    renderWikiPage(window._wikiPages, location.hash.slice(1));
+    const h = location.hash.slice(1);
+    if (h.startsWith('wiki-')) renderWikiPage(window._wikiPages, h);
+    else if (h === 'wiki' || h === '' || !h.startsWith('election-')) renderWikiIndex(window._wikiPages, window._electionsData);
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);
