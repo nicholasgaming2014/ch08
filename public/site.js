@@ -829,8 +829,8 @@ function renderElection(election, activeCensus) {
   const presInfo = section.querySelector('.wiki-president-info');
   if (election.presidentBefore || election.electedPresident) {
     presInfo.innerHTML = `<div class="wiki-pres-row">
-      <div class="wiki-pres-col"><span class="wiki-pres-label">President before election</span> <span class="wiki-pres-name">${election.presidentBefore || ''}</span> <span class="wiki-pres-party">${election.presidentBeforeParty || ''}</span></div>
-      <div class="wiki-pres-col wiki-pres-right"><span class="wiki-pres-label">Elected President</span> <span class="wiki-pres-name">${election.electedPresident || ''}</span> <span class="wiki-pres-party">${election.electedPresidentParty || ''}</span></div>
+      <div class="wiki-pres-col"><div class="wiki-pres-label">President before election</div><div class="wiki-pres-name">${election.presidentBefore || ''}</div><div class="wiki-pres-party">${election.presidentBeforeParty || ''}</div></div>
+      <div class="wiki-pres-col wiki-pres-right"><div class="wiki-pres-label">Elected President</div><div class="wiki-pres-name">${election.electedPresident || ''}</div><div class="wiki-pres-party">${election.electedPresidentParty || ''}</div></div>
     </div>`;
     presInfo.hidden = false;
   } else {
