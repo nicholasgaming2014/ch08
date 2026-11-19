@@ -1370,6 +1370,21 @@ function addWikiOfficeField(container, field = {}) {
   container.append(row);
 }
 
+const wikiEducationList = document.getElementById('wiki-education-list');
+
+function addWikiEducationRow(edu = {}) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px;';
+  row.innerHTML = `
+    <input type="text" data-key="school" maxlength="300" placeholder="University / College" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <input type="text" data-key="degree" maxlength="300" placeholder="Degree (e.g. BA, JD)" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <button type="button" class="button danger" style="font-size:11px;padding:4px 8px">×</button>`;
+  row.querySelector('[data-key="school"]').value = edu.school || '';
+  row.querySelector('[data-key="degree"]').value = edu.degree || '';
+  row.querySelector('.button.danger').addEventListener('click', () => row.remove());
+  wikiEducationList.append(row);
+}
+
 function addWikiSectionRow(section = {}) {
   const row = document.createElement('div');
   row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px;';
@@ -1391,6 +1406,8 @@ function fillWikiPage(page) {
   wikiForm.photoCaption.value = page.photoCaption || '';
   wikiForm.bornDate.value = page.bornDate || '';
   wikiForm.bornPlace.value = page.bornPlace || '';
+  wikiForm.diedDate.value = page.diedDate || '';
+  wikiForm.diedPlace.value = page.diedPlace || '';
   wikiForm.politicalParty.value = page.politicalParty || '';
   wikiForm.spouses.value = page.spouses || '';
   wikiForm.children.value = page.children || '';
@@ -1409,6 +1426,8 @@ function fillWikiPage(page) {
   wikiForm._keptPhoto = page.photo || '';
   wikiOfficeList.innerHTML = '';
   (page.offices || []).forEach(o => addWikiOfficeRow(o));
+  wikiEducationList.innerHTML = '';
+  (page.educations || []).forEach(e => addWikiEducationRow(e));
   wikiSectionList.innerHTML = '';
   (page.sections || []).forEach(s => addWikiSectionRow(s));
   const viewLink = document.getElementById('wiki-view-link');
@@ -1460,6 +1479,10 @@ if (document.getElementById('add-wiki-office')) {
   document.getElementById('add-wiki-office').addEventListener('click', () => addWikiOfficeRow());
 }
 
+if (document.getElementById('add-wiki-education')) {
+  document.getElementById('add-wiki-education').addEventListener('click', () => addWikiEducationRow());
+}
+
 if (document.getElementById('add-wiki-section')) {
   document.getElementById('add-wiki-section').addEventListener('click', () => addWikiSectionRow());
 }
@@ -1483,10 +1506,18 @@ if (wikiForm) {
     data.append('photoCaption', wikiForm.photoCaption.value);
     data.append('bornDate', wikiForm.bornDate.value);
     data.append('bornPlace', wikiForm.bornPlace.value);
+    data.append('diedDate', wikiForm.diedDate.value);
+    data.append('diedPlace', wikiForm.diedPlace.value);
     data.append('politicalParty', wikiForm.politicalParty.value);
     data.append('spouses', wikiForm.spouses.value);
     data.append('children', wikiForm.children.value);
     data.append('education', wikiForm.education.value);
+
+    const educations = [...wikiEducationList.children].map(row => ({
+      school: row.querySelector('[data-key="school"]')?.value || '',
+      degree: row.querySelector('[data-key="degree"]')?.value || '',
+    }));
+    data.append('educations', JSON.stringify(educations));
 
     if (wikiForm.querySelector('[name="photo"]').files[0]) {
       data.append('photo', wikiForm.querySelector('[name="photo"]').files[0]);

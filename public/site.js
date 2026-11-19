@@ -1595,12 +1595,18 @@ function renderWikiPage(pages, hash) {
   });
 
   // Personal details
+  const eduEntries = (page.educations || []).filter(e => e.school);
+  const eduText = eduEntries.length
+    ? eduEntries.map(e => e.degree ? `${e.school} (${e.degree})` : e.school).join('\n')
+    : page.education || '';
+
   const details = [
-    { label: 'Born', value: [page.bornDate, page.bornPlace].filter(Boolean).join(', ') },
+    { label: 'Born', value: [page.bornDate, page.bornPlace].filter(Boolean).join('\n') },
+    { label: 'Died', value: [page.diedDate, page.diedPlace].filter(Boolean).join('\n') },
     { label: 'Political party', value: page.politicalParty },
     { label: 'Spouse(s)', value: page.spouses },
     { label: 'Children', value: page.children },
-    { label: 'Education', value: page.education },
+    { label: 'Education', value: eduText },
   ];
   const hasDetails = details.some(d => d.value);
   if (hasDetails) {
@@ -1620,7 +1626,14 @@ function renderWikiPage(pages, hash) {
     th.textContent = d.label;
     const td = document.createElement('td');
     td.style.cssText = 'padding:4px 8px;font-size:14px;border-bottom:none;';
-    td.textContent = d.value;
+    if (d.value.includes('\n')) {
+      d.value.split('\n').forEach((line, i) => {
+        if (i > 0) td.append(document.createElement('br'));
+        td.append(document.createTextNode(line));
+      });
+    } else {
+      td.textContent = d.value;
+    }
     row.append(th, td);
     ib.append(row);
   });

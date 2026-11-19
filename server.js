@@ -921,6 +921,11 @@ app.put('/api/admin/wiki/:slug', requireAdminApi, upload.fields([
   else if (body.keptPhoto) photo = body.keptPhoto;
   else if (body.removePhoto === 'true') photo = '';
 
+  const educations = JSON.parse(body.educations || '[]').slice(0, 20).map(e => ({
+    school: text(e.school, 300),
+    degree: text(e.degree, 300),
+  }));
+
   content.wikiPages[slug] = {
     name: text(body.name, 300),
     photoCaption: text(body.photoCaption, 500),
@@ -929,10 +934,13 @@ app.put('/api/admin/wiki/:slug', requireAdminApi, upload.fields([
     highlightWords: text(body.highlightWords, 2000),
     bornDate: text(body.bornDate, 100),
     bornPlace: text(body.bornPlace, 300),
+    diedDate: text(body.diedDate, 100),
+    diedPlace: text(body.diedPlace, 300),
     politicalParty: text(body.politicalParty, 200),
     spouses: text(body.spouses, 500),
     children: text(body.children, 500),
     education: text(body.education, 1000),
+    educations,
     offices,
     sections,
   };

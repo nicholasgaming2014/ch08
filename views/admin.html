@@ -251,6 +251,14 @@
             </label>
           </div>
           <div class="field-row">
+            <label class="field"><span>died (date)</span>
+              <input type="text" name="diedDate" maxlength="100" placeholder="July 4, 1826 (aged 90)">
+            </label>
+            <label class="field"><span>died (place)</span>
+              <input type="text" name="diedPlace" maxlength="300" placeholder="Quincy, Massachusetts, U.S.">
+            </label>
+          </div>
+          <div class="field-row">
             <label class="field"><span>political party</span>
               <input type="text" name="politicalParty" maxlength="200" placeholder="Democratic">
             </label>
@@ -262,10 +270,14 @@
             <label class="field"><span>children</span>
               <input type="text" name="children" maxlength="500" placeholder="Beau, Hunter, Naomi, Ashley">
             </label>
-            <label class="field"><span>education</span>
+            <label class="field"><span>education (legacy, single line)</span>
               <input type="text" name="education" maxlength="1000" placeholder="University of Delaware (BA), Syracuse University (JD)">
             </label>
           </div>
+          <h4 style="margin-top:12px">education entries</h4>
+          <p class="hint">add each school/college separately with an optional degree or note.</p>
+          <div id="wiki-education-list"></div>
+          <button type="button" class="button secondary" id="add-wiki-education" style="align-self:flex-start">+ add education</button>
 
           <h3 style="margin-top:16px">content sections</h3>
           <div id="wiki-section-list"></div>
