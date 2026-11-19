@@ -500,7 +500,7 @@ function applyHighlightWords(html, highlightWords, links) {
       const isExternal = url.startsWith('http://') || url.startsWith('https://');
       const target = isExternal ? ' target="_blank" rel="noopener"' : '';
       const href = url.startsWith('#') ? '/' + url : url;
-      return `<a href="${href}" style="color:#0645ad"${target}>${match}</a>`;
+      return `<a href="${href}" style="color:#0645ad;text-decoration:none"${target}>${match}</a>`;
     }
     return `<span style="color:#0645ad;cursor:pointer">${match}</span>`;
   });
@@ -563,6 +563,7 @@ function renderElectionIndex(elections) {
     a.href = `#election-${slug}`;
     a.textContent = e.title || slug;
     a.style.color = '#0645ad';
+    a.style.textDecoration = 'none';
     a.style.cursor = 'pointer';
     a.style.fontSize = '16px';
     p.append(a);
@@ -1424,6 +1425,7 @@ function renderWikiIndex(pages, elections) {
       a.href = `#wiki-${slug}`;
       a.textContent = page.name || slug;
       a.style.color = '#0645ad';
+      a.style.textDecoration = 'none';
       p.append(a);
       list.append(p);
     });
@@ -1446,6 +1448,7 @@ function renderWikiIndex(pages, elections) {
       a.href = `#election-${slug}`;
       a.textContent = e.title || `${slug} United States presidential election`;
       a.style.color = '#0645ad';
+      a.style.textDecoration = 'none';
       p.append(a);
       if (e.electionDate) {
         const span = document.createElement('span');
