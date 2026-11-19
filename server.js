@@ -163,7 +163,7 @@ const upload = multer({
   }),
   limits: { fileSize: 200 * 1024 * 1024, files: 40 },
   fileFilter: (req, file, cb) => {
-    const isImage = ['image', 'cover', 'images', 'screenshot', 'photo', 'collageGifs', 'mapImage', 'candidateImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
+    const isImage = ['image', 'cover', 'images', 'screenshot', 'photo', 'collageGifs', 'mapImage', 'candidateImage', 'sidebarImage', 'rowImage'].includes(file.fieldname) || SONG_COVER_FIELD.test(file.fieldname);
     const isVideo = file.fieldname === 'video';
     const allowed = file.fieldname === 'audio' ? AUDIO_TYPES : isVideo ? VIDEO_TYPES : isImage ? IMAGE_TYPES : {};
     if (allowed[file.mimetype]) return cb(null, true);
