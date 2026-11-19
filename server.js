@@ -42,6 +42,7 @@ const DEFAULT_CONTENT = {
   elections: {},
   censusData: {},
   wikiPages: {},
+  templatePages: {},
   highlightLinks: {},
 };
 
@@ -110,6 +111,11 @@ function loadContent() {
     if (saved.wikiPages && typeof saved.wikiPages === 'object') {
       for (const [slug, page] of Object.entries(saved.wikiPages)) {
         if (page && typeof page === 'object') content.wikiPages[slug] = page;
+      }
+    }
+    if (saved.templatePages && typeof saved.templatePages === 'object') {
+      for (const [slug, page] of Object.entries(saved.templatePages)) {
+        if (page && typeof page === 'object') content.templatePages[slug] = page;
       }
     }
     if (saved.highlightLinks && typeof saved.highlightLinks === 'object') {
@@ -960,6 +966,77 @@ app.put('/api/admin/highlight-links', requireAdminApi, express.json(), async (re
     if (w && u) clean[w] = u;
   }
   content.highlightLinks = clean;
+  await saveContent();
+  res.json(content);
+});
+
+// ---------- Template Pages ----------
+
+app.put('/api/admin/template/:slug', requireAdminApi, upload.fields([
+  { name: 'sidebarImage', maxCount: 1 },
+  { name: 'rowImage', maxCount: 20 },
+]), async (req, res) => {
+  const slug = req.params.slug.replace(/[^a-z0-9_-]/gi, '').toLowerCase().slice(0, 80);
+  if (!slug) return res.status(400).json({ error: 'invalid slug' });
+  const body = req.body || {};
+  const existing = content.templatePages[slug] || {};
+  const oldSidebarImage = existing.sidebarImage;
+
+  const columns = JSON.parse(body.columns || '[]').slice(0, 20).map(c => ({
+    key: text(c.key, 100),
+    label: text(c.label, 200),
+    type: ['text', 'image', 'color-bar'].includes(c.type) ? c.type : 'text',
+  }));
+
+  const rows = JSON.parse(body.rows || '[]').slice(0, 500).map(r => {
+    const row = {};
+    columns.forEach(c => { row[c.key] = text(String(r[c.key] || ''), 2000); });
+    return row;
+  });
+
+  let sidebarImage = existing.sidebarImage || '';
+  if (req.files?.sidebarImage?.[0]) sidebarImage = fileUrl(req.files.sidebarImage[0]);
+  else if (body.keptSidebarImage) sidebarImage = body.keptSidebarImage;
+  else if (body.removeSidebarImage === 'true') sidebarImage = '';
+
+  const rowImages = req.files?.rowImage || [];
+  const rowImageMap = {};
+  rowImages.forEach(f => { rowImageMap[f.originalname] = fileUrl(f); });
+
+  rows.forEach(r => {
+    columns.forEach(c => {
+      if (c.type === 'image' && rowImageMap[r[c.key]]) {
+        r[c.key] = rowImageMap[r[c.key]];
+      }
+    });
+  });
+
+  content.templatePages[slug] = {
+    title: text(body.title, 500),
+    lead: text(body.lead, 20000),
+    highlightWords: text(body.highlightWords, 2000),
+    sidebarImage,
+    sidebarCaption: text(body.sidebarCaption, 500),
+    columns,
+    rows,
+    sections: JSON.parse(body.sections || '[]').slice(0, 30).map(s => ({
+      heading: text(s.heading, 300),
+      text: text(s.text, 50000),
+    })),
+  };
+  await saveContent();
+  if (oldSidebarImage && oldSidebarImage !== sidebarImage) await removeUpload(oldSidebarImage);
+  const keepFiles = [sidebarImage, ...Object.values(rowImageMap)];
+  await removeRequestFiles(req, keepFiles);
+  res.json(content);
+});
+
+app.delete('/api/admin/template/:slug', requireAdminApi, async (req, res) => {
+  const slug = req.params.slug.replace(/[^a-z0-9_-]/gi, '').toLowerCase().slice(0, 80);
+  const page = content.templatePages[slug];
+  if (!page) return res.status(404).json({ error: 'not found' });
+  if (page.sidebarImage) await removeUpload(page.sidebarImage);
+  delete content.templatePages[slug];
   await saveContent();
   res.json(content);
 });

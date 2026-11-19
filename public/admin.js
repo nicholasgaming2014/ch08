@@ -1579,6 +1579,252 @@ if (saveHlLinksBtn) {
   });
 }
 
+// ---------- Template Pages ----------
+
+const tplSlugSelect = document.getElementById('tpl-slug-select');
+const newTplSlug = document.getElementById('new-tpl-slug');
+const createTplBtn = document.getElementById('create-tpl-btn');
+const deleteTplBtn = document.getElementById('delete-tpl-btn');
+const tplForm = document.getElementById('tpl-form');
+const tplColumnList = document.getElementById('tpl-column-list');
+const tplRowList = document.getElementById('tpl-row-list');
+const tplSectionList = document.getElementById('tpl-section-list');
+let currentTplSlug = '';
+
+function populateTplSelect(pages) {
+  if (!tplSlugSelect) return;
+  const slugs = Object.keys(pages || {}).sort();
+  tplSlugSelect.innerHTML = '<option value="">— select a template page —</option>';
+  slugs.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = pages[s].title || s;
+    tplSlugSelect.append(opt);
+  });
+  if (currentTplSlug && pages[currentTplSlug]) {
+    tplSlugSelect.value = currentTplSlug;
+  }
+}
+
+function addTplColumnRow(col = {}) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px;';
+  row.innerHTML = `
+    <input type="text" data-key="key" maxlength="100" placeholder="key (e.g. name)" style="width:120px;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <input type="text" data-key="label" maxlength="200" placeholder="Column label" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+    <select data-key="type" style="padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+      <option value="text">text</option>
+      <option value="image">image</option>
+      <option value="color-bar">color-bar</option>
+    </select>
+    <button type="button" class="button danger" style="font-size:11px;padding:4px 8px">×</button>`;
+  row.querySelector('[data-key="key"]').value = col.key || '';
+  row.querySelector('[data-key="label"]').value = col.label || '';
+  row.querySelector('[data-key="type"]').value = col.type || 'text';
+  row.querySelector('.button.danger').addEventListener('click', () => row.remove());
+  tplColumnList.append(row);
+}
+
+function getTplColumns() {
+  return [...tplColumnList.children].map(row => ({
+    key: row.querySelector('[data-key="key"]')?.value || '',
+    label: row.querySelector('[data-key="label"]')?.value || '',
+    type: row.querySelector('[data-key="type"]')?.value || 'text',
+  })).filter(c => c.key);
+}
+
+function addTplRow(rowData = {}) {
+  const columns = getTplColumns();
+  const row = document.createElement('div');
+  row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;';
+  let html = '';
+  columns.forEach(c => {
+    if (c.type === 'image') {
+      html += `<label class="field"><span>${c.label || c.key}</span><input type="file" data-col="${c.key}" accept="image/*"><input type="hidden" data-col-kept="${c.key}"></label>`;
+      if (rowData[c.key]) {
+        html += `<img src="${rowData[c.key]}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">`;
+      }
+    } else {
+      html += `<label class="field"><span>${c.label || c.key}</span><input type="text" data-col="${c.key}" maxlength="2000"></label>`;
+    }
+  });
+  html += '<button type="button" class="button danger remove-tpl-row" style="align-self:flex-end;font-size:12px">remove row</button>';
+  row.innerHTML = html;
+  columns.forEach(c => {
+    if (c.type === 'image') {
+      const hidden = row.querySelector(`[data-col-kept="${c.key}"]`);
+      if (hidden) hidden.value = rowData[c.key] || '';
+    } else {
+      const input = row.querySelector(`[data-col="${c.key}"]`);
+      if (input) input.value = rowData[c.key] || '';
+    }
+  });
+  row.querySelector('.remove-tpl-row').addEventListener('click', () => row.remove());
+  tplRowList.append(row);
+}
+
+function addTplSectionRow(section = {}) {
+  const row = document.createElement('div');
+  row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px;';
+  row.innerHTML = `
+    <label class="field"><span>heading</span><input type="text" data-key="heading" maxlength="300"></label>
+    <label class="field"><span>text</span><textarea data-key="text" rows="4" maxlength="50000"></textarea></label>
+    <button type="button" class="button danger remove-tpl-section" style="align-self:flex-end;font-size:12px">remove section</button>`;
+  row.querySelector('[data-key="heading"]').value = section.heading || '';
+  row.querySelector('[data-key="text"]').value = section.text || '';
+  row.querySelector('.remove-tpl-section').addEventListener('click', () => row.remove());
+  tplSectionList.append(row);
+}
+
+function fillTplPage(page) {
+  if (!tplForm) return;
+  tplForm.title.value = page.title || '';
+  tplForm.lead.value = page.lead || '';
+  tplForm.highlightWords.value = page.highlightWords || '';
+  tplForm.sidebarCaption.value = page.sidebarCaption || '';
+  const preview = tplForm.querySelector('.tpl-sidebar-preview');
+  const removeCheck = tplForm.querySelector('[name="removeSidebarImage"]');
+  if (page.sidebarImage) {
+    preview.src = page.sidebarImage;
+    preview.style.display = 'block';
+    removeCheck.parentElement.hidden = false;
+  } else {
+    preview.style.display = 'none';
+    removeCheck.parentElement.hidden = true;
+  }
+  removeCheck.checked = false;
+  tplForm._keptSidebarImage = page.sidebarImage || '';
+  tplColumnList.innerHTML = '';
+  (page.columns || []).forEach(c => addTplColumnRow(c));
+  tplRowList.innerHTML = '';
+  (page.rows || []).forEach(r => addTplRow(r));
+  tplSectionList.innerHTML = '';
+  (page.sections || []).forEach(s => addTplSectionRow(s));
+  const viewLink = document.getElementById('tpl-view-link');
+  if (viewLink) viewLink.href = `/#tpl-${currentTplSlug}`;
+  tplForm.hidden = false;
+}
+
+function selectTplPage(slug) {
+  currentTplSlug = slug;
+  if (!slug || !content.templatePages?.[slug]) {
+    if (tplForm) tplForm.hidden = true;
+    return;
+  }
+  fillTplPage(content.templatePages[slug]);
+}
+
+if (tplSlugSelect) {
+  tplSlugSelect.addEventListener('change', () => selectTplPage(tplSlugSelect.value));
+}
+
+if (createTplBtn) {
+  createTplBtn.addEventListener('click', () => {
+    const slug = newTplSlug.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 80);
+    if (!slug) return;
+    if (!content.templatePages) content.templatePages = {};
+    if (content.templatePages[slug]) { tplSlugSelect.value = slug; selectTplPage(slug); return; }
+    content.templatePages[slug] = { title: '', lead: '', columns: [], rows: [], sections: [] };
+    populateTplSelect(content.templatePages);
+    tplSlugSelect.value = slug;
+    selectTplPage(slug);
+    newTplSlug.value = '';
+  });
+}
+
+if (deleteTplBtn) {
+  deleteTplBtn.addEventListener('click', async () => {
+    if (!currentTplSlug) return;
+    if (!confirm(`Delete template page "${currentTplSlug}"? This cannot be undone.`)) return;
+    try {
+      content = await send('DELETE', `/api/admin/template/${currentTplSlug}`);
+      currentTplSlug = '';
+      populateTplSelect(content.templatePages || {});
+      if (tplForm) tplForm.hidden = true;
+    } catch (err) { alert(err.message); }
+  });
+}
+
+if (document.getElementById('add-tpl-column')) {
+  document.getElementById('add-tpl-column').addEventListener('click', () => addTplColumnRow());
+}
+
+if (document.getElementById('add-tpl-row')) {
+  document.getElementById('add-tpl-row').addEventListener('click', () => addTplRow());
+}
+
+if (document.getElementById('add-tpl-section')) {
+  document.getElementById('add-tpl-section').addEventListener('click', () => addTplSectionRow());
+}
+
+if (tplForm) {
+  tplForm.querySelector('[name="sidebarImage"]').addEventListener('change', function() {
+    if (this.files[0]) {
+      const preview = tplForm.querySelector('.tpl-sidebar-preview');
+      preview.src = URL.createObjectURL(this.files[0]);
+      preview.style.display = 'block';
+    }
+  });
+
+  tplForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!currentTplSlug) { setStatus(tplForm, 'select a page first', true); return; }
+    const data = new FormData();
+    data.append('title', tplForm.title.value);
+    data.append('lead', tplForm.lead.value);
+    data.append('highlightWords', tplForm.highlightWords.value);
+    data.append('sidebarCaption', tplForm.sidebarCaption.value);
+
+    if (tplForm.querySelector('[name="sidebarImage"]').files[0]) {
+      data.append('sidebarImage', tplForm.querySelector('[name="sidebarImage"]').files[0]);
+    } else if (!tplForm.querySelector('[name="removeSidebarImage"]').checked) {
+      data.append('keptSidebarImage', tplForm._keptSidebarImage || '');
+    } else {
+      data.append('removeSidebarImage', 'true');
+    }
+
+    const columns = getTplColumns();
+    data.append('columns', JSON.stringify(columns));
+
+    const rows = [...tplRowList.children].map(row => {
+      const r = {};
+      columns.forEach(c => {
+        if (c.type === 'image') {
+          const fileInput = row.querySelector(`[data-col="${c.key}"]`);
+          const keptInput = row.querySelector(`[data-col-kept="${c.key}"]`);
+          if (fileInput?.files?.[0]) {
+            data.append('rowImage', fileInput.files[0], fileInput.files[0].name);
+            r[c.key] = fileInput.files[0].name;
+          } else {
+            r[c.key] = keptInput?.value || '';
+          }
+        } else {
+          const input = row.querySelector(`[data-col="${c.key}"]`);
+          r[c.key] = input?.value || '';
+        }
+      });
+      return r;
+    });
+    data.append('rows', JSON.stringify(rows));
+
+    const sections = [...tplSectionList.children].map(row => ({
+      heading: row.querySelector('[data-key="heading"]')?.value || '',
+      text: row.querySelector('[data-key="text"]')?.value || '',
+    }));
+    data.append('sections', JSON.stringify(sections));
+
+    setStatus(tplForm, 'saving...');
+    try {
+      content = await send('PUT', `/api/admin/template/${currentTplSlug}`, data);
+      fillTplPage(content.templatePages[currentTplSlug] || {});
+      populateTplSelect(content.templatePages || {});
+      setStatus(tplForm, 'saved ✓');
+    } catch (err) {
+      setStatus(tplForm, err.message, true);
+    }
+  });
+}
+
 // ---------- fc/fifa stats ----------
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
@@ -2078,6 +2324,7 @@ fetch('/api/content', { cache: 'no-store' })
     populateElectionSelect(content.elections || {});
     populateCensusSelect(content.censusData || {});
     populateWikiSelect(content.wikiPages || {});
+    populateTplSelect(content.templatePages || {});
     populateHighlightLinks(content.highlightLinks || {});
     renderFcAdmin();
   });

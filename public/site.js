@@ -7,7 +7,7 @@ function showPage() {
   const hash = location.hash.slice(1);
   let id = PAGES.includes(hash) ? hash : 'home';
   if (hash.startsWith('election-')) id = 'election';
-  if (hash.startsWith('wiki-')) id = 'wiki';
+  if (hash.startsWith('wiki-') || hash.startsWith('tpl-')) id = 'wiki';
   if (id === 'election' && !hash.startsWith('election-')) id = 'wiki';
   pages.forEach(p => p.hidden = p.id !== id);
   pageLinks.forEach(l => {
@@ -17,10 +17,12 @@ function showPage() {
   if (id === 'beats') requestAnimationFrame(() => players.forEach(p => p.draw()));
   if (id === 'election' && window._electionsData) renderElectionPage(window._electionsData, hash, window._censusData);
   if (id === 'wiki') {
-    if (hash.startsWith('wiki-')) {
+    if (hash.startsWith('tpl-')) {
+      if (window._templatePages) renderTemplatePage(window._templatePages, hash);
+    } else if (hash.startsWith('wiki-')) {
       if (window._wikiPages) renderWikiPage(window._wikiPages, hash);
     } else {
-      renderWikiIndex(window._wikiPages || {}, window._electionsData || {});
+      renderWikiIndex(window._wikiPages || {}, window._electionsData || {}, window._templatePages || {});
     }
   }
 }
@@ -1393,7 +1395,7 @@ window.addEventListener('resize', () => players.forEach(p => p.draw()));
 
 // ---------- Wiki Pages ----------
 
-function renderWikiIndex(pages, elections) {
+function renderWikiIndex(pages, elections, templates) {
   const section = document.getElementById('wiki');
   if (!section) return;
   const body = section.querySelector('.wiki-body');
@@ -1461,7 +1463,31 @@ function renderWikiIndex(pages, elections) {
     sectionsDiv.append(list);
   }
 
-  if (!pageSlugs.length && !electionSlugs.length) {
+  const tplSlugs = Object.keys(templates || {}).sort();
+  if (tplSlugs.length) {
+    const h = document.createElement('h2');
+    h.id = 'wiki-index-templates';
+    h.className = 'wiki-section-heading';
+    h.textContent = 'Lists';
+    sectionsDiv.append(h);
+    const list = document.createElement('div');
+    list.className = 'wiki-section';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    tplSlugs.forEach(slug => {
+      const tpl = templates[slug];
+      const p = document.createElement('p');
+      const a = document.createElement('a');
+      a.href = `#tpl-${slug}`;
+      a.textContent = tpl.title || slug;
+      a.style.color = '#0645ad';
+      a.style.textDecoration = 'none';
+      p.append(a);
+      list.append(p);
+    });
+    sectionsDiv.append(list);
+  }
+
+  if (!pageSlugs.length && !electionSlugs.length && !tplSlugs.length) {
     sectionsDiv.innerHTML = '<p class="empty-note">no wiki pages yet</p>';
   }
 }
@@ -1673,6 +1699,182 @@ function renderWikiPage(pages, hash) {
   section.querySelector('.wiki-candidate-table').hidden = true;
 }
 
+function renderTemplatePage(templates, hash) {
+  const section = document.getElementById('wiki');
+  if (!section) return;
+  if (!hash.startsWith('tpl-')) return;
+  const slug = hash.slice('tpl-'.length);
+  const page = templates[slug];
+  if (!page || !page.title) {
+    section.querySelector('.wiki-body').innerHTML = '<p>Page not found.</p>';
+    return;
+  }
+
+  const title = section.querySelector('.wiki-title');
+  title.textContent = page.title;
+
+  // Sidebar image (use infobox-wrap area)
+  const infoboxWrap = section.querySelector('.wiki-infobox-wrap');
+  if (page.sidebarImage) {
+    infoboxWrap.hidden = false;
+    infoboxWrap.style.width = '';
+    const ib = section.querySelector('.wiki-person-infobox');
+    ib.innerHTML = '';
+    const imgRow = document.createElement('tr');
+    const imgTd = document.createElement('td');
+    imgTd.colSpan = 2;
+    imgTd.style.cssText = 'text-align:center;padding:8px;border-bottom:none;';
+    const img = document.createElement('img');
+    img.src = page.sidebarImage;
+    img.alt = page.title;
+    img.style.cssText = 'width:250px;max-width:100%;';
+    imgTd.append(img);
+    if (page.sidebarCaption) {
+      const cap = document.createElement('div');
+      cap.style.cssText = 'font-size:12px;color:#54595d;margin-top:4px;';
+      cap.textContent = page.sidebarCaption;
+      imgTd.append(cap);
+    }
+    imgRow.append(imgTd);
+    ib.append(imgRow);
+  } else {
+    infoboxWrap.hidden = true;
+    section.querySelector('.wiki-person-infobox').innerHTML = '';
+  }
+
+  // Lead paragraph
+  const leadEl = section.querySelector('.wiki-lead');
+  if (page.lead) {
+    let leadHtml = page.lead.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (page.highlightWords) leadHtml = applyHighlightWords(leadHtml, page.highlightWords);
+    leadHtml = leadHtml.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+    leadEl.innerHTML = `<p style="font-size:14px;line-height:1.6">${leadHtml}</p>`;
+    leadEl.hidden = false;
+  } else {
+    leadEl.hidden = true;
+  }
+
+  // Build data table
+  const columns = page.columns || [];
+  const rows = page.rows || [];
+  const sectionsDiv = section.querySelector('.wiki-sections');
+  sectionsDiv.innerHTML = '';
+
+  if (columns.length && rows.length) {
+    const tableHeading = document.createElement('h2');
+    tableHeading.className = 'wiki-section-heading';
+    tableHeading.id = 'tpl-table';
+    tableHeading.textContent = page.title;
+    sectionsDiv.append(tableHeading);
+
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;';
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    headerRow.style.cssText = 'background:#f8f9fa;';
+    columns.forEach(c => {
+      const th = document.createElement('th');
+      th.style.cssText = 'padding:6px 8px;border:1px solid #a2a9b1;text-align:left;font-size:13px;font-weight:700;';
+      th.textContent = c.label || c.key;
+      headerRow.append(th);
+    });
+    thead.append(headerRow);
+    table.append(thead);
+
+    const tbody = document.createElement('tbody');
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      columns.forEach(c => {
+        const td = document.createElement('td');
+        td.style.cssText = 'padding:4px 8px;border:1px solid #a2a9b1;vertical-align:middle;font-size:14px;';
+        const val = r[c.key] || '';
+        if (c.type === 'image' && val) {
+          const img = document.createElement('img');
+          img.src = val;
+          img.alt = '';
+          img.style.cssText = 'width:60px;height:75px;object-fit:cover;';
+          td.append(img);
+        } else if (c.type === 'color-bar' && val) {
+          td.style.cssText += `background:${val};width:4px;padding:0;`;
+          td.innerHTML = '&nbsp;';
+        } else {
+          let textHtml = val.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+          textHtml = textHtml.replace(/\n/g, '<br>');
+          td.innerHTML = textHtml;
+        }
+        tr.append(td);
+      });
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    sectionsDiv.append(table);
+  }
+
+  // TOC
+  const allSections = page.sections || [];
+  const tocEl = section.querySelector('.wiki-toc');
+  const tocItems = [
+    ...(columns.length && rows.length ? [{ heading: page.title, id: 'tpl-table' }] : []),
+    ...allSections.map((s, i) => ({ heading: s.heading, id: `tpl-sec-${i}` })),
+  ];
+  if (tocItems.length > 1) {
+    tocEl.innerHTML = '<div class="wiki-toc-title">Contents</div>';
+    const ol = document.createElement('ol');
+    ol.className = 'wiki-toc-list';
+    tocItems.forEach(item => {
+      if (!item.heading) return;
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = `#${item.id}`;
+      a.textContent = item.heading;
+      a.style.cssText = 'color:#0645ad;text-decoration:none;';
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
+      });
+      li.append(a);
+      ol.append(li);
+    });
+    tocEl.append(ol);
+    tocEl.hidden = false;
+  } else {
+    tocEl.hidden = true;
+  }
+
+  // Additional sections
+  allSections.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'wiki-section';
+    div.id = `tpl-sec-${i}`;
+    if (s.heading) {
+      const h = document.createElement('h2');
+      h.className = 'wiki-section-heading';
+      h.textContent = s.heading;
+      div.append(h);
+    }
+    if (s.text) {
+      let textHtml = s.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+      textHtml = textHtml.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+      const p = document.createElement('div');
+      p.innerHTML = `<p>${textHtml}</p>`;
+      div.append(p);
+    }
+    sectionsDiv.append(div);
+  });
+
+  // Hide election-specific elements
+  section.querySelector('.wiki-nominee-gallery').innerHTML = '';
+  section.querySelector('.wiki-election-nav').hidden = true;
+  section.querySelector('.wiki-ec-info').hidden = true;
+  section.querySelector('.wiki-map').hidden = true;
+  section.querySelector('.wiki-map-caption').hidden = true;
+  section.querySelector('.wiki-president-info').hidden = true;
+  section.querySelector('.wiki-turnout-row').hidden = true;
+  section.querySelector('.wiki-candidate-table').hidden = true;
+}
+
 fetch('/api/content')
   .then(res => res.json())
   .then(content => {
@@ -1684,11 +1886,13 @@ fetch('/api/content')
     window._electionsData = content.elections || {};
     window._censusData = content.censusData || {};
     window._wikiPages = content.wikiPages || {};
+    window._templatePages = content.templatePages || {};
     window._highlightLinks = content.highlightLinks || {};
     renderElectionPage(window._electionsData, location.hash.slice(1));
     const h = location.hash.slice(1);
-    if (h.startsWith('wiki-')) renderWikiPage(window._wikiPages, h);
-    else if (h === 'wiki' || h === '' || !h.startsWith('election-')) renderWikiIndex(window._wikiPages, window._electionsData);
+    if (h.startsWith('tpl-')) renderTemplatePage(window._templatePages, h);
+    else if (h.startsWith('wiki-')) renderWikiPage(window._wikiPages, h);
+    else if (h === 'wiki' || h === '' || !h.startsWith('election-')) renderWikiIndex(window._wikiPages, window._electionsData, window._templatePages);
     if (content.fc) fcData = content.fc;
     renderFc();
     renderBeats(content.beats, content.producers);
