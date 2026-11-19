@@ -506,6 +506,25 @@ function applyHighlightWords(html, highlightWords, links) {
   });
 }
 
+document.addEventListener('click', e => {
+  const span = e.target.closest('span[style*="0645ad"]');
+  if (!span) return;
+  const links = window._highlightLinks || {};
+  const text = span.textContent.trim();
+  const lowerMap = {};
+  for (const [k, v] of Object.entries(links)) lowerMap[k.toLowerCase()] = v;
+  const url = lowerMap[text.toLowerCase()];
+  if (!url) return;
+  e.preventDefault();
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    window.open(url, '_blank', 'noopener');
+  } else if (url.startsWith('#')) {
+    location.hash = url;
+  } else {
+    location.href = url;
+  }
+});
+
 function renderElectionIndex(elections) {
   const section = document.getElementById('election');
   const body = section.querySelector('.wiki-body');
