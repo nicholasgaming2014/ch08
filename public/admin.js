@@ -1617,10 +1617,14 @@ const newTplSlug = document.getElementById('new-tpl-slug');
 const createTplBtn = document.getElementById('create-tpl-btn');
 const deleteTplBtn = document.getElementById('delete-tpl-btn');
 const tplForm = document.getElementById('tpl-form');
-const tplColumnList = document.getElementById('tpl-column-list');
+const tplColBar = document.getElementById('tpl-col-bar');
+const tplColEditor = document.getElementById('tpl-col-editor');
 const tplRowList = document.getElementById('tpl-row-list');
 const tplSectionList = document.getElementById('tpl-section-list');
+const tplPreviewBody = document.getElementById('tpl-preview-body');
 let currentTplSlug = '';
+let tplColumns = [];
+let tplEditingColIdx = -1;
 
 function populateTplSelect(pages) {
   if (!tplSlugSelect) return;
@@ -1637,61 +1641,247 @@ function populateTplSelect(pages) {
   }
 }
 
-function addTplColumnRow(col = {}) {
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px;';
-  row.innerHTML = `
-    <input type="text" data-key="key" maxlength="100" placeholder="key (e.g. name)" style="width:120px;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
-    <input type="text" data-key="label" maxlength="200" placeholder="Column label" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
-    <select data-key="type" style="padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
-      <option value="text">text</option>
-      <option value="image">image</option>
-      <option value="color-bar">color-bar</option>
-    </select>
-    <button type="button" class="button danger" style="font-size:11px;padding:4px 8px">×</button>`;
-  row.querySelector('[data-key="key"]').value = col.key || '';
-  row.querySelector('[data-key="label"]').value = col.label || '';
-  row.querySelector('[data-key="type"]').value = col.type || 'text';
-  row.querySelector('.button.danger').addEventListener('click', () => row.remove());
-  tplColumnList.append(row);
+const tplTypeColors = { text: '#3366cc', image: '#009933', 'color-bar': '#cc6600' };
+
+function renderTplColBar() {
+  if (!tplColBar) return;
+  tplColBar.innerHTML = '';
+  tplColumns.forEach((c, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'tpl-col-chip' + (i === tplEditingColIdx ? ' tpl-col-chip-active' : '');
+    const color = tplTypeColors[c.type] || '#3366cc';
+    chip.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid ${color};color:${color};background:${color}18;`;
+    if (i === tplEditingColIdx) chip.style.cssText += `font-weight:600;box-shadow:0 0 0 2px ${color}44;`;
+    chip.textContent = c.label || c.key || '(unnamed)';
+    chip.addEventListener('click', () => openTplColEditor(i));
+    tplColBar.append(chip);
+  });
+}
+
+function openTplColEditor(idx) {
+  if (!tplColEditor) return;
+  saveTplColEditor();
+  tplEditingColIdx = idx;
+  const c = tplColumns[idx];
+  if (!c) { tplColEditor.hidden = true; tplEditingColIdx = -1; renderTplColBar(); return; }
+  document.getElementById('tpl-ce-key').value = c.key || '';
+  document.getElementById('tpl-ce-label').value = c.label || '';
+  document.getElementById('tpl-ce-type').value = c.type || 'text';
+  document.getElementById('tpl-ce-width').value = c.width || '';
+  document.getElementById('tpl-ce-height').value = c.height || '';
+  document.getElementById('tpl-col-editor-title').textContent = `column ${idx + 1}: ${c.key || '(unnamed)'}`;
+  tplColEditor.hidden = false;
+  renderTplColBar();
+}
+
+function saveTplColEditor() {
+  if (tplEditingColIdx < 0 || !tplColumns[tplEditingColIdx]) return;
+  const c = tplColumns[tplEditingColIdx];
+  c.key = document.getElementById('tpl-ce-key').value.trim();
+  c.label = document.getElementById('tpl-ce-label').value.trim();
+  c.type = document.getElementById('tpl-ce-type').value;
+  c.width = document.getElementById('tpl-ce-width').value.trim();
+  c.height = document.getElementById('tpl-ce-height').value.trim();
+}
+
+function closeTplColEditor() {
+  saveTplColEditor();
+  tplEditingColIdx = -1;
+  if (tplColEditor) tplColEditor.hidden = true;
+  renderTplColBar();
+  rebuildTplRows();
+  updateTplPreview();
 }
 
 function getTplColumns() {
-  return [...tplColumnList.children].map(row => ({
-    key: row.querySelector('[data-key="key"]')?.value || '',
-    label: row.querySelector('[data-key="label"]')?.value || '',
-    type: row.querySelector('[data-key="type"]')?.value || 'text',
-  })).filter(c => c.key);
+  saveTplColEditor();
+  return tplColumns.filter(c => c.key);
 }
 
-function addTplRow(rowData = {}) {
-  const columns = getTplColumns();
-  const row = document.createElement('div');
-  row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;';
-  let html = '';
-  columns.forEach(c => {
+function getFirstTextVal(rowEl, columns) {
+  for (const c of columns) {
+    if (c.type === 'text' && c.key) {
+      const input = rowEl.querySelector(`[data-col="${c.key}"]`);
+      if (input?.value) return input.value.split('(')[0].trim().substring(0, 30);
+    }
+  }
+  return '';
+}
+
+function addTplRowCard(rowData = {}, expanded = false) {
+  if (!tplRowList) return;
+  const idx = tplRowList.children.length;
+  const cols = getTplColumns();
+  const card = document.createElement('div');
+  card.className = 'tpl-row-card';
+
+  const firstText = (() => {
+    for (const c of cols) {
+      if (c.type === 'text' && c.key && rowData[c.key]) return rowData[c.key].split('(')[0].trim().substring(0, 30);
+    }
+    return '';
+  })();
+
+  const header = document.createElement('div');
+  header.className = 'tpl-row-header';
+  header.innerHTML = `<span class="tpl-row-toggle">▶</span> <span class="tpl-row-title">Row ${idx + 1}${firstText ? ' — ' + firstText : ''}</span>`;
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'button danger';
+  removeBtn.style.cssText = 'font-size:11px;padding:2px 8px;margin-left:auto;';
+  removeBtn.textContent = '×';
+  removeBtn.addEventListener('click', e => { e.stopPropagation(); card.remove(); renumberTplRows(); updateTplPreview(); });
+  header.append(removeBtn);
+
+  const body = document.createElement('div');
+  body.className = 'tpl-row-body';
+  body.hidden = !expanded;
+
+  cols.forEach(c => {
     if (c.type === 'image') {
-      html += `<label class="field"><span>${c.label || c.key}</span><input type="file" data-col="${c.key}" accept="image/*"><input type="hidden" data-col-kept="${c.key}"></label>`;
-      if (rowData[c.key]) {
-        html += `<img src="${rowData[c.key]}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">`;
+      const field = document.createElement('div');
+      field.className = 'tpl-row-field';
+      const val = rowData[c.key] || '';
+      field.innerHTML = `<label class="field"><span>${c.label || c.key}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <img src="${val}" alt="" class="tpl-row-thumb" style="${val ? '' : 'display:none'}">
+          <input type="file" data-col="${c.key}" accept="image/*" style="font-size:12px">
+          <input type="hidden" data-col-kept="${c.key}" value="${val}">
+        </div></label>`;
+      const fileInput = field.querySelector(`[data-col="${c.key}"]`);
+      fileInput.addEventListener('change', function() {
+        if (this.files[0]) {
+          const thumb = field.querySelector('.tpl-row-thumb');
+          thumb.src = URL.createObjectURL(this.files[0]);
+          thumb.style.display = '';
+        }
+      });
+      body.append(field);
+    } else if (c.type === 'color-bar') {
+      const field = document.createElement('div');
+      field.className = 'tpl-row-field';
+      const val = rowData[c.key] || '#3333FF';
+      field.innerHTML = `<label class="field"><span>${c.label || c.key}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="color" data-col="${c.key}" value="${val}" style="width:40px;height:28px;padding:0;border:1px solid #a2a9b1;border-radius:4px;cursor:pointer">
+          <span class="tpl-color-hex" style="font-size:12px;color:#666">${val}</span>
+        </div></label>`;
+      field.querySelector(`[data-col="${c.key}"]`).addEventListener('input', function() {
+        field.querySelector('.tpl-color-hex').textContent = this.value;
+        updateTplPreview();
+      });
+      body.append(field);
+    } else {
+      const field = document.createElement('div');
+      field.className = 'tpl-row-field';
+      field.innerHTML = `<label class="field"><span>${c.label || c.key}</span><input type="text" data-col="${c.key}" maxlength="2000"></label>`;
+      const input = field.querySelector(`[data-col="${c.key}"]`);
+      input.value = rowData[c.key] || '';
+      input.addEventListener('input', () => {
+        const title = card.querySelector('.tpl-row-title');
+        const ft = getFirstTextVal(card, cols);
+        const ri = [...tplRowList.children].indexOf(card);
+        title.textContent = `Row ${ri + 1}${ft ? ' — ' + ft : ''}`;
+        updateTplPreview();
+      });
+      body.append(field);
+    }
+  });
+
+  header.addEventListener('click', () => {
+    const wasHidden = body.hidden;
+    body.hidden = !wasHidden;
+    header.querySelector('.tpl-row-toggle').textContent = wasHidden ? '▼' : '▶';
+  });
+  if (expanded) header.querySelector('.tpl-row-toggle').textContent = '▼';
+
+  card.append(header, body);
+  tplRowList.append(card);
+}
+
+function renumberTplRows() {
+  if (!tplRowList) return;
+  const cols = getTplColumns();
+  [...tplRowList.children].forEach((card, i) => {
+    const title = card.querySelector('.tpl-row-title');
+    if (!title) return;
+    const ft = getFirstTextVal(card, cols);
+    title.textContent = `Row ${i + 1}${ft ? ' — ' + ft : ''}`;
+  });
+}
+
+function rebuildTplRows() {
+  if (!tplRowList) return;
+  const cols = getTplColumns();
+  const rowsData = extractTplRowData(cols);
+  tplRowList.innerHTML = '';
+  rowsData.forEach(r => addTplRowCard(r));
+}
+
+function extractTplRowData(columns) {
+  if (!tplRowList) return [];
+  return [...tplRowList.children].map(card => {
+    const r = {};
+    columns.forEach(c => {
+      if (c.type === 'image') {
+        const kept = card.querySelector(`[data-col-kept="${c.key}"]`);
+        r[c.key] = kept?.value || '';
+        const fileInput = card.querySelector(`[data-col="${c.key}"]`);
+        if (fileInput?.files?.[0]) { r._file = r._file || {}; r._file[c.key] = fileInput.files[0]; }
+      } else {
+        const input = card.querySelector(`[data-col="${c.key}"]`);
+        r[c.key] = input?.value || '';
       }
-    } else {
-      html += `<label class="field"><span>${c.label || c.key}</span><input type="text" data-col="${c.key}" maxlength="2000"></label>`;
+    });
+    return r;
+  });
+}
+
+function updateTplPreview() {
+  if (!tplPreviewBody) return;
+  const cols = getTplColumns();
+  const rows = extractTplRowData(cols);
+  if (!cols.length || !rows.length) { tplPreviewBody.innerHTML = '<div style="padding:12px;color:#999;font-size:12px;text-align:center">add columns and rows to see preview</div>'; return; }
+  const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:sans-serif;color:#202122"><thead><tr style="background:#eaecf0">';
+  cols.forEach(c => {
+    const w = c.width ? ` style="width:${esc(c.width)}"` : '';
+    if (c.type === 'color-bar') html += `<th style="padding:3px;border:1px solid #a2a9b1;width:3px;max-width:3px"></th>`;
+    else html += `<th style="padding:4px 6px;border:1px solid #a2a9b1;font-size:10px;font-weight:700"${w}>${esc(c.label || c.key)}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    const multiKeys = cols.filter(c => c.type !== 'image' && c.type !== 'color-bar');
+    const maxMulti = Math.max(1, ...multiKeys.map(c => { const v = r[c.key] || ''; return v.includes(';') ? v.split(';').length : 1; }));
+    for (let sub = 0; sub < maxMulti; sub++) {
+      html += '<tr>';
+      cols.forEach(c => {
+        const val = r[c.key] || '';
+        const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
+        if (c.type === 'image') {
+          if (sub === 0) html += `<td style="padding:3px;border:1px solid #a2a9b1;text-align:center"${maxMulti > 1 ? ` rowspan="${maxMulti}"` : ''}>${val ? `<div style="width:28px;height:34px;background:#ddd;border-radius:2px;display:inline-block"></div>` : ''}</td>`;
+        } else if (c.type === 'color-bar') {
+          if (sub === 0) html += `<td style="padding:0;border:1px solid #a2a9b1;width:3px;max-width:3px;background:${esc(parts[0])}"${maxMulti > 1 ? ` rowspan="${maxMulti}"` : ''}></td>`;
+        } else {
+          const cv = parts[sub] || '';
+          if (c.key === 'name') {
+            const m = cv.match(/^(.+?)\s*\((.+)\)$/);
+            if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(cv)}</span></td>`;
+          } else if (c.key === 'term') {
+            const tp = cv.split(/\s*[-–]\s*/);
+            if (tp.length === 2) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;text-align:center;font-size:10px">${esc(tp[0])}<br>–<br>${esc(tp[1])}</td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px">${esc(cv)}</td>`;
+          } else {
+            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px">${esc(cv)}</td>`;
+          }
+        }
+      });
+      html += '</tr>';
     }
   });
-  html += '<button type="button" class="button danger remove-tpl-row" style="align-self:flex-end;font-size:12px">remove row</button>';
-  row.innerHTML = html;
-  columns.forEach(c => {
-    if (c.type === 'image') {
-      const hidden = row.querySelector(`[data-col-kept="${c.key}"]`);
-      if (hidden) hidden.value = rowData[c.key] || '';
-    } else {
-      const input = row.querySelector(`[data-col="${c.key}"]`);
-      if (input) input.value = rowData[c.key] || '';
-    }
-  });
-  row.querySelector('.remove-tpl-row').addEventListener('click', () => row.remove());
-  tplRowList.append(row);
+  html += '</tbody></table>';
+  tplPreviewBody.innerHTML = html;
 }
 
 function addTplSectionRow(section = {}) {
@@ -1725,15 +1915,18 @@ function fillTplPage(page) {
   }
   removeCheck.checked = false;
   tplForm._keptSidebarImage = page.sidebarImage || '';
-  tplColumnList.innerHTML = '';
-  (page.columns || []).forEach(c => addTplColumnRow(c));
+  tplColumns = (page.columns || []).map(c => ({ ...c }));
+  tplEditingColIdx = -1;
+  if (tplColEditor) tplColEditor.hidden = true;
+  renderTplColBar();
   tplRowList.innerHTML = '';
-  (page.rows || []).forEach(r => addTplRow(r));
+  (page.rows || []).forEach(r => addTplRowCard(r));
   tplSectionList.innerHTML = '';
   (page.sections || []).forEach(s => addTplSectionRow(s));
   const viewLink = document.getElementById('tpl-view-link');
   if (viewLink) viewLink.href = `/#tpl-${currentTplSlug}`;
   tplForm.hidden = false;
+  updateTplPreview();
 }
 
 function selectTplPage(slug) {
@@ -1777,11 +1970,35 @@ if (deleteTplBtn) {
 }
 
 if (document.getElementById('add-tpl-column')) {
-  document.getElementById('add-tpl-column').addEventListener('click', () => addTplColumnRow());
+  document.getElementById('add-tpl-column').addEventListener('click', () => {
+    tplColumns.push({ key: '', label: '', type: 'text', width: '', height: '' });
+    openTplColEditor(tplColumns.length - 1);
+  });
+}
+
+if (document.getElementById('tpl-col-editor-close')) {
+  document.getElementById('tpl-col-editor-close').addEventListener('click', closeTplColEditor);
+}
+
+if (document.getElementById('tpl-col-remove')) {
+  document.getElementById('tpl-col-remove').addEventListener('click', () => {
+    if (tplEditingColIdx >= 0) {
+      tplColumns.splice(tplEditingColIdx, 1);
+      tplEditingColIdx = -1;
+      if (tplColEditor) tplColEditor.hidden = true;
+      renderTplColBar();
+      rebuildTplRows();
+      updateTplPreview();
+    }
+  });
 }
 
 if (document.getElementById('add-tpl-row')) {
-  document.getElementById('add-tpl-row').addEventListener('click', () => addTplRow());
+  document.getElementById('add-tpl-row').addEventListener('click', () => {
+    addTplRowCard({}, true);
+    renumberTplRows();
+    updateTplPreview();
+  });
 }
 
 if (document.getElementById('add-tpl-section')) {
@@ -1817,12 +2034,12 @@ if (tplForm) {
     const columns = getTplColumns();
     data.append('columns', JSON.stringify(columns));
 
-    const rows = [...tplRowList.children].map(row => {
+    const rows = [...tplRowList.children].map(card => {
       const r = {};
       columns.forEach(c => {
         if (c.type === 'image') {
-          const fileInput = row.querySelector(`[data-col="${c.key}"]`);
-          const keptInput = row.querySelector(`[data-col-kept="${c.key}"]`);
+          const fileInput = card.querySelector(`[data-col="${c.key}"]`);
+          const keptInput = card.querySelector(`[data-col-kept="${c.key}"]`);
           if (fileInput?.files?.[0]) {
             data.append('rowImage', fileInput.files[0], fileInput.files[0].name);
             r[c.key] = fileInput.files[0].name;
@@ -1830,7 +2047,7 @@ if (tplForm) {
             r[c.key] = keptInput?.value || '';
           }
         } else {
-          const input = row.querySelector(`[data-col="${c.key}"]`);
+          const input = card.querySelector(`[data-col="${c.key}"]`);
           r[c.key] = input?.value || '';
         }
       });

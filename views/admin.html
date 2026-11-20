@@ -321,17 +321,43 @@
           </fieldset>
 
           <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">
-            <legend style="font-weight:600;padding:0 8px">table columns</legend>
-            <p class="hint">define the columns for your table. types: text, image (portrait), color-bar (party color stripe).</p>
-            <div id="tpl-column-list"></div>
-            <button type="button" class="button secondary" id="add-tpl-column" style="align-self:flex-start">+ add column</button>
-          </fieldset>
+            <legend style="font-weight:600;padding:0 8px">table editor</legend>
+            <p class="hint">semicolons (;) split multi-value fields. click a column chip to edit its settings.</p>
+            <div id="tpl-col-bar" style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0"></div>
+            <button type="button" class="button secondary" id="add-tpl-column" style="font-size:12px;padding:4px 10px">+ column</button>
+            <div id="tpl-col-editor" style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px" hidden>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-weight:600;font-size:13px" id="tpl-col-editor-title">column settings</span>
+                <button type="button" id="tpl-col-editor-close" class="button secondary" style="font-size:11px;padding:3px 8px">done</button>
+              </div>
+              <div class="field-row" style="gap:8px">
+                <label class="field" style="flex:1"><span>key</span><input type="text" id="tpl-ce-key" maxlength="100" placeholder="e.g. name"></label>
+                <label class="field" style="flex:1"><span>label</span><input type="text" id="tpl-ce-label" maxlength="200" placeholder="Column label"></label>
+              </div>
+              <div class="field-row" style="gap:8px">
+                <label class="field" style="flex:1"><span>type</span>
+                  <select id="tpl-ce-type" style="padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
+                    <option value="text">text</option>
+                    <option value="image">image</option>
+                    <option value="color-bar">color-bar</option>
+                  </select>
+                </label>
+                <label class="field" style="flex:1"><span>width</span><input type="text" id="tpl-ce-width" maxlength="50" placeholder="e.g. 120px, 10%"></label>
+                <label class="field" style="flex:1"><span>height</span><input type="text" id="tpl-ce-height" maxlength="50" placeholder="e.g. 140px"></label>
+              </div>
+              <button type="button" id="tpl-col-remove" class="button" style="font-size:12px;padding:4px 10px;color:#d33;border-color:#d33;margin-top:4px">remove column</button>
+            </div>
 
-          <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">
-            <legend style="font-weight:600;padding:0 8px">table rows</legend>
-            <p class="hint">each row is one entry. for multi-value fields (elections, parties, vice presidents), separate values with a semicolon (;). use party_color column type color-bar and put a hex color like #3333FF.</p>
-            <div id="tpl-row-list"></div>
-            <button type="button" class="button secondary" id="add-tpl-row" style="align-self:flex-start">+ add row</button>
+            <div style="display:flex;gap:12px;margin-top:12px">
+              <div style="flex:1">
+                <div id="tpl-row-list"></div>
+                <button type="button" class="button secondary" id="add-tpl-row" style="font-size:12px;padding:4px 10px">+ row</button>
+              </div>
+              <div id="tpl-preview-pane" style="flex:1;min-width:280px;max-height:500px;overflow-y:auto;border:1px solid #a2a9b1;border-radius:6px;padding:4px;background:#fff">
+                <div style="font-size:11px;color:#54595d;padding:4px 6px;border-bottom:1px solid #eee;margin-bottom:4px">live preview</div>
+                <div id="tpl-preview-body"></div>
+              </div>
+            </div>
           </fieldset>
 
           <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">

@@ -1785,6 +1785,7 @@ function renderTemplatePage(templates, hash) {
       if (c.type === 'color-bar') th.className = 'tpl-color-bar-header';
       th.dataset.col = c.key;
       th.textContent = c.label || c.key;
+      if (c.width) th.style.width = c.width;
       headerRow.append(th);
     });
     thead.append(headerRow);
@@ -1808,12 +1809,15 @@ function renderTemplatePage(templates, hash) {
             if (subRow === 0) {
               const td = document.createElement('td');
               td.className = 'tpl-portrait-cell';
+              if (c.width) td.style.width = c.width;
               if (maxMulti > 1) td.rowSpan = maxMulti;
               if (val) {
                 const img = document.createElement('img');
                 img.src = val;
                 img.alt = '';
                 img.className = 'tpl-portrait-img';
+                if (c.width) img.style.width = c.width;
+                if (c.height) img.style.height = c.height;
                 td.append(img);
               }
               tr.append(td);

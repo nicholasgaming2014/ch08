@@ -2275,3 +2275,15 @@ h2 {
 .candidate-photo-preview {
   border: 1px solid #333;
 }
+
+/* ---- Admin list page editor (Design 2: row cards + live preview) ---- */
+.tpl-row-card { border:1px solid #444; border-radius:6px; margin-bottom:6px; overflow:hidden; }
+.tpl-row-header { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; background:#1a1a1a; }
+.tpl-row-header:hover { background:#222; }
+.tpl-row-toggle { font-size:11px; color:#999; width:14px; display:inline-block; }
+.tpl-row-title { font-size:13px; font-weight:600; }
+.tpl-row-body { padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.tpl-row-field { }
+.tpl-row-thumb { width:50px; height:60px; object-fit:cover; border-radius:4px; }
+.tpl-col-chip { transition: box-shadow 0.15s; }
+.tpl-col-chip:hover { opacity:0.85; }

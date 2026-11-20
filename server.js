@@ -994,6 +994,8 @@ app.put('/api/admin/template/:slug', requireAdminApi, upload.fields([
     key: text(c.key, 100),
     label: text(c.label, 200),
     type: ['text', 'image', 'color-bar'].includes(c.type) ? c.type : 'text',
+    width: text(c.width || '', 50),
+    height: text(c.height || '', 50),
   }));
 
   const rows = JSON.parse(body.rows || '[]').slice(0, 500).map(r => {
