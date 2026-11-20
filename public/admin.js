@@ -1617,10 +1617,11 @@ const newTplSlug = document.getElementById('new-tpl-slug');
 const createTplBtn = document.getElementById('create-tpl-btn');
 const deleteTplBtn = document.getElementById('delete-tpl-btn');
 const tplForm = document.getElementById('tpl-form');
-const tplColumnList = document.getElementById('tpl-column-list');
-const tplRowList = document.getElementById('tpl-row-list');
+const tplEditorHead = document.getElementById('tpl-editor-head');
+const tplEditorBody = document.getElementById('tpl-editor-body');
 const tplSectionList = document.getElementById('tpl-section-list');
 let currentTplSlug = '';
+let tplColumns = [];
 
 function populateTplSelect(pages) {
   if (!tplSlugSelect) return;
@@ -1637,61 +1638,157 @@ function populateTplSelect(pages) {
   }
 }
 
-function addTplColumnRow(col = {}) {
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px;';
-  row.innerHTML = `
-    <input type="text" data-key="key" maxlength="100" placeholder="key (e.g. name)" style="width:120px;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
-    <input type="text" data-key="label" maxlength="200" placeholder="Column label" style="flex:1;padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
-    <select data-key="type" style="padding:4px 8px;font-size:13px;border:1px solid #a2a9b1;border-radius:4px">
-      <option value="text">text</option>
-      <option value="image">image</option>
-      <option value="color-bar">color-bar</option>
-    </select>
-    <button type="button" class="button danger" style="font-size:11px;padding:4px 8px">×</button>`;
-  row.querySelector('[data-key="key"]').value = col.key || '';
-  row.querySelector('[data-key="label"]').value = col.label || '';
-  row.querySelector('[data-key="type"]').value = col.type || 'text';
-  row.querySelector('.button.danger').addEventListener('click', () => row.remove());
-  tplColumnList.append(row);
+function renderTplEditor(columns, rows) {
+  tplColumns = columns.map(c => ({ ...c }));
+  if (!tplEditorHead || !tplEditorBody) return;
+  tplEditorHead.innerHTML = '';
+  tplEditorBody.innerHTML = '';
+
+  // config row: type/width/height per column
+  const configRow = document.createElement('tr');
+  configRow.className = 'tpl-config-row';
+  const configCorner = document.createElement('th');
+  configCorner.textContent = '#';
+  configCorner.className = 'tpl-corner-cell';
+  configRow.append(configCorner);
+  tplColumns.forEach((c, ci) => {
+    const th = document.createElement('th');
+    th.className = 'tpl-config-cell';
+    th.innerHTML = `
+      <input type="text" data-ci="${ci}" data-prop="key" value="${c.key || ''}" placeholder="key" class="tpl-cfg-input tpl-cfg-key" title="column key">
+      <select data-ci="${ci}" data-prop="type" class="tpl-cfg-input tpl-cfg-type" title="column type">
+        <option value="text"${c.type === 'text' ? ' selected' : ''}>text</option>
+        <option value="image"${c.type === 'image' ? ' selected' : ''}>image</option>
+        <option value="color-bar"${c.type === 'color-bar' ? ' selected' : ''}>color-bar</option>
+      </select>
+      <div style="display:flex;gap:2px">
+        <input type="text" data-ci="${ci}" data-prop="width" value="${c.width || ''}" placeholder="w" class="tpl-cfg-input tpl-cfg-dim" title="width (e.g. 120px, 10%)">
+        <input type="text" data-ci="${ci}" data-prop="height" value="${c.height || ''}" placeholder="h" class="tpl-cfg-input tpl-cfg-dim" title="height (e.g. 140px)">
+      </div>
+      <button type="button" class="tpl-col-remove" data-ci="${ci}" title="remove column">×</button>`;
+    configRow.append(th);
+  });
+  const configAdd = document.createElement('th');
+  configAdd.className = 'tpl-config-cell';
+  configRow.append(configAdd);
+  tplEditorHead.append(configRow);
+
+  // header row: editable labels
+  const headerRow = document.createElement('tr');
+  headerRow.className = 'tpl-header-row';
+  const numTh = document.createElement('th');
+  numTh.className = 'tpl-num-header';
+  numTh.textContent = 'No.';
+  headerRow.append(numTh);
+  tplColumns.forEach((c, ci) => {
+    const th = document.createElement('th');
+    th.className = 'tpl-label-cell';
+    th.innerHTML = `<input type="text" data-ci="${ci}" data-prop="label" value="${c.label || ''}" placeholder="Label" class="tpl-label-input">`;
+    headerRow.append(th);
+  });
+  const actTh = document.createElement('th');
+  actTh.className = 'tpl-act-header';
+  headerRow.append(actTh);
+  tplEditorHead.append(headerRow);
+
+  // data rows
+  (rows || []).forEach((rowData, ri) => addTplEditorRow(rowData, ri));
+}
+
+function addTplEditorRow(rowData = {}, index) {
+  if (index === undefined) index = tplEditorBody.children.length;
+  const tr = document.createElement('tr');
+  tr.className = 'tpl-data-row';
+  const numTd = document.createElement('td');
+  numTd.className = 'tpl-num-cell';
+  numTd.textContent = index + 1;
+  tr.append(numTd);
+
+  tplColumns.forEach(c => {
+    const td = document.createElement('td');
+    td.className = 'tpl-cell';
+    if (c.type === 'image') {
+      td.className += ' tpl-cell-image';
+      const val = rowData[c.key] || '';
+      td.innerHTML = `
+        <div class="tpl-img-cell">
+          <img src="${val}" alt="" class="tpl-cell-thumb" style="${val ? '' : 'display:none'}">
+          <input type="file" data-col="${c.key}" accept="image/*" class="tpl-cell-file">
+          <input type="hidden" data-col-kept="${c.key}" value="${val}">
+        </div>`;
+      td.querySelector('.tpl-cell-file').addEventListener('change', function() {
+        if (this.files[0]) {
+          const thumb = td.querySelector('.tpl-cell-thumb');
+          thumb.src = URL.createObjectURL(this.files[0]);
+          thumb.style.display = '';
+        }
+      });
+    } else if (c.type === 'color-bar') {
+      const val = rowData[c.key] || '#3333FF';
+      td.innerHTML = `<input type="color" data-col="${c.key}" value="${val}" class="tpl-cell-color" title="party color">`;
+    } else {
+      const val = rowData[c.key] || '';
+      td.innerHTML = `<input type="text" data-col="${c.key}" value="" class="tpl-cell-text" placeholder="…">`;
+      td.querySelector('input').value = val;
+    }
+    tr.append(td);
+  });
+
+  const actTd = document.createElement('td');
+  actTd.className = 'tpl-act-cell';
+  actTd.innerHTML = `<button type="button" class="tpl-row-remove" title="remove row">×</button>`;
+  actTd.querySelector('.tpl-row-remove').addEventListener('click', () => {
+    tr.remove();
+    renumberTplRows();
+  });
+  tr.append(actTd);
+  tplEditorBody.append(tr);
+}
+
+function renumberTplRows() {
+  [...tplEditorBody.children].forEach((tr, i) => {
+    const num = tr.querySelector('.tpl-num-cell');
+    if (num) num.textContent = i + 1;
+  });
 }
 
 function getTplColumns() {
-  return [...tplColumnList.children].map(row => ({
-    key: row.querySelector('[data-key="key"]')?.value || '',
-    label: row.querySelector('[data-key="label"]')?.value || '',
-    type: row.querySelector('[data-key="type"]')?.value || 'text',
-  })).filter(c => c.key);
+  if (!tplEditorHead) return tplColumns;
+  const configCells = tplEditorHead.querySelectorAll('.tpl-config-row .tpl-config-cell');
+  const cols = [];
+  configCells.forEach(cell => {
+    const keyInput = cell.querySelector('[data-prop="key"]');
+    if (!keyInput) return;
+    const ci = keyInput.dataset.ci;
+    cols.push({
+      key: keyInput.value || '',
+      label: tplEditorHead.querySelector(`.tpl-label-cell [data-ci="${ci}"][data-prop="label"]`)?.value || '',
+      type: cell.querySelector('[data-prop="type"]')?.value || 'text',
+      width: cell.querySelector('[data-prop="width"]')?.value || '',
+      height: cell.querySelector('[data-prop="height"]')?.value || '',
+    });
+  });
+  return cols.filter(c => c.key);
 }
 
-function addTplRow(rowData = {}) {
+function getTplRows() {
   const columns = getTplColumns();
-  const row = document.createElement('div');
-  row.style.cssText = 'border:1px solid #333;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;';
-  let html = '';
-  columns.forEach(c => {
-    if (c.type === 'image') {
-      html += `<label class="field"><span>${c.label || c.key}</span><input type="file" data-col="${c.key}" accept="image/*"><input type="hidden" data-col-kept="${c.key}"></label>`;
-      if (rowData[c.key]) {
-        html += `<img src="${rowData[c.key]}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">`;
+  return [...tplEditorBody.children].map(tr => {
+    const r = {};
+    columns.forEach(c => {
+      if (c.type === 'image') {
+        const kept = tr.querySelector(`[data-col-kept="${c.key}"]`);
+        r[c.key] = kept?.value || '';
+        r._file = r._file || {};
+        const fileInput = tr.querySelector(`[data-col="${c.key}"]`);
+        if (fileInput?.files?.[0]) r._file[c.key] = fileInput.files[0];
+      } else {
+        const input = tr.querySelector(`[data-col="${c.key}"]`);
+        r[c.key] = input?.value || '';
       }
-    } else {
-      html += `<label class="field"><span>${c.label || c.key}</span><input type="text" data-col="${c.key}" maxlength="2000"></label>`;
-    }
+    });
+    return r;
   });
-  html += '<button type="button" class="button danger remove-tpl-row" style="align-self:flex-end;font-size:12px">remove row</button>';
-  row.innerHTML = html;
-  columns.forEach(c => {
-    if (c.type === 'image') {
-      const hidden = row.querySelector(`[data-col-kept="${c.key}"]`);
-      if (hidden) hidden.value = rowData[c.key] || '';
-    } else {
-      const input = row.querySelector(`[data-col="${c.key}"]`);
-      if (input) input.value = rowData[c.key] || '';
-    }
-  });
-  row.querySelector('.remove-tpl-row').addEventListener('click', () => row.remove());
-  tplRowList.append(row);
 }
 
 function addTplSectionRow(section = {}) {
@@ -1725,10 +1822,7 @@ function fillTplPage(page) {
   }
   removeCheck.checked = false;
   tplForm._keptSidebarImage = page.sidebarImage || '';
-  tplColumnList.innerHTML = '';
-  (page.columns || []).forEach(c => addTplColumnRow(c));
-  tplRowList.innerHTML = '';
-  (page.rows || []).forEach(r => addTplRow(r));
+  renderTplEditor(page.columns || [], page.rows || []);
   tplSectionList.innerHTML = '';
   (page.sections || []).forEach(s => addTplSectionRow(s));
   const viewLink = document.getElementById('tpl-view-link');
@@ -1777,11 +1871,32 @@ if (deleteTplBtn) {
 }
 
 if (document.getElementById('add-tpl-column')) {
-  document.getElementById('add-tpl-column').addEventListener('click', () => addTplColumnRow());
+  document.getElementById('add-tpl-column').addEventListener('click', () => {
+    const currentRows = getTplRows();
+    tplColumns.push({ key: '', label: '', type: 'text', width: '', height: '' });
+    renderTplEditor(tplColumns, currentRows);
+  });
 }
 
 if (document.getElementById('add-tpl-row')) {
-  document.getElementById('add-tpl-row').addEventListener('click', () => addTplRow());
+  document.getElementById('add-tpl-row').addEventListener('click', () => {
+    tplColumns = getTplColumns();
+    addTplEditorRow({});
+    renumberTplRows();
+  });
+}
+
+if (tplEditorHead) {
+  tplEditorHead.addEventListener('click', e => {
+    const btn = e.target.closest('.tpl-col-remove');
+    if (!btn) return;
+    const ci = parseInt(btn.dataset.ci, 10);
+    const currentRows = getTplRows();
+    const removedKey = tplColumns[ci]?.key;
+    tplColumns.splice(ci, 1);
+    currentRows.forEach(r => { delete r[removedKey]; delete r._file?.[removedKey]; });
+    renderTplEditor(tplColumns, currentRows);
+  });
 }
 
 if (document.getElementById('add-tpl-section')) {
@@ -1817,12 +1932,12 @@ if (tplForm) {
     const columns = getTplColumns();
     data.append('columns', JSON.stringify(columns));
 
-    const rows = [...tplRowList.children].map(row => {
+    const rows = [...tplEditorBody.children].map(tr => {
       const r = {};
       columns.forEach(c => {
         if (c.type === 'image') {
-          const fileInput = row.querySelector(`[data-col="${c.key}"]`);
-          const keptInput = row.querySelector(`[data-col-kept="${c.key}"]`);
+          const fileInput = tr.querySelector(`[data-col="${c.key}"]`);
+          const keptInput = tr.querySelector(`[data-col-kept="${c.key}"]`);
           if (fileInput?.files?.[0]) {
             data.append('rowImage', fileInput.files[0], fileInput.files[0].name);
             r[c.key] = fileInput.files[0].name;
@@ -1830,7 +1945,7 @@ if (tplForm) {
             r[c.key] = keptInput?.value || '';
           }
         } else {
-          const input = row.querySelector(`[data-col="${c.key}"]`);
+          const input = tr.querySelector(`[data-col="${c.key}"]`);
           r[c.key] = input?.value || '';
         }
       });

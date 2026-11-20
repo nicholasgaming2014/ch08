@@ -321,17 +321,18 @@
           </fieldset>
 
           <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">
-            <legend style="font-weight:600;padding:0 8px">table columns</legend>
-            <p class="hint">define the columns for your table. types: text, image (portrait), color-bar (party color stripe).</p>
-            <div id="tpl-column-list"></div>
-            <button type="button" class="button secondary" id="add-tpl-column" style="align-self:flex-start">+ add column</button>
-          </fieldset>
-
-          <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">
-            <legend style="font-weight:600;padding:0 8px">table rows</legend>
-            <p class="hint">each row is one entry. for multi-value fields (elections, parties, vice presidents), separate values with a semicolon (;). use party_color column type color-bar and put a hex color like #3333FF.</p>
-            <div id="tpl-row-list"></div>
-            <button type="button" class="button secondary" id="add-tpl-row" style="align-self:flex-start">+ add row</button>
+            <legend style="font-weight:600;padding:0 8px">table editor</legend>
+            <p class="hint">click cells to edit. semicolons (;) split multi-value fields. column types: text, image, color-bar.</p>
+            <div style="overflow-x:auto;margin-top:8px">
+              <table id="tpl-table-editor" class="tpl-editor-table">
+                <thead id="tpl-editor-head"></thead>
+                <tbody id="tpl-editor-body"></tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button type="button" class="button secondary" id="add-tpl-column">+ column</button>
+              <button type="button" class="button secondary" id="add-tpl-row">+ row</button>
+            </div>
           </fieldset>
 
           <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">
