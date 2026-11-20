@@ -1652,7 +1652,7 @@ function renderTplColBar() {
     const color = tplTypeColors[c.type] || '#3366cc';
     chip.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid ${color};color:${color};background:${color}18;`;
     if (i === tplEditingColIdx) chip.style.cssText += `font-weight:600;box-shadow:0 0 0 2px ${color}44;`;
-    chip.textContent = c.label || c.key || '(unnamed)';
+    chip.textContent = (c.label || c.key || '(unnamed)') + (c.multi ? ' ⇅' : '');
     chip.addEventListener('click', () => openTplColEditor(i));
     tplColBar.append(chip);
   });
@@ -1669,6 +1669,7 @@ function openTplColEditor(idx) {
   document.getElementById('tpl-ce-type').value = c.type || 'text';
   document.getElementById('tpl-ce-width').value = c.width || '';
   document.getElementById('tpl-ce-height').value = c.height || '';
+  document.getElementById('tpl-ce-multi').checked = !!c.multi;
   document.getElementById('tpl-col-editor-title').textContent = `column ${idx + 1}: ${c.key || '(unnamed)'}`;
   tplColEditor.hidden = false;
   renderTplColBar();
@@ -1682,6 +1683,7 @@ function saveTplColEditor() {
   c.type = document.getElementById('tpl-ce-type').value;
   c.width = document.getElementById('tpl-ce-width').value.trim();
   c.height = document.getElementById('tpl-ce-height').value.trim();
+  c.multi = document.getElementById('tpl-ce-multi').checked;
 }
 
 function closeTplColEditor() {
@@ -1851,19 +1853,16 @@ function updateTplPreview() {
   });
   html += '</tr></thead><tbody>';
   rows.forEach(r => {
-    const elecCol = cols.find(c => c.key === 'election');
-    const elecVal = elecCol ? (r[elecCol.key] || '') : '';
-    const maxMulti = Math.max(1, elecVal.includes(';') ? elecVal.split(';').length : 1);
+    const multiCols = cols.filter(c => c.multi);
+    const maxMulti = Math.max(1, ...multiCols.map(c => { const v = r[c.key] || ''; return v.includes(';') ? v.split(';').length : 1; }));
     for (let sub = 0; sub < maxMulti; sub++) {
       html += '<tr>';
       cols.forEach(c => {
         const val = r[c.key] || '';
         const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
-        const isElection = c.key === 'election';
-        const spans = !isElection && maxMulti > 1;
-        if (!isElection) {
+        if (!c.multi) {
           if (sub > 0) return;
-          const rs = spans ? ` rowspan="${maxMulti}"` : '';
+          const rs = maxMulti > 1 ? ` rowspan="${maxMulti}"` : '';
           if (c.type === 'image') {
             html += `<td style="padding:3px;border:1px solid #a2a9b1;text-align:center"${rs}>${val ? `<div style="width:28px;height:34px;background:#ddd;border-radius:2px;display:inline-block"></div>` : ''}</td>`;
           } else if (c.type === 'color-bar') {

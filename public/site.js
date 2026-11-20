@@ -1793,18 +1793,16 @@ function renderTemplatePage(templates, hash) {
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
-      const elecCol = columns.find(c => c.key === 'election');
-      const elecVal = elecCol ? (r[elecCol.key] || '') : '';
-      const maxMulti = Math.max(1, elecVal.includes(';') ? elecVal.split(';').length : 1);
+      const multiCols = columns.filter(c => c.multi);
+      const maxMulti = Math.max(1, ...multiCols.map(c => { const v = r[c.key] || ''; return v.includes(';') ? v.split(';').length : 1; }));
 
       for (let subRow = 0; subRow < maxMulti; subRow++) {
         const tr = document.createElement('tr');
         columns.forEach(c => {
           const val = r[c.key] || '';
           const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
-          const isElection = c.key === 'election';
 
-          if (!isElection) {
+          if (!c.multi) {
             if (subRow > 0) return;
             const rs = maxMulti > 1;
             if (c.type === 'image') {
