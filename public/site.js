@@ -1783,6 +1783,7 @@ function renderTemplatePage(templates, hash) {
     columns.forEach(c => {
       const th = document.createElement('th');
       if (c.type === 'color-bar') th.className = 'tpl-color-bar-header';
+      th.dataset.col = c.key;
       th.textContent = c.label || c.key;
       headerRow.append(th);
     });
@@ -1829,6 +1830,7 @@ function renderTemplatePage(templates, hash) {
           } else {
             const td = document.createElement('td');
             td.className = 'tpl-text-cell';
+            td.dataset.col = c.key;
             const cellVal = parts[subRow] || '';
             const cellEsc = esc(cellVal);
 

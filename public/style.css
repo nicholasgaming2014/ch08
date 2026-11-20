@@ -1988,23 +1988,38 @@ h2 {
   padding: 6px;
   text-align: center;
   vertical-align: middle;
+  width: 120px;
 }
 .tpl-portrait-img {
-  width: 90px;
-  height: 110px;
+  width: 110px;
+  height: 140px;
   object-fit: cover;
 }
 .tpl-color-bar-cell {
-  width: 6px;
+  width: 3px;
+  max-width: 3px;
   padding: 0;
   border-left: none;
   border-right: none;
 }
 .tpl-color-bar-header {
-  width: 6px;
+  width: 3px;
+  max-width: 3px;
   padding: 0;
   border-left: none;
   border-right: none;
+}
+.tpl-wiki-table th[data-col="party"],
+.tpl-wiki-table td[data-col="party"] {
+  width: 90px;
+  max-width: 100px;
+  font-size: 13px;
+}
+.tpl-wiki-table th[data-col="president"],
+.tpl-wiki-table td[data-col="president"],
+.tpl-wiki-table th[data-col="vice_president"],
+.tpl-wiki-table td[data-col="vice_president"] {
+  width: 14%;
 }
 .tpl-name-link {
   color: #0645ad;
