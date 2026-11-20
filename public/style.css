@@ -1958,6 +1958,72 @@ h2 {
   cursor: pointer;
 }
 
+/* Wikipedia-style list/template table */
+.tpl-wiki-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-bottom: 16px;
+  font-family: sans-serif;
+}
+.tpl-wiki-table thead th {
+  padding: 6px 10px;
+  border: 1px solid #a2a9b1;
+  background: #eaecf0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  vertical-align: bottom;
+}
+.tpl-wiki-table tbody td {
+  border: 1px solid #a2a9b1;
+  vertical-align: middle;
+}
+.tpl-text-cell {
+  padding: 6px 10px;
+  text-align: center;
+  font-size: 14px;
+}
+.tpl-portrait-cell {
+  padding: 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+.tpl-portrait-img {
+  width: 90px;
+  height: 110px;
+  object-fit: cover;
+}
+.tpl-color-bar-cell {
+  width: 6px;
+  padding: 0;
+  border-left: none;
+  border-right: none;
+}
+.tpl-color-bar-header {
+  width: 6px;
+  padding: 0;
+  border-left: none;
+  border-right: none;
+}
+.tpl-name-link {
+  color: #0645ad;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+.tpl-birth-death {
+  font-size: 13px;
+  color: #202122;
+  font-weight: 400;
+  margin-top: 2px;
+}
+.tpl-term-dash {
+  font-size: 13px;
+  color: #202122;
+  margin: 1px 0;
+}
+
 .wiki-infobox-flag {
   text-align: center;
   padding: 6px 8px;

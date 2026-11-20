@@ -1763,7 +1763,7 @@ function renderTemplatePage(templates, hash) {
     leadEl.hidden = true;
   }
 
-  // Build data table
+  const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const columns = page.columns || [];
   const rows = page.rows || [];
   const sectionsDiv = section.querySelector('.wiki-sections');
@@ -1777,13 +1777,12 @@ function renderTemplatePage(templates, hash) {
     sectionsDiv.append(tableHeading);
 
     const table = document.createElement('table');
-    table.style.cssText = 'width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;';
+    table.className = 'tpl-wiki-table';
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    headerRow.style.cssText = 'background:#f8f9fa;';
     columns.forEach(c => {
       const th = document.createElement('th');
-      th.style.cssText = 'padding:6px 8px;border:1px solid #a2a9b1;text-align:left;font-size:13px;font-weight:700;';
+      if (c.type === 'color-bar') th.className = 'tpl-color-bar-header';
       th.textContent = c.label || c.key;
       headerRow.append(th);
     });
@@ -1792,29 +1791,75 @@ function renderTemplatePage(templates, hash) {
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
-      const tr = document.createElement('tr');
-      columns.forEach(c => {
-        const td = document.createElement('td');
-        td.style.cssText = 'padding:4px 8px;border:1px solid #a2a9b1;vertical-align:middle;font-size:14px;';
+      const multiKeys = columns.filter(c => c.type !== 'image' && c.type !== 'color-bar');
+      const maxMulti = Math.max(1, ...multiKeys.map(c => {
         const val = r[c.key] || '';
-        if (c.type === 'image' && val) {
-          const img = document.createElement('img');
-          img.src = val;
-          img.alt = '';
-          img.style.cssText = 'width:60px;height:75px;object-fit:cover;';
-          td.append(img);
-        } else if (c.type === 'color-bar' && val) {
-          td.style.cssText += `background:${val};width:4px;padding:0;`;
-          td.innerHTML = '&nbsp;';
-        } else {
-          let textHtml = val.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
-          textHtml = textHtml.replace(/\n/g, '<br>');
-          td.innerHTML = textHtml;
-        }
-        tr.append(td);
-      });
-      tbody.append(tr);
+        return val.includes(';') ? val.split(';').length : 1;
+      }));
+
+      for (let subRow = 0; subRow < maxMulti; subRow++) {
+        const tr = document.createElement('tr');
+        columns.forEach(c => {
+          const val = r[c.key] || '';
+          const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
+
+          if (c.type === 'image') {
+            if (subRow === 0) {
+              const td = document.createElement('td');
+              td.className = 'tpl-portrait-cell';
+              if (maxMulti > 1) td.rowSpan = maxMulti;
+              if (val) {
+                const img = document.createElement('img');
+                img.src = val;
+                img.alt = '';
+                img.className = 'tpl-portrait-img';
+                td.append(img);
+              }
+              tr.append(td);
+            }
+          } else if (c.type === 'color-bar') {
+            if (subRow === 0) {
+              const td = document.createElement('td');
+              td.className = 'tpl-color-bar-cell';
+              if (maxMulti > 1) td.rowSpan = maxMulti;
+              const color = parts[0] || '';
+              if (color) td.style.background = color;
+              tr.append(td);
+            }
+          } else {
+            const td = document.createElement('td');
+            td.className = 'tpl-text-cell';
+            const cellVal = parts[subRow] || '';
+            const cellEsc = esc(cellVal);
+
+            if (c.key === 'name') {
+              const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
+              if (nameParts) {
+                let nameHtml = esc(nameParts[1]);
+                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+              } else {
+                let nameHtml = cellEsc;
+                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
+              }
+            } else if (c.key === 'term') {
+              const termParts = cellVal.split(/\s*[-–]\s*/);
+              if (termParts.length === 2) {
+                td.innerHTML = `<div>${esc(termParts[0])}</div><div class="tpl-term-dash">–</div><div>${esc(termParts[1])}</div>`;
+              } else {
+                td.textContent = cellVal;
+              }
+            } else {
+              let textHtml = cellEsc;
+              if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+              td.innerHTML = textHtml;
+            }
+            tr.append(td);
+          }
+        });
+        tbody.append(tr);
+      }
     });
     table.append(tbody);
     sectionsDiv.append(table);

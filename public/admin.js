@@ -1625,7 +1625,7 @@ let currentTplSlug = '';
 function populateTplSelect(pages) {
   if (!tplSlugSelect) return;
   const slugs = Object.keys(pages || {}).sort();
-  tplSlugSelect.innerHTML = '<option value="">— select a template page —</option>';
+  tplSlugSelect.innerHTML = '<option value="">— select a list page —</option>';
   slugs.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s;
@@ -1766,7 +1766,7 @@ if (createTplBtn) {
 if (deleteTplBtn) {
   deleteTplBtn.addEventListener('click', async () => {
     if (!currentTplSlug) return;
-    if (!confirm(`Delete template page "${currentTplSlug}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete list page "${currentTplSlug}"? This cannot be undone.`)) return;
     try {
       content = await send('DELETE', `/api/admin/template/${currentTplSlug}`);
       currentTplSlug = '';

@@ -194,7 +194,7 @@
     <section id="panel-wikipedia" class="admin-panel" hidden>
       <nav class="admin-subtabs" aria-label="Wikipedia sections">
         <a href="#wiki-pages" class="subtab active" data-subtab="wiki-pages">wiki pages</a>
-        <a href="#wiki-templates" class="subtab" data-subtab="wiki-templates">template pages</a>
+        <a href="#wiki-templates" class="subtab" data-subtab="wiki-templates">list pages</a>
         <a href="#wiki-elections" class="subtab" data-subtab="wiki-elections">elections</a>
         <a href="#wiki-census" class="subtab" data-subtab="wiki-census">census</a>
         <a href="#wiki-links" class="subtab" data-subtab="wiki-links">highlight links</a>
@@ -291,24 +291,24 @@
         </form>
       </div>
 
-      <!-- Template Pages sub-panel -->
+      <!-- List Pages sub-panel -->
       <div id="subtab-wiki-templates" class="subtab-panel" hidden>
         <div class="admin-card" style="margin-bottom:16px">
-          <h2>template pages</h2>
-          <p class="hint">create Wikipedia-style list/table pages (e.g. List of vice presidents).</p>
+          <h2>list pages</h2>
+          <p class="hint">create Wikipedia-style list/table pages (e.g. List of presidents).</p>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
             <select id="tpl-slug-select" style="flex:1;min-width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
-              <option value="">— select a template page —</option>
+              <option value="">— select a list page —</option>
             </select>
-            <input type="text" id="new-tpl-slug" maxlength="80" placeholder="new slug (e.g. vice-presidents)" style="width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
+            <input type="text" id="new-tpl-slug" maxlength="80" placeholder="new slug (e.g. presidents)" style="width:200px;padding:6px 8px;font-size:14px;border:1px solid #a2a9b1;border-radius:4px">
             <button type="button" id="create-tpl-btn" class="button secondary" style="white-space:nowrap">+ create</button>
             <button type="button" id="delete-tpl-btn" class="button secondary" style="white-space:nowrap;color:#d33">delete</button>
           </div>
         </div>
         <form id="tpl-form" class="admin-card" hidden>
-          <h2>template page editor</h2>
+          <h2>list page editor</h2>
           <div class="field-row">
-            <label class="field"><span>title</span><input type="text" name="title" maxlength="500" placeholder="List of vice presidents of the United States"></label>
+            <label class="field"><span>title</span><input type="text" name="title" maxlength="500" placeholder="List of presidents of the United States"></label>
           </div>
           <label class="field"><span>lead paragraph</span><textarea name="lead" rows="4" maxlength="20000" placeholder="introductory text that appears above the table"></textarea></label>
           <label class="field"><span>highlight words (comma-separated)</span><input type="text" name="highlightWords" maxlength="2000" placeholder="Democratic Party, Republican Party"></label>
@@ -329,6 +329,7 @@
 
           <fieldset style="border:1px solid #a2a9b1;border-radius:6px;padding:12px;margin-top:8px">
             <legend style="font-weight:600;padding:0 8px">table rows</legend>
+            <p class="hint">each row is one entry. for multi-value fields (elections, parties, vice presidents), separate values with a semicolon (;). use party_color column type color-bar and put a hex color like #3333FF.</p>
             <div id="tpl-row-list"></div>
             <button type="button" class="button secondary" id="add-tpl-row" style="align-self:flex-start">+ add row</button>
           </fieldset>
@@ -340,7 +341,7 @@
           </fieldset>
 
           <div style="display:flex;gap:12px;align-items:center;margin-top:16px">
-            <button type="submit" class="button">save template page</button>
+            <button type="submit" class="button">save list page</button>
             <a id="tpl-view-link" href="/#wiki" class="button secondary" target="_blank" style="text-decoration:none">view page</a>
             <span class="status" role="status"></span>
           </div>
