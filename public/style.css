@@ -2275,27 +2275,3 @@ h2 {
 .candidate-photo-preview {
   border: 1px solid #333;
 }
-
-/* ---- Admin table editor for list pages ---- */
-.tpl-editor-table { width:100%; border-collapse:collapse; font-size:13px; }
-.tpl-editor-table th, .tpl-editor-table td { border:1px solid #a2a9b1; padding:4px 6px; vertical-align:top; }
-.tpl-config-row th { background:#d6dce6; }
-.tpl-header-row th { background:#eaecf0; font-weight:700; text-align:center; }
-.tpl-corner-cell, .tpl-num-header { width:36px; text-align:center; font-size:12px; }
-.tpl-num-cell { text-align:center; font-weight:600; background:#f8f9fa; width:36px; }
-.tpl-config-cell { min-width:100px; }
-.tpl-cfg-input { display:block; width:100%; box-sizing:border-box; padding:2px 4px; font-size:12px; border:1px solid #c8ccd1; border-radius:3px; margin-bottom:2px; }
-.tpl-cfg-key { font-weight:600; }
-.tpl-cfg-dim { width:48%; display:inline-block; }
-.tpl-col-remove { background:#d33; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:13px; padding:1px 6px; margin-top:2px; }
-.tpl-label-input { width:100%; box-sizing:border-box; padding:3px 6px; font-size:13px; font-weight:700; border:1px solid #c8ccd1; border-radius:3px; text-align:center; }
-.tpl-cell-text { width:100%; box-sizing:border-box; padding:3px 6px; font-size:13px; border:1px solid #c8ccd1; border-radius:3px; }
-.tpl-cell-color { width:40px; height:28px; padding:0; border:1px solid #c8ccd1; border-radius:3px; cursor:pointer; }
-.tpl-cell-image { min-width:80px; }
-.tpl-img-cell { display:flex; flex-direction:column; gap:4px; align-items:center; }
-.tpl-cell-thumb { width:50px; height:60px; object-fit:cover; border-radius:3px; }
-.tpl-cell-file { width:100%; font-size:11px; }
-.tpl-act-header { width:30px; }
-.tpl-act-cell { text-align:center; width:30px; }
-.tpl-row-remove { background:#d33; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:13px; padding:2px 6px; }
-.tpl-data-row:hover { background:#f8f9fa; }
