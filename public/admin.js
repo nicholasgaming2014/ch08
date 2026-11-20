@@ -1846,8 +1846,10 @@ function updateTplPreview() {
   if (!cols.length || !rows.length) { tplPreviewBody.innerHTML = '<div style="padding:12px;color:#999;font-size:12px;text-align:center">add columns and rows to see preview</div>'; return; }
   const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const barMap = {};
-  cols.forEach((c, i) => { if (c.type === 'color-bar' && cols[i + 1]) barMap[cols[i + 1].key] = c.key; });
-  const nameKeys = new Set(['name', 'president', 'vice_president']);
+  const barSameKey = new Set();
+  cols.forEach((c, i) => { if (c.type === 'color-bar' && cols[i + 1]) { barMap[cols[i + 1].key] = c.key; if (c.key === cols[i + 1].key) barSameKey.add(c.key); } });
+  const isNameCol = k => { const lk = (k || '').toLowerCase(); return lk.includes('name') || lk.includes('president'); };
+  const isTermCol = k => (k || '').toLowerCase().includes('term');
   let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:sans-serif;color:#202122"><thead><tr style="background:#eaecf0">';
   cols.forEach(c => {
     if (c.type === 'color-bar') return;
@@ -1872,11 +1874,13 @@ function updateTplPreview() {
           const rs = maxMulti > 1 ? ` rowspan="${maxMulti}"` : '';
           if (c.type === 'image') {
             html += `<td style="padding:3px;border:1px solid #a2a9b1;text-align:center"${rs}>${val ? `<div style="width:28px;height:34px;background:#ddd;border-radius:2px;display:inline-block"></div>` : ''}</td>`;
-          } else if (nameKeys.has(c.key)) {
+          } else if (barSameKey.has(c.key)) {
+            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px;${barStyle}"${rs}></td>`;
+          } else if (isNameCol(c.key)) {
             const m = val.match(/^(.+?)\s*\((.+)\)$/);
             if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
             else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(val)}</span></td>`;
-          } else if (c.key === 'term') {
+          } else if (isTermCol(c.key)) {
             const tp = val.split(/\s*[-–]\s*/);
             if (tp.length === 2) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;text-align:center;font-size:10px;${barStyle}"${rs}>${esc(tp[0])}<br>–<br>${esc(tp[1])}</td>`;
             else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px;${barStyle}"${rs}>${esc(val)}</td>`;
@@ -1885,7 +1889,7 @@ function updateTplPreview() {
           }
         } else {
           const cv = parts[sub] || '';
-          if (nameKeys.has(c.key)) {
+          if (isNameCol(c.key)) {
             const m = cv.match(/^(.+?)\s*\((.+)\)$/);
             if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
             else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(cv)}</span></td>`;

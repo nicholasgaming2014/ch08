@@ -1792,11 +1792,16 @@ function renderTemplatePage(templates, hash) {
     table.append(thead);
 
     const colorBarMap = {};
+    const colorBarSameKey = new Set();
     columns.forEach((c, i) => {
-      if (c.type === 'color-bar' && columns[i + 1]) colorBarMap[columns[i + 1].key] = c.key;
+      if (c.type === 'color-bar' && columns[i + 1]) {
+        colorBarMap[columns[i + 1].key] = c.key;
+        if (c.key === columns[i + 1].key) colorBarSameKey.add(c.key);
+      }
     });
 
-    const nameKeys = new Set(['name', 'president', 'vice_president']);
+    const isNameCol = k => { const lk = (k || '').toLowerCase(); return lk.includes('name') || lk.includes('president'); };
+    const isTermCol = k => (k || '').toLowerCase().includes('term');
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
@@ -1833,8 +1838,11 @@ function renderTemplatePage(templates, hash) {
               td.dataset.col = c.key;
               if (rs) td.rowSpan = maxMulti;
               if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
+              const suppressText = colorBarSameKey.has(c.key);
 
-              if (nameKeys.has(c.key)) {
+              if (suppressText) {
+                // color-bar and text column share the same key; color is on border, don't show hex as text
+              } else if (isNameCol(c.key)) {
                 const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
                 if (nameParts) {
                   let nameHtml = esc(nameParts[1]);
@@ -1845,7 +1853,7 @@ function renderTemplatePage(templates, hash) {
                   if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
                   td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
                 }
-              } else if (c.key === 'term') {
+              } else if (isTermCol(c.key)) {
                 const termParts = val.split(/\s*[-–]\s*/);
                 if (termParts.length === 2) {
                   td.innerHTML = `<div>${esc(termParts[0])}</div><div class="tpl-term-dash">–</div><div>${esc(termParts[1])}</div>`;
@@ -1865,7 +1873,7 @@ function renderTemplatePage(templates, hash) {
             td.dataset.col = c.key;
             if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
             const cellVal = parts[subRow] || '';
-            if (nameKeys.has(c.key)) {
+            if (isNameCol(c.key)) {
               const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
               if (nameParts) {
                 let nameHtml = esc(nameParts[1]);
