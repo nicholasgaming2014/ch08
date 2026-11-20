@@ -1793,24 +1793,25 @@ function renderTemplatePage(templates, hash) {
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
-      const multiKeys = columns.filter(c => c.type !== 'image' && c.type !== 'color-bar');
-      const maxMulti = Math.max(1, ...multiKeys.map(c => {
-        const val = r[c.key] || '';
-        return val.includes(';') ? val.split(';').length : 1;
-      }));
+      const elecCol = columns.find(c => c.key === 'election');
+      const elecVal = elecCol ? (r[elecCol.key] || '') : '';
+      const maxMulti = Math.max(1, elecVal.includes(';') ? elecVal.split(';').length : 1);
 
       for (let subRow = 0; subRow < maxMulti; subRow++) {
         const tr = document.createElement('tr');
         columns.forEach(c => {
           const val = r[c.key] || '';
           const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
+          const isElection = c.key === 'election';
 
-          if (c.type === 'image') {
-            if (subRow === 0) {
+          if (!isElection) {
+            if (subRow > 0) return;
+            const rs = maxMulti > 1;
+            if (c.type === 'image') {
               const td = document.createElement('td');
               td.className = 'tpl-portrait-cell';
               if (c.width) td.style.width = c.width;
-              if (maxMulti > 1) td.rowSpan = maxMulti;
+              if (rs) td.rowSpan = maxMulti;
               if (val) {
                 const img = document.createElement('img');
                 img.src = val;
@@ -1821,14 +1822,43 @@ function renderTemplatePage(templates, hash) {
                 td.append(img);
               }
               tr.append(td);
-            }
-          } else if (c.type === 'color-bar') {
-            if (subRow === 0) {
+            } else if (c.type === 'color-bar') {
               const td = document.createElement('td');
               td.className = 'tpl-color-bar-cell';
-              if (maxMulti > 1) td.rowSpan = maxMulti;
+              if (rs) td.rowSpan = maxMulti;
               const color = parts[0] || '';
               if (color) td.style.background = color;
+              tr.append(td);
+            } else {
+              const td = document.createElement('td');
+              td.className = 'tpl-text-cell';
+              td.dataset.col = c.key;
+              if (rs) td.rowSpan = maxMulti;
+              const cellEsc = esc(val);
+
+              if (c.key === 'name') {
+                const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
+                if (nameParts) {
+                  let nameHtml = esc(nameParts[1]);
+                  if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                  td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+                } else {
+                  let nameHtml = cellEsc;
+                  if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                  td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
+                }
+              } else if (c.key === 'term') {
+                const termParts = val.split(/\s*[-–]\s*/);
+                if (termParts.length === 2) {
+                  td.innerHTML = `<div>${esc(termParts[0])}</div><div class="tpl-term-dash">–</div><div>${esc(termParts[1])}</div>`;
+                } else {
+                  td.textContent = val;
+                }
+              } else {
+                let textHtml = cellEsc;
+                if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+                td.innerHTML = textHtml;
+              }
               tr.append(td);
             }
           } else {
@@ -1836,31 +1866,9 @@ function renderTemplatePage(templates, hash) {
             td.className = 'tpl-text-cell';
             td.dataset.col = c.key;
             const cellVal = parts[subRow] || '';
-            const cellEsc = esc(cellVal);
-
-            if (c.key === 'name') {
-              const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
-              if (nameParts) {
-                let nameHtml = esc(nameParts[1]);
-                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
-              } else {
-                let nameHtml = cellEsc;
-                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
-              }
-            } else if (c.key === 'term') {
-              const termParts = cellVal.split(/\s*[-–]\s*/);
-              if (termParts.length === 2) {
-                td.innerHTML = `<div>${esc(termParts[0])}</div><div class="tpl-term-dash">–</div><div>${esc(termParts[1])}</div>`;
-              } else {
-                td.textContent = cellVal;
-              }
-            } else {
-              let textHtml = cellEsc;
-              if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
-              td.innerHTML = textHtml;
-            }
+            let textHtml = esc(cellVal);
+            if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+            td.innerHTML = textHtml;
             tr.append(td);
           }
         });

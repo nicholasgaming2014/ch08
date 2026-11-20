@@ -1851,30 +1851,37 @@ function updateTplPreview() {
   });
   html += '</tr></thead><tbody>';
   rows.forEach(r => {
-    const multiKeys = cols.filter(c => c.type !== 'image' && c.type !== 'color-bar');
-    const maxMulti = Math.max(1, ...multiKeys.map(c => { const v = r[c.key] || ''; return v.includes(';') ? v.split(';').length : 1; }));
+    const elecCol = cols.find(c => c.key === 'election');
+    const elecVal = elecCol ? (r[elecCol.key] || '') : '';
+    const maxMulti = Math.max(1, elecVal.includes(';') ? elecVal.split(';').length : 1);
     for (let sub = 0; sub < maxMulti; sub++) {
       html += '<tr>';
       cols.forEach(c => {
         const val = r[c.key] || '';
         const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
-        if (c.type === 'image') {
-          if (sub === 0) html += `<td style="padding:3px;border:1px solid #a2a9b1;text-align:center"${maxMulti > 1 ? ` rowspan="${maxMulti}"` : ''}>${val ? `<div style="width:28px;height:34px;background:#ddd;border-radius:2px;display:inline-block"></div>` : ''}</td>`;
-        } else if (c.type === 'color-bar') {
-          if (sub === 0) html += `<td style="padding:0;border:1px solid #a2a9b1;width:3px;max-width:3px;background:${esc(parts[0])}"${maxMulti > 1 ? ` rowspan="${maxMulti}"` : ''}></td>`;
+        const isElection = c.key === 'election';
+        const spans = !isElection && maxMulti > 1;
+        if (!isElection) {
+          if (sub > 0) return;
+          const rs = spans ? ` rowspan="${maxMulti}"` : '';
+          if (c.type === 'image') {
+            html += `<td style="padding:3px;border:1px solid #a2a9b1;text-align:center"${rs}>${val ? `<div style="width:28px;height:34px;background:#ddd;border-radius:2px;display:inline-block"></div>` : ''}</td>`;
+          } else if (c.type === 'color-bar') {
+            html += `<td style="padding:0;border:1px solid #a2a9b1;width:3px;max-width:3px;background:${esc(parts[0])}"${rs}></td>`;
+          } else if (c.key === 'name') {
+            const m = val.match(/^(.+?)\s*\((.+)\)$/);
+            if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(val)}</span></td>`;
+          } else if (c.key === 'term') {
+            const tp = val.split(/\s*[-–]\s*/);
+            if (tp.length === 2) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;text-align:center;font-size:10px"${rs}>${esc(tp[0])}<br>–<br>${esc(tp[1])}</td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px"${rs}>${esc(val)}</td>`;
+          } else {
+            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px"${rs}>${esc(val)}</td>`;
+          }
         } else {
           const cv = parts[sub] || '';
-          if (c.key === 'name') {
-            const m = cv.match(/^(.+?)\s*\((.+)\)$/);
-            if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
-            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(cv)}</span></td>`;
-          } else if (c.key === 'term') {
-            const tp = cv.split(/\s*[-–]\s*/);
-            if (tp.length === 2) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;text-align:center;font-size:10px">${esc(tp[0])}<br>–<br>${esc(tp[1])}</td>`;
-            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px">${esc(cv)}</td>`;
-          } else {
-            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px">${esc(cv)}</td>`;
-          }
+          html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px">${esc(cv)}</td>`;
         }
       });
       html += '</tr>';
