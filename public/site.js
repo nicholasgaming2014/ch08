@@ -1781,8 +1781,8 @@ function renderTemplatePage(templates, hash) {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     columns.forEach(c => {
+      if (c.type === 'color-bar') return;
       const th = document.createElement('th');
-      if (c.type === 'color-bar') th.className = 'tpl-color-bar-header';
       th.dataset.col = c.key;
       th.textContent = c.label || c.key;
       if (c.width) th.style.width = c.width;
@@ -1790,6 +1790,13 @@ function renderTemplatePage(templates, hash) {
     });
     thead.append(headerRow);
     table.append(thead);
+
+    const colorBarMap = {};
+    columns.forEach((c, i) => {
+      if (c.type === 'color-bar' && columns[i + 1]) colorBarMap[columns[i + 1].key] = c.key;
+    });
+
+    const nameKeys = new Set(['name', 'president', 'vice_president']);
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
@@ -1799,8 +1806,11 @@ function renderTemplatePage(templates, hash) {
       for (let subRow = 0; subRow < maxMulti; subRow++) {
         const tr = document.createElement('tr');
         columns.forEach(c => {
+          if (c.type === 'color-bar') return;
           const val = r[c.key] || '';
           const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
+          const barKey = colorBarMap[c.key];
+          const barColor = barKey ? (r[barKey] || '') : '';
 
           if (!c.multi) {
             if (subRow > 0) return;
@@ -1808,40 +1818,30 @@ function renderTemplatePage(templates, hash) {
             if (c.type === 'image') {
               const td = document.createElement('td');
               td.className = 'tpl-portrait-cell';
-              if (c.width) td.style.width = c.width;
               if (rs) td.rowSpan = maxMulti;
               if (val) {
                 const img = document.createElement('img');
                 img.src = val;
                 img.alt = '';
                 img.className = 'tpl-portrait-img';
-                if (c.width) img.style.width = c.width;
-                if (c.height) img.style.height = c.height;
                 td.append(img);
               }
-              tr.append(td);
-            } else if (c.type === 'color-bar') {
-              const td = document.createElement('td');
-              td.className = 'tpl-color-bar-cell';
-              if (rs) td.rowSpan = maxMulti;
-              const color = parts[0] || '';
-              if (color) td.style.background = color;
               tr.append(td);
             } else {
               const td = document.createElement('td');
               td.className = 'tpl-text-cell';
               td.dataset.col = c.key;
               if (rs) td.rowSpan = maxMulti;
-              const cellEsc = esc(val);
+              if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
 
-              if (c.key === 'name') {
+              if (nameKeys.has(c.key)) {
                 const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
                 if (nameParts) {
                   let nameHtml = esc(nameParts[1]);
                   if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
                   td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
                 } else {
-                  let nameHtml = cellEsc;
+                  let nameHtml = esc(val);
                   if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
                   td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
                 }
@@ -1853,7 +1853,7 @@ function renderTemplatePage(templates, hash) {
                   td.textContent = val;
                 }
               } else {
-                let textHtml = cellEsc;
+                let textHtml = esc(val);
                 if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
                 td.innerHTML = textHtml;
               }
@@ -1863,10 +1863,24 @@ function renderTemplatePage(templates, hash) {
             const td = document.createElement('td');
             td.className = 'tpl-text-cell';
             td.dataset.col = c.key;
+            if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
             const cellVal = parts[subRow] || '';
-            let textHtml = esc(cellVal);
-            if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
-            td.innerHTML = textHtml;
+            if (nameKeys.has(c.key)) {
+              const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
+              if (nameParts) {
+                let nameHtml = esc(nameParts[1]);
+                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+              } else {
+                let nameHtml = esc(cellVal);
+                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
+              }
+            } else {
+              let textHtml = esc(cellVal);
+              if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+              td.innerHTML = textHtml;
+            }
             tr.append(td);
           }
         });

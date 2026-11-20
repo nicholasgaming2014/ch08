@@ -1845,11 +1845,14 @@ function updateTplPreview() {
   const rows = extractTplRowData(cols);
   if (!cols.length || !rows.length) { tplPreviewBody.innerHTML = '<div style="padding:12px;color:#999;font-size:12px;text-align:center">add columns and rows to see preview</div>'; return; }
   const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const barMap = {};
+  cols.forEach((c, i) => { if (c.type === 'color-bar' && cols[i + 1]) barMap[cols[i + 1].key] = c.key; });
+  const nameKeys = new Set(['name', 'president', 'vice_president']);
   let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:sans-serif;color:#202122"><thead><tr style="background:#eaecf0">';
   cols.forEach(c => {
+    if (c.type === 'color-bar') return;
     const w = c.width ? ` style="width:${esc(c.width)}"` : '';
-    if (c.type === 'color-bar') html += `<th style="padding:3px;border:1px solid #a2a9b1;width:3px;max-width:3px"></th>`;
-    else html += `<th style="padding:4px 6px;border:1px solid #a2a9b1;font-size:10px;font-weight:700"${w}>${esc(c.label || c.key)}</th>`;
+    html += `<th style="padding:4px 6px;border:1px solid #a2a9b1;font-size:10px;font-weight:700"${w}>${esc(c.label || c.key)}</th>`;
   });
   html += '</tr></thead><tbody>';
   rows.forEach(r => {
@@ -1858,29 +1861,37 @@ function updateTplPreview() {
     for (let sub = 0; sub < maxMulti; sub++) {
       html += '<tr>';
       cols.forEach(c => {
+        if (c.type === 'color-bar') return;
         const val = r[c.key] || '';
         const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
+        const barKey = barMap[c.key];
+        const barColor = barKey ? (r[barKey] || '') : '';
+        const barStyle = barColor ? `border-left:4px solid ${esc(barColor)};` : '';
         if (!c.multi) {
           if (sub > 0) return;
           const rs = maxMulti > 1 ? ` rowspan="${maxMulti}"` : '';
           if (c.type === 'image') {
             html += `<td style="padding:3px;border:1px solid #a2a9b1;text-align:center"${rs}>${val ? `<div style="width:28px;height:34px;background:#ddd;border-radius:2px;display:inline-block"></div>` : ''}</td>`;
-          } else if (c.type === 'color-bar') {
-            html += `<td style="padding:0;border:1px solid #a2a9b1;width:3px;max-width:3px;background:${esc(parts[0])}"${rs}></td>`;
-          } else if (c.key === 'name') {
+          } else if (nameKeys.has(c.key)) {
             const m = val.match(/^(.+?)\s*\((.+)\)$/);
-            if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
-            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(val)}</span></td>`;
+            if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"${rs}><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(val)}</span></td>`;
           } else if (c.key === 'term') {
             const tp = val.split(/\s*[-–]\s*/);
-            if (tp.length === 2) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;text-align:center;font-size:10px"${rs}>${esc(tp[0])}<br>–<br>${esc(tp[1])}</td>`;
-            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px"${rs}>${esc(val)}</td>`;
+            if (tp.length === 2) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;text-align:center;font-size:10px;${barStyle}"${rs}>${esc(tp[0])}<br>–<br>${esc(tp[1])}</td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px;${barStyle}"${rs}>${esc(val)}</td>`;
           } else {
-            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px"${rs}>${esc(val)}</td>`;
+            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px;${barStyle}"${rs}>${esc(val)}</td>`;
           }
         } else {
           const cv = parts[sub] || '';
-          html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px">${esc(cv)}</td>`;
+          if (nameKeys.has(c.key)) {
+            const m = cv.match(/^(.+?)\s*\((.+)\)$/);
+            if (m) html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(m[1])}</span><br><span style="font-size:10px;color:#555">(${esc(m[2])})</span></td>`;
+            else html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;${barStyle}"><span style="color:#0645ad;font-weight:700;font-size:11px">${esc(cv)}</span></td>`;
+          } else {
+            html += `<td style="padding:3px 6px;border:1px solid #a2a9b1;font-size:10px;${barStyle}">${esc(cv)}</td>`;
+          }
         }
       });
       html += '</tr>';
