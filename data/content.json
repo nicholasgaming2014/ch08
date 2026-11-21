@@ -13242,7 +13242,8 @@
           "type": "text",
           "width": "21%",
           "height": "",
-          "multi": true
+          "multi": true,
+          "noHighlight": true
         }
       ],
       "rows": [

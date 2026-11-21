@@ -1670,6 +1670,7 @@ function openTplColEditor(idx) {
   document.getElementById('tpl-ce-width').value = c.width || '';
   document.getElementById('tpl-ce-height').value = c.height || '';
   document.getElementById('tpl-ce-multi').checked = !!c.multi;
+  document.getElementById('tpl-ce-noHighlight').checked = !!c.noHighlight;
   document.getElementById('tpl-col-editor-title').textContent = `column ${idx + 1}: ${c.key || '(unnamed)'}`;
   tplColEditor.hidden = false;
   renderTplColBar();
@@ -1684,6 +1685,7 @@ function saveTplColEditor() {
   c.width = document.getElementById('tpl-ce-width').value.trim();
   c.height = document.getElementById('tpl-ce-height').value.trim();
   c.multi = document.getElementById('tpl-ce-multi').checked;
+  c.noHighlight = document.getElementById('tpl-ce-noHighlight').checked;
 }
 
 function closeTplColEditor() {

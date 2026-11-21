@@ -1837,12 +1837,13 @@ function renderTemplatePage(templates, hash) {
               td.className = 'tpl-text-cell';
               td.dataset.col = c.key;
               if (rs) td.rowSpan = maxMulti;
-              if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
+              if (barColor) td.style.borderLeft = `8px solid ${barColor}`;
               const suppressText = colorBarSameKey.has(c.key);
 
+              const hl = !c.noHighlight;
               if (suppressText) {
                 // color-bar and text column share the same key; color is on border, don't show hex as text
-              } else if (isNameCol(c.key)) {
+              } else if (hl && isNameCol(c.key)) {
                 const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
                 if (nameParts) {
                   let nameHtml = esc(nameParts[1]);
@@ -1857,16 +1858,16 @@ function renderTemplatePage(templates, hash) {
                 const termParts = val.split(/\s*[-–]\s*/);
                 if (termParts.length === 2) {
                   let t0 = esc(termParts[0]), t1 = esc(termParts[1]);
-                  if (page.highlightWords) { t0 = applyHighlightWords(t0, page.highlightWords); t1 = applyHighlightWords(t1, page.highlightWords); }
+                  if (hl && page.highlightWords) { t0 = applyHighlightWords(t0, page.highlightWords); t1 = applyHighlightWords(t1, page.highlightWords); }
                   td.innerHTML = `<div>${t0}</div><div class="tpl-term-dash">–</div><div>${t1}</div>`;
                 } else {
                   let termHtml = esc(val);
-                  if (page.highlightWords) termHtml = applyHighlightWords(termHtml, page.highlightWords);
+                  if (hl && page.highlightWords) termHtml = applyHighlightWords(termHtml, page.highlightWords);
                   td.innerHTML = termHtml;
                 }
               } else {
                 let textHtml = esc(val);
-                if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+                if (hl && page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
                 td.innerHTML = textHtml;
               }
               tr.append(td);
@@ -1878,9 +1879,10 @@ function renderTemplatePage(templates, hash) {
             td.className = 'tpl-text-cell';
             td.dataset.col = c.key;
             if (singleMulti) td.rowSpan = maxMulti;
-            if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
+            if (barColor) td.style.borderLeft = `8px solid ${barColor}`;
             const cellVal = parts[subRow] || '';
-            if (isNameCol(c.key)) {
+            const hl2 = !c.noHighlight;
+            if (hl2 && isNameCol(c.key)) {
               const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
               if (nameParts) {
                 let nameHtml = esc(nameParts[1]);
@@ -1893,7 +1895,7 @@ function renderTemplatePage(templates, hash) {
               }
             } else {
               let textHtml = esc(cellVal);
-              if (page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
+              if (hl2 && page.highlightWords) textHtml = applyHighlightWords(textHtml, page.highlightWords);
               td.innerHTML = textHtml;
             }
             tr.append(td);
