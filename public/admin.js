@@ -1741,6 +1741,9 @@ function addTplRowCard(rowData = {}, expanded = false) {
   body.className = 'tpl-row-body';
   body.hidden = !expanded;
 
+  const nextMulti = {};
+  cols.forEach((c, i) => { if (c.type === 'color-bar' && cols[i + 1] && cols[i + 1].multi) nextMulti[c.key] = true; });
+
   cols.forEach(c => {
     if (c.type === 'image') {
       const field = document.createElement('div');
@@ -1761,6 +1764,40 @@ function addTplRowCard(rowData = {}, expanded = false) {
         }
       });
       body.append(field);
+    } else if (c.type === 'color-bar' && nextMulti[c.key]) {
+      const rawVal = rowData[c.key] || '';
+      const vals = rawVal.includes(';') ? rawVal.split(';').map(s => s.trim()) : [rawVal];
+      const field = document.createElement('div');
+      field.className = 'tpl-row-field';
+      const label = c.label || c.key;
+      let html = `<div class="field"><span>${label}</span><div style="display:flex;flex-direction:column;gap:6px">`;
+      for (let n = 0; n < 3; n++) {
+        const v = vals[n] || (n === 0 ? '#3333FF' : '');
+        const suffix = n === 0 ? '' : ` ${n + 1}`;
+        html += `<div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:#999;min-width:12px">${n + 1}.</span>
+          <input type="color" data-col-multi="${c.key}" data-multi-idx="${n}" value="${v || '#3333FF'}" style="width:40px;height:28px;padding:0;border:1px solid #a2a9b1;border-radius:4px;cursor:pointer${n > 0 && !v ? ';opacity:0.4' : ''}">
+          <span class="tpl-color-hex" style="font-size:12px;color:#666">${v || ''}</span>
+          ${n > 0 ? `<label style="font-size:11px;color:#999;display:flex;align-items:center;gap:4px"><input type="checkbox" data-col-multi-on="${c.key}" data-multi-idx="${n}" ${v ? 'checked' : ''}> use</label>` : ''}
+        </div>`;
+      }
+      html += '</div></div>';
+      field.innerHTML = html;
+      field.querySelectorAll(`[data-col-multi="${c.key}"]`).forEach(inp => {
+        inp.addEventListener('input', function() {
+          this.parentElement.querySelector('.tpl-color-hex').textContent = this.value;
+          if (this.dataset.multiIdx !== '0') { this.style.opacity = '1'; const cb = this.parentElement.querySelector(`[data-col-multi-on]`); if (cb) cb.checked = true; }
+          updateTplPreview();
+        });
+      });
+      field.querySelectorAll(`[data-col-multi-on="${c.key}"]`).forEach(cb => {
+        cb.addEventListener('change', function() {
+          const inp = this.closest('div').querySelector(`[data-col-multi]`);
+          if (inp) inp.style.opacity = this.checked ? '1' : '0.4';
+          updateTplPreview();
+        });
+      });
+      body.append(field);
     } else if (c.type === 'color-bar') {
       const field = document.createElement('div');
       field.className = 'tpl-row-field';
@@ -1773,6 +1810,34 @@ function addTplRowCard(rowData = {}, expanded = false) {
       field.querySelector(`[data-col="${c.key}"]`).addEventListener('input', function() {
         field.querySelector('.tpl-color-hex').textContent = this.value;
         updateTplPreview();
+      });
+      body.append(field);
+    } else if (c.multi) {
+      const rawVal = rowData[c.key] || '';
+      const vals = rawVal.includes(';') ? rawVal.split(';').map(s => s.trim()) : [rawVal];
+      const field = document.createElement('div');
+      field.className = 'tpl-row-field';
+      const label = c.label || c.key;
+      let html = `<div class="field"><span>${label}</span><div style="display:flex;flex-direction:column;gap:4px">`;
+      for (let n = 0; n < 3; n++) {
+        const v = vals[n] || '';
+        html += `<div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:#999;min-width:12px">${n + 1}.</span>
+          <input type="text" data-col-multi="${c.key}" data-multi-idx="${n}" maxlength="2000" value="" style="flex:1${n > 0 && !v ? ';opacity:0.5' : ''}">
+        </div>`;
+      }
+      html += '</div></div>';
+      field.innerHTML = html;
+      field.querySelectorAll(`[data-col-multi="${c.key}"]`).forEach(inp => {
+        inp.value = vals[parseInt(inp.dataset.multiIdx)] || '';
+        inp.addEventListener('input', function() {
+          if (this.dataset.multiIdx !== '0') this.style.opacity = this.value ? '1' : '0.5';
+          const title = card.querySelector('.tpl-row-title');
+          const ft = getFirstTextVal(card, cols);
+          const ri = [...tplRowList.children].indexOf(card);
+          title.textContent = `Row ${ri + 1}${ft ? ' — ' + ft : ''}`;
+          updateTplPreview();
+        });
       });
       body.append(field);
     } else {
@@ -1824,6 +1889,8 @@ function rebuildTplRows() {
 
 function extractTplRowData(columns) {
   if (!tplRowList) return [];
+  const nextMultiKeys = {};
+  columns.forEach((c, i) => { if (c.type === 'color-bar' && columns[i + 1] && columns[i + 1].multi) nextMultiKeys[c.key] = true; });
   return [...tplRowList.children].map(card => {
     const r = {};
     columns.forEach(c => {
@@ -1832,6 +1899,22 @@ function extractTplRowData(columns) {
         r[c.key] = kept?.value || '';
         const fileInput = card.querySelector(`[data-col="${c.key}"]`);
         if (fileInput?.files?.[0]) { r._file = r._file || {}; r._file[c.key] = fileInput.files[0]; }
+      } else if (c.type === 'color-bar' && nextMultiKeys[c.key]) {
+        const inputs = card.querySelectorAll(`[data-col-multi="${c.key}"]`);
+        const vals = [];
+        inputs.forEach((inp, n) => {
+          if (n === 0) { vals.push(inp.value); }
+          else {
+            const cb = card.querySelector(`[data-col-multi-on="${c.key}"][data-multi-idx="${n}"]`);
+            if (cb && cb.checked) vals.push(inp.value);
+          }
+        });
+        r[c.key] = vals.length > 1 ? vals.join(';') : vals[0] || '';
+      } else if (c.multi) {
+        const inputs = card.querySelectorAll(`[data-col-multi="${c.key}"]`);
+        const vals = [];
+        inputs.forEach(inp => { if (inp.value.trim()) vals.push(inp.value.trim()); });
+        r[c.key] = vals.length > 1 ? vals.join(';') : vals[0] || '';
       } else {
         const input = card.querySelector(`[data-col="${c.key}"]`);
         r[c.key] = input?.value || '';
