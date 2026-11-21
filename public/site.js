@@ -1803,6 +1803,7 @@ function renderTemplatePage(templates, hash) {
     const isNameCol = k => { const lk = (k || '').toLowerCase(); return lk.includes('name') || lk.includes('president'); };
     const isTermCol = k => (k || '').toLowerCase().includes('term');
     const nameToSlug = n => n.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const isVacant = v => /^vacant\b/i.test(v.trim());
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
@@ -1817,6 +1818,9 @@ function renderTemplatePage(templates, hash) {
           const parts = val.includes(';') ? val.split(';').map(s => s.trim()) : [val];
           const barKey = colorBarMap[c.key];
           const barColor = barKey ? (r[barKey] || '') : '';
+
+          const barParts = barColor.includes(';') ? barColor.split(';').map(s => s.trim()) : [barColor];
+          const subBarColor = barParts.length > 1 ? (barParts[subRow] || barParts[0]) : barColor;
 
           if (!c.multi) {
             if (subRow > 0) return;
@@ -1845,17 +1849,21 @@ function renderTemplatePage(templates, hash) {
               if (suppressText) {
                 // color-bar and text column share the same key; color is on border, don't show hex as text
               } else if (hl && isNameCol(c.key)) {
-                const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
-                if (nameParts) {
-                  const slug = nameToSlug(nameParts[1]);
-                  let nameHtml = esc(nameParts[1]);
-                  if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                  td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+                if (isVacant(val)) {
+                  td.innerHTML = `<span class="tpl-vacant">${esc(val)}</span>`;
                 } else {
-                  const slug = nameToSlug(val);
-                  let nameHtml = esc(val);
-                  if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                  td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a>`;
+                  const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
+                  if (nameParts) {
+                    const slug = nameToSlug(nameParts[1]);
+                    let nameHtml = esc(nameParts[1]);
+                    if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                    td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+                  } else {
+                    const slug = nameToSlug(val);
+                    let nameHtml = esc(val);
+                    if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                    td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a>`;
+                  }
                 }
               } else if (isTermCol(c.key)) {
                 const termParts = val.split(/\s*[-–]\s*/);
@@ -1882,21 +1890,25 @@ function renderTemplatePage(templates, hash) {
             td.className = 'tpl-text-cell';
             td.dataset.col = c.key;
             if (singleMulti) td.rowSpan = maxMulti;
-            if (barColor) td.style.borderLeft = `8px solid ${barColor}`;
+            if (subBarColor) td.style.borderLeft = `8px solid ${subBarColor}`;
             const cellVal = parts[subRow] || '';
             const hl2 = !c.noHighlight;
             if (hl2 && isNameCol(c.key)) {
-              const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
-              if (nameParts) {
-                const slug = nameToSlug(nameParts[1]);
-                let nameHtml = esc(nameParts[1]);
-                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+              if (isVacant(cellVal)) {
+                td.innerHTML = `<span class="tpl-vacant">${esc(cellVal)}</span>`;
               } else {
-                const slug = nameToSlug(cellVal);
-                let nameHtml = esc(cellVal);
-                if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a>`;
+                const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
+                if (nameParts) {
+                  const slug = nameToSlug(nameParts[1]);
+                  let nameHtml = esc(nameParts[1]);
+                  if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                  td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+                } else {
+                  const slug = nameToSlug(cellVal);
+                  let nameHtml = esc(cellVal);
+                  if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
+                  td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a>`;
+                }
               }
             } else {
               let textHtml = esc(cellVal);

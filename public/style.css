@@ -2010,6 +2010,11 @@ h2 {
   cursor: pointer;
   text-decoration: none;
 }
+.tpl-vacant {
+  color: #54595d;
+  font-style: italic;
+  font-weight: 400;
+}
 .tpl-birth-death {
   font-size: 13px;
   color: #202122;
