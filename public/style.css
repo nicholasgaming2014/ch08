@@ -2004,6 +2004,7 @@ h2 {
   width: 14%;
 }
 .tpl-name-link {
+  display: block;
   color: #0645ad;
   font-weight: 700;
   cursor: pointer;

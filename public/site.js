@@ -1802,6 +1802,7 @@ function renderTemplatePage(templates, hash) {
 
     const isNameCol = k => { const lk = (k || '').toLowerCase(); return lk.includes('name') || lk.includes('president'); };
     const isTermCol = k => (k || '').toLowerCase().includes('term');
+    const nameToSlug = n => n.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
@@ -1846,13 +1847,15 @@ function renderTemplatePage(templates, hash) {
               } else if (hl && isNameCol(c.key)) {
                 const nameParts = val.match(/^(.+?)\s*\((.+)\)$/);
                 if (nameParts) {
+                  const slug = nameToSlug(nameParts[1]);
                   let nameHtml = esc(nameParts[1]);
                   if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                  td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+                  td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
                 } else {
+                  const slug = nameToSlug(val);
                   let nameHtml = esc(val);
                   if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                  td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
+                  td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a>`;
                 }
               } else if (isTermCol(c.key)) {
                 const termParts = val.split(/\s*[-–]\s*/);
@@ -1885,13 +1888,15 @@ function renderTemplatePage(templates, hash) {
             if (hl2 && isNameCol(c.key)) {
               const nameParts = cellVal.match(/^(.+?)\s*\((.+)\)$/);
               if (nameParts) {
+                const slug = nameToSlug(nameParts[1]);
                 let nameHtml = esc(nameParts[1]);
                 if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
+                td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a><div class="tpl-birth-death">(${esc(nameParts[2])})</div>`;
               } else {
+                const slug = nameToSlug(cellVal);
                 let nameHtml = esc(cellVal);
                 if (page.highlightWords) nameHtml = applyHighlightWords(nameHtml, page.highlightWords);
-                td.innerHTML = `<div class="tpl-name-link">${nameHtml}</div>`;
+                td.innerHTML = `<a class="tpl-name-link" href="/#wiki-${slug}">${nameHtml}</a>`;
               }
             } else {
               let textHtml = esc(cellVal);
