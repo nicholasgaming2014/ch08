@@ -1988,12 +1988,10 @@ h2 {
   padding: 6px;
   text-align: center;
   vertical-align: middle;
-  width: 75px;
 }
 .tpl-portrait-img {
-  width: 65px;
-  height: 80px;
-  object-fit: cover;
+  width: 100px;
+  height: auto;
 }
 .tpl-wiki-table th[data-col="party"],
 .tpl-wiki-table td[data-col="party"] {
