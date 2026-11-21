@@ -2159,6 +2159,8 @@ if (tplForm) {
     const columns = getTplColumns();
     data.append('columns', JSON.stringify(columns));
 
+    const nextMultiKeys = {};
+    columns.forEach((ci, i) => { if (ci.type === 'color-bar' && columns[i + 1] && columns[i + 1].multi) nextMultiKeys[ci.key] = true; });
     const rows = [...tplRowList.children].map(card => {
       const r = {};
       columns.forEach(c => {
@@ -2171,9 +2173,44 @@ if (tplForm) {
           } else {
             r[c.key] = keptInput?.value || '';
           }
+        } else if (c.type === 'color-bar' && nextMultiKeys[c.key]) {
+          const inputs = card.querySelectorAll(`[data-col-multi="${c.key}"]`);
+          if (inputs.length) {
+            const vals = [];
+            inputs.forEach((inp, n) => {
+              if (n === 0) { vals.push(inp.value); }
+              else {
+                const cb = card.querySelector(`[data-col-multi-on="${c.key}"][data-multi-idx="${n}"]`);
+                if (cb && cb.checked) vals.push(inp.value);
+              }
+            });
+            r[c.key] = vals.length > 1 ? vals.join(';') : vals[0] || '';
+          } else {
+            const single = card.querySelector(`[data-col="${c.key}"]`);
+            r[c.key] = single?.value || '';
+          }
+        } else if (c.multi) {
+          const inputs = card.querySelectorAll(`[data-col-multi="${c.key}"]`);
+          if (inputs.length) {
+            const vals = [];
+            inputs.forEach(inp => { if (inp.value.trim()) vals.push(inp.value.trim()); });
+            r[c.key] = vals.length > 1 ? vals.join(';') : vals[0] || '';
+          } else {
+            const single = card.querySelector(`[data-col="${c.key}"]`);
+            r[c.key] = single?.value || '';
+          }
         } else {
           const input = card.querySelector(`[data-col="${c.key}"]`);
-          r[c.key] = input?.value || '';
+          if (input) {
+            r[c.key] = input.value || '';
+          } else {
+            const multi = card.querySelectorAll(`[data-col-multi="${c.key}"]`);
+            if (multi.length) {
+              const vals = [];
+              multi.forEach(inp => { if (inp.value.trim()) vals.push(inp.value.trim()); });
+              r[c.key] = vals.length > 1 ? vals.join(';') : vals[0] || '';
+            }
+          }
         }
       });
       return r;
