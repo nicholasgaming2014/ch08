@@ -1856,9 +1856,13 @@ function renderTemplatePage(templates, hash) {
               } else if (isTermCol(c.key)) {
                 const termParts = val.split(/\s*[-–]\s*/);
                 if (termParts.length === 2) {
-                  td.innerHTML = `<div>${esc(termParts[0])}</div><div class="tpl-term-dash">–</div><div>${esc(termParts[1])}</div>`;
+                  let t0 = esc(termParts[0]), t1 = esc(termParts[1]);
+                  if (page.highlightWords) { t0 = applyHighlightWords(t0, page.highlightWords); t1 = applyHighlightWords(t1, page.highlightWords); }
+                  td.innerHTML = `<div>${t0}</div><div class="tpl-term-dash">–</div><div>${t1}</div>`;
                 } else {
-                  td.textContent = val;
+                  let termHtml = esc(val);
+                  if (page.highlightWords) termHtml = applyHighlightWords(termHtml, page.highlightWords);
+                  td.innerHTML = termHtml;
                 }
               } else {
                 let textHtml = esc(val);
@@ -1868,9 +1872,12 @@ function renderTemplatePage(templates, hash) {
               tr.append(td);
             }
           } else {
+            const singleMulti = parts.length === 1 && maxMulti > 1;
+            if (singleMulti && subRow > 0) return;
             const td = document.createElement('td');
             td.className = 'tpl-text-cell';
             td.dataset.col = c.key;
+            if (singleMulti) td.rowSpan = maxMulti;
             if (barColor) td.style.borderLeft = `4px solid ${barColor}`;
             const cellVal = parts[subRow] || '';
             if (isNameCol(c.key)) {
